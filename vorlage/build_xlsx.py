@@ -167,8 +167,8 @@ for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xp
 ("Quellcode-Ordner","","Nur Entwicklung: Zielordner für PDF2E_Exportieren (leer = Unterordner src neben der Mappe)"),
 ("Textdatei behalten","Nein","Ja = pdftotext-Ausgabe im TEMP-Ordner behalten (Fehlersuche), Pfad steht im Protokoll"),
 ("Entwickler","Frank Hentzschel","Wird im Info-Fenster angezeigt"),
-("Firma","","Firmenbezeichnung für Info-Fenster und Copyright - bitte eintragen"),
-("Kontakt","","z. B. E-Mail oder Webseite für Support"),
+("Firma","office & database development","Firmenbezeichnung für Info-Fenster und Copyright"),
+("Kontakt","Frank.Hentzschel@gmx.de","z. B. E-Mail oder Webseite für Support"),
 ("Logo-Datei","","Vollständiger Pfad zum Logo (BMP, JPG oder GIF, kein PNG), z. B. C:\\PDF2E\\logo.jpg"),
 ("E-Rechnung-Adapter","STUB","STUB = Testlauf ohne Smart Tools (keine gültige E-Rechnung), SMARTTOOLS = echte Erzeugung")],2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
