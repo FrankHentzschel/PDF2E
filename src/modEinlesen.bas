@@ -85,8 +85,6 @@ Private Sub VorgabenSetzen()
         If Len(wsE.Cells(z, 4).Value) > 0 Then Feld("f_KUstId").Value = wsE.Cells(z, 4).Value
         Feld("f_Konto").Value = wsE.Cells(z, 5).Value
         Feld("f_Kondition").Value = wsE.Cells(z, 6).Value
-    Else
-        Protokoll "Info", "Kunde " & Feld("f_KundenNr").Value & " nicht im Blatt 'Empfaenger'. Standard-Vorgaben verwendet."
     End If
 
     If Len(Feld("f_Konto").Value) = 0 Then
@@ -97,4 +95,27 @@ Private Sub VorgabenSetzen()
         z = StandardZeile("Zahlungskonditionen", 4)
         If z > 0 Then Feld("f_Kondition").Value = ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(z, 1).Value
     End If
+
+    If TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value)) = 0 Then EmpfaengerAnlegen
+End Sub
+
+' Neuen Rechnungsempfänger mit den aktuellen Vorgaben ins Blatt "Empfaenger"
+' übernehmen, damit der Anwender nichts von Hand anlegen muss. Abweichende
+' Vorgaben (Konto, Kondition, E-Mail) werden dort nur bei Bedarf eingetragen.
+Private Sub EmpfaengerAnlegen()
+    Dim wsE As Worksheet, z As Long
+    If Len(CStr(Feld("f_KundenNr").Value)) = 0 Then Exit Sub
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    z = wsE.Cells(wsE.Rows.Count, 1).End(xlUp).Row + 1
+    wsE.Cells(z, 1).NumberFormat = "@"
+    wsE.Cells(z, 1).Value = CStr(Feld("f_KundenNr").Value)
+    wsE.Cells(z, 2).Value = Feld("f_KName").Value
+    wsE.Cells(z, 3).Value = Feld("f_KEmail").Value
+    wsE.Cells(z, 4).Value = Feld("f_KUstId").Value
+    ' Konto und Kondition bleiben leer = es gilt der jeweilige Standard-Eintrag
+    wsE.Cells(z, 7).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & _
+                            " aus RE " & Feld("f_RechNr").Value & " - Konto/Kondition leer = Standard"
+    wsE.Range(wsE.Cells(z, 1), wsE.Cells(z, 7)).Interior.Color = RGB(255, 248, 225)
+    Protokoll "Info", "Neuer Empfänger " & Feld("f_KundenNr").Value & " (" & Feld("f_KName").Value & _
+                      ") im Blatt 'Empfaenger' angelegt. Abweichendes Konto oder Kondition dort eintragen."
 End Sub

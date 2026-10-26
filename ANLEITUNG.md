@@ -58,7 +58,7 @@ Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, 
 | 2603816 | REWE Markt GmbH (RE-GLN 4388096000002) | 3 | 24,80 | 489,74 |
 | 2603587 | REWE Markt GmbH, Lieferort Forchheim | 4 | −49,60 (Rückgabe) | 176,30 |
 
-Im Ordner `tests/pdftotext` liegen die pdftotext-Ausgaben dieser Muster. Damit lässt sich prüfen, ob die Windows-Version von pdftotext anders formatiert.
+Im Ordner `tests/pdftotext` liegen die pdftotext-Ausgaben dieser Muster. Dateien mit `_windows` stammen aus pdftotext unter Windows (Xpdf), die übrigen aus Linux (Poppler). Die Windows-Version verteilt manche Leergutzeilen auf zwei Zeilen; der Parser fügt sie spaltengenau zusammen.
 
 Im Stub-Modus legt **E-Rechnung erzeugen** zwei Dateien an: `<RechNr>_ZUGFeRD_STUB.pdf`, eine unveränderte Kopie, und daneben `.daten.xml` mit allen Übergabewerten.
 

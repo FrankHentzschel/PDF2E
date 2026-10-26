@@ -21,8 +21,8 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim i As Long, p As Long, start As Long
     Dim l As String, s As String, modus As Abschnitt
     Dim m As Object
-    Dim anzahlLS As Long, lsListe As String, lgRest As String
-    Dim reArtNr As Object
+    Dim anzahlLS As Long, lsListe As String, lgOffen As String, z As String
+    Dim reArtNr As Object, reLGRest As Object
     Dim steuerSaetze As New Collection, mwstSumme As Currency
 
     ' Muster (VBScript-RegExp)
@@ -44,6 +44,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reMail = NeuesRegex("([\w.+-]+@[\w-]+(?:\.[\w-]+)+)")
     Set rePLZ = NeuesRegex("^(\d{5})\s+(.+)$")
     Set reArtNr = NeuesRegex("^\d{5}\s")
+    Set reLGRest = NeuesRegex("\d+,\d{2}\s+[\d.]*\d,\d{2}-?\s*$")
 
     Select Case UCase$(variante)
         Case "STANDARD"
@@ -96,7 +97,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                 l = zeilen(i)
                 s = Trim$(l)
                 If Len(s) = 0 Then GoTo weiter
-                If Left$(s, 1) = ChrW(&H2500) Or Left$(s, 1) = ChrW(&H2550) Then lgRest = "": GoTo weiter
+                If Left$(s, 1) = ChrW(&H2500) Or Left$(s, 1) = ChrW(&H2550) Then LeergutAbschliessen lgOffen, reArtNr: GoTo weiter
                 If Left$(s, 8) = "ÜBERTRAG" Then GoTo weiter
                 If Left$(s, 13) = "LEERGUT-KONTO" Then modus = abLeergut: GoTo weiter
                 If modus = abLeergut And Left$(s, 5) = "SALDO" Then GoTo weiter
@@ -144,21 +145,26 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                         GoTo weiter
                     End If
                 ElseIf modus = abLeergut Then
-                    ' pdftotext (Xpdf, Windows) bricht Leergutzeilen teils in zwei Zeilen um:
-                    ' "99001 Euro 0,5   1443-   20" / "36   1459-   16-  3,10   49,60-"
-                    If Len(lgRest) > 0 Then
-                        If Treffer(reArtNr, s) Is Nothing Then
-                            Set m = Treffer(reLG, lgRest & "   " & s)
-                            lgRest = ""
-                            If Not m Is Nothing Then PfandAnhaengen m: GoTo weiter
-                        End If
-                        lgRest = ""
-                    End If
                     Set m = Treffer(reLG, l)
-                    If Not m Is Nothing Then PfandAnhaengen m: GoTo weiter
-                    ' Zeile mit Artikelnummer ohne Pfandbetrag: Kontostand (nicht rechnungsrelevant)
-                    ' oder erster Teil einer umgebrochenen Zeile - für die nächste Zeile merken
-                    If Not Treffer(reArtNr, s) Is Nothing Then lgRest = s: GoTo weiter
+                    If Not m Is Nothing Then LeergutAbschliessen lgOffen, reArtNr: PfandAnhaengen m: GoTo weiter
+                    ' pdftotext (Xpdf, Windows) verteilt eine Leergutzeile teils auf zwei Zeilen,
+                    ' der Teil mit dem Pfandbetrag steht dabei VOR der Artikelnummer:
+                    '   "                    36    1459-    16-  3,10    49,60-"
+                    '   "99001 Euro 0,5   1443-  20"
+                    ' Beide Teile werden spaltengenau übereinandergelegt.
+                    If Len(lgOffen) > 0 Then
+                        z = Ueberlagern(lgOffen, l)
+                        If Len(z) > 0 Then
+                            Set m = Treffer(reLG, z)
+                            If Not m Is Nothing Then lgOffen = "": PfandAnhaengen m: GoTo weiter
+                        End If
+                    End If
+                    ' Artikelzeile ohne Pfandbetrag (Kontostand) oder Teilzeile: für die nächste Zeile merken
+                    If Not Treffer(reArtNr, s) Is Nothing Or Not Treffer(reLGRest, s) Is Nothing Then
+                        LeergutAbschliessen lgOffen, reArtNr
+                        lgOffen = l
+                        GoTo weiter
+                    End If
                 End If
 
                 ' Alles andere: Zusatzangaben auswerten, sonst als Hinweis protokollieren
@@ -181,10 +187,38 @@ weiter:
         End If
     Next p
 
+    LeergutAbschliessen lgOffen, reArtNr
     If anzahlLS > 1 Then Protokoll "Warnung", "Mehrere Lieferscheine: " & lsListe & ". In der E-Rechnung steht nur der erste."
     Feld("f_PDF_MwSt").Value = mwstSumme
     SteuersatzSetzen steuerSaetze
 End Sub
+
+' Eine offene Teilzeile ohne Artikelnummer, die keinem Artikel zugeordnet werden
+' konnte, wäre ein fehlender Pfandbetrag - deshalb als Warnung protokollieren.
+Private Sub LeergutAbschliessen(ByRef lgOffen As String, ByVal reArtNr As Object)
+    If Len(lgOffen) > 0 Then
+        If Treffer(reArtNr, Trim$(lgOffen)) Is Nothing Then
+            Protokoll "Warnung", "Leergutzeile keinem Artikel zugeordnet: " & Trim$(lgOffen)
+        End If
+    End If
+    lgOffen = ""
+End Sub
+
+' Legt zwei Textzeilen spaltengenau übereinander. Leer, wenn sich Zeichen überschneiden.
+Private Function Ueberlagern(ByVal a As String, ByVal b As String) As String
+    Dim n As Long, i As Long, ca As String, cb As String, erg As String
+    n = Len(a)
+    If Len(b) > n Then n = Len(b)
+    a = a & Space$(n - Len(a))
+    b = b & Space$(n - Len(b))
+    For i = 1 To n
+        ca = Mid$(a, i, 1)
+        cb = Mid$(b, i, 1)
+        If ca <> " " And cb <> " " Then Exit Function
+        If ca <> " " Then erg = erg & ca Else erg = erg & cb
+    Next i
+    Ueberlagern = erg
+End Function
 
 Private Sub PfandAnhaengen(ByVal m As Object)
     PositionAnhaengen "Pfand", m.SubMatches(0), "Pfand " & Trim$(m.SubMatches(1)), _

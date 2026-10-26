@@ -11,7 +11,7 @@ Attribute VB_Name = "modPDF2E"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.1.0"
+Public Const TOOL_VERSION As String = "1.2.0"
 Public Const TOOL_STAND As String = "26.10.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 

@@ -21,7 +21,7 @@ def name(n,ref): wb.defined_names[n]=DefinedName(n,attr_text=ref)
 ws=wb.active; ws.title="Start"
 ws.column_dimensions['A'].width=4; ws.column_dimensions['B'].width=26; ws.column_dimensions['C'].width=100
 lines=[("PDF2E",Font(bold=True,size=22,color="7A4A12")),
-("PDF-Rechnungen als E-Rechnung (ZUGFeRD)  |  Version 1.1.0",Font(size=11,color="555555")),
+("PDF-Rechnungen als E-Rechnung (ZUGFeRD)  |  Version 1.2.0",Font(size=11,color="555555")),
 ("",None),
 ("Ablauf",SEC),
 ("1. Makro 'RechnungEinlesen' starten und die BSI-PDF auswählen.",None),
@@ -33,7 +33,7 @@ lines=[("PDF2E",Font(bold=True,size=22,color="7A4A12")),
 ("Einrichtung (einmalig)",SEC),
 ("- Blatt 'Einstellungen': Pfad zu pdftotext.exe, Eingangs- und Ausgabeordner.",None),
 ("- Blätter 'Brauerei', 'Bankkonten', 'Zahlungskonditionen' pflegen; Standard-Einträge mit 'x' markieren.",None),
-("- Blatt 'Empfaenger': optional je Kundennummer Vorgabe-Konto, Kondition und Rechnungs-E-Mail.",None),
+("- Blatt 'Empfaenger': neue Kunden werden beim Einlesen automatisch angelegt. Nur abweichendes Konto, Kondition oder E-Mail eintragen (leer = Standard).",None),
 ("- Schaltflächen: einmalig das Makro 'PDF2E_Einrichten' ausführen (Alt+F8). Es legt die Schaltflächen hier und im Blatt 'Rechnung' an.",None),
 ("",None),
 ("Farben: gelb = Eingabe/änderbar, grün = berechnet, grau = Wert laut PDF (zum Abgleich).",Font(italic=True))]
@@ -175,7 +175,8 @@ for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xp
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 ws=wb.create_sheet("Versionshistorie")
 header(ws,["Version","Datum","Art","Änderung"],[10,12,16,100])
-for i,row in enumerate([("1.1.0","26.10.2026","Neue Funktion","Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen \"Anwendungslogo\" und \"Firmenlogo\")"),
+for i,row in enumerate([("1.2.0","26.10.2026","Neue Funktion","Neue Rechnungsempfänger werden automatisch im Blatt Empfaenger angelegt; Fehlerbehebung: umgebrochene Leergutzeilen der echten Windows-Ausgabe (Pfandteil vor der Artikelzeile) werden spaltengenau zusammengeführt"),
+("1.1.0","26.10.2026","Neue Funktion","Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen \"Anwendungslogo\" und \"Firmenlogo\")"),
 ("1.0.3","26.10.2026","Fehlerbehebung","Fehler beim Laden des Logos werden im Protokoll gemeldet"),
 ("1.0.2","26.10.2026","Fehlerbehebung","Schaltflächen als Formen statt Formularsteuerelemente (Anzeigefehler); Versionszeile im Blatt Start wird automatisch nachgeführt"),
 ("1.0.1","26.10.2026","Fehlerbehebung","Umgebrochene Leergutzeilen (pdftotext unter Windows) werden zusammengeführt; Option \"Textdatei behalten\""),
