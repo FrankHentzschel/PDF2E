@@ -3,8 +3,10 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
-## Unveröffentlicht
+## 1.0.2 – 26.10.2026
 
+- **Fehlerbehebung:** Die Schaltflächen wurden in neueren Excel-Versionen teils als „Das Bild kann nicht angezeigt werden“ dargestellt. Sie sind jetzt abgerundete Formen statt Formularsteuerelemente. `PDF2E_Einrichten` ersetzt die alten Schaltflächen.
+- **Fehlerbehebung:** Im Blatt „Start“ stand fest „Version 1.0.0“. Die Zeile wird jetzt beim Öffnen und bei `PDF2E_Einrichten` aus der Programmversion nachgeführt.
 - Vorlage: Firma („office & database development“) und Kontakt im Blatt „Einstellungen“ vorbelegt.
 
 ## 1.0.1 – 26.10.2026
