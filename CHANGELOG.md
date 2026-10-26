@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## 1.3.0 – 26.10.2026
+
+- **Neue Funktion:** Das Firmenlogo steht im Info-Fenster standardmäßig links, bündig mit dem Anwendungslogo. Mit der Einstellung „Firmenlogo-Position“ = RECHTS steht es wie bisher rechts.
+- Anwendungslogo `assets/pdf2e_logo.jpg` durch Franks Entwurf ersetzt.
+
 ## 1.2.0 – 26.10.2026
 
 - **Neue Funktion:** Ein Rechnungsempfänger, der noch nicht im Blatt „Empfaenger“ steht, wird beim Einlesen automatisch angelegt (Kundennr., Name, E-Mail, USt-IdNr.). Konto und Kondition bleiben leer, dann gilt der Standard-Eintrag. Nur Abweichungen trägt der Anwender ein.

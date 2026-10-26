@@ -16,7 +16,7 @@ Private Const HOEHE As Single = 300
 Private WithEvents mOk As MSForms.CommandButton
 
 Private Sub UserForm_Initialize()
-    Dim farbe As Long, y As Single, x0 As Single, firmenlogo As String, textBreite As Single
+    Dim farbe As Long, y As Single, x0 As Single, firmenlogo As String, textLinks As Single, textBreite As Single
     farbe = RGB(122, 74, 18)        ' PDF2E-Braun
 
     Me.Caption = TOOL_NAME
@@ -53,20 +53,26 @@ Private Sub UserForm_Initialize()
         .BackColor = RGB(220, 220, 220)
     End With
 
-    ' Firmenlogo des Entwicklers rechts neben dem Entwicklerblock.
+    ' Firmenlogo des Entwicklers neben dem Entwicklerblock, Standard links (bündig
+    ' mit dem Anwendungslogo), mit Einstellung "Firmenlogo-Position" = RECHTS rechts.
     ' "Logo-Datei" ist der Schlüssel bis 1.0.x und gilt als Firmenlogo weiter.
     firmenlogo = EinstellungOderLeer("Firmenlogo")
     If Len(firmenlogo) = 0 Then firmenlogo = EinstellungOderLeer("Logo-Datei")
+    textLinks = 24
     textBreite = BREITE - 52
-    If BildEinfuegen("imgFirma", firmenlogo, BREITE - 28 - 72, 134, 72, 72) Then textBreite = BREITE - 52 - 84
+    If UCase$(EinstellungOderLeer("Firmenlogo-Position")) = "RECHTS" Then
+        If BildEinfuegen("imgFirma", firmenlogo, BREITE - 28 - 84, 134, 84, 84) Then textBreite = BREITE - 52 - 96
+    Else
+        If BildEinfuegen("imgFirma", firmenlogo, 24, 134, 84, 84) Then textLinks = 120: textBreite = BREITE - 120 - 28
+    End If
 
     y = 134
-    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True, textBreite
-    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False, textBreite
-    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False, textBreite
+    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True, textLinks, textBreite
+    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False, textLinks, textBreite
+    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False, textLinks, textBreite
     y = y + 6
-    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False, textBreite
-    Zeile "lblSystem", "", SystemText(), y, False, textBreite
+    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False, textLinks, textBreite
+    Zeile "lblSystem", "", SystemText(), y, False, textLinks, textBreite
 
     With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & EinstellungOderLeer("Firma") & ". Alle Rechte vorbehalten.", _
                     24, HOEHE - 52, BREITE - 150, 14)
@@ -117,9 +123,9 @@ End Function
 
 ' Eine Textzeile; entfällt, wenn der Wert leer ist
 Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal wert As String, ByRef y As Single, _
-                  ByVal fett As Boolean, ByVal zeilenBreite As Single)
+                  ByVal fett As Boolean, ByVal zeilenLinks As Single, ByVal zeilenBreite As Single)
     If Len(Trim$(wert)) = 0 Then Exit Sub
-    With NeuesLabel(name, vorsatz & wert, 24, y, zeilenBreite, 15)
+    With NeuesLabel(name, vorsatz & wert, zeilenLinks, y, zeilenBreite, 15)
         .Font.Name = "Segoe UI": .Font.Size = 9: .Font.Bold = fett
         .ForeColor = RGB(48, 48, 48)
     End With
