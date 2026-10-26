@@ -3,6 +3,12 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## 1.1.0 – 26.10.2026
+
+- **Neue Funktion:** Das Info-Fenster zeigt zwei Logos. Oben steht das Logo der Anwendung (Einstellung „Anwendungslogo“), unten rechts neben den Entwicklerangaben das Firmenlogo (Einstellung „Firmenlogo“).
+- Der bisherige Schlüssel „Logo-Datei“ gilt weiter als Firmenlogo, wenn „Firmenlogo“ fehlt.
+- Neu: Anwendungslogo `assets/pdf2e_logo.jpg` (Entwurf).
+
 ## 1.0.3 – 26.10.2026
 
 - **Fehlerbehebung:** Kann das Info-Fenster die Logo-Datei nicht laden, steht der Grund jetzt im Protokoll. Bisher blieb die Fläche ohne Hinweis leer. Anlass: Eine WebP-Datei mit der Endung .gif wurde nicht angezeigt.

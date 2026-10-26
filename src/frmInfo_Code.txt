@@ -16,7 +16,7 @@ Private Const HOEHE As Single = 300
 Private WithEvents mOk As MSForms.CommandButton
 
 Private Sub UserForm_Initialize()
-    Dim farbe As Long, y As Single, logo As String, x0 As Single, fehler As String
+    Dim farbe As Long, y As Single, x0 As Single, firmenlogo As String, textBreite As Single
     farbe = RGB(122, 74, 18)        ' PDF2E-Braun
 
     Me.Caption = TOOL_NAME
@@ -30,28 +30,9 @@ Private Sub UserForm_Initialize()
         .BackColor = farbe
     End With
 
-    ' Logo (BMP, JPG, GIF; PNG wird von LoadPicture nicht unterstützt)
+    ' Anwendungslogo oben links (BMP, JPG, GIF; PNG wird von LoadPicture nicht unterstützt)
     x0 = 24
-    logo = EinstellungOderLeer("Logo-Datei")
-    If Len(logo) > 0 Then
-        If Len(Dir$(logo)) > 0 Then
-            On Error Resume Next
-            With Me.Controls.Add("Forms.Image.1", "imgLogo")
-                .Left = 24: .Top = 28: .Width = 80: .Height = 80
-                .BorderStyle = fmBorderStyleNone
-                .BackStyle = fmBackStyleTransparent
-                .PictureSizeMode = fmPictureSizeModeZoom
-                .Picture = LoadPicture(logo)
-                If Err.Number <> 0 Then fehler = Err.Description
-            End With
-            If Len(fehler) > 0 Then
-                Protokoll "Warnung", "Logo konnte nicht geladen werden (" & logo & "): " & fehler & _
-                          " - erlaubt sind echte BMP-, JPG- oder GIF-Dateien (kein PNG/WebP)."
-            End If
-            On Error GoTo 0
-            x0 = 120
-        End If
-    End If
+    If BildEinfuegen("imgAnwendung", EinstellungOderLeer("Anwendungslogo"), 24, 24, 84, 84) Then x0 = 120
 
     With NeuesLabel("lblName", TOOL_NAME, x0, 22, BREITE - x0 - 20, 40)
         .Font.Name = "Segoe UI": .Font.Size = 26: .Font.Bold = True
@@ -72,13 +53,20 @@ Private Sub UserForm_Initialize()
         .BackColor = RGB(220, 220, 220)
     End With
 
+    ' Firmenlogo des Entwicklers rechts neben dem Entwicklerblock.
+    ' "Logo-Datei" ist der Schlüssel bis 1.0.x und gilt als Firmenlogo weiter.
+    firmenlogo = EinstellungOderLeer("Firmenlogo")
+    If Len(firmenlogo) = 0 Then firmenlogo = EinstellungOderLeer("Logo-Datei")
+    textBreite = BREITE - 52
+    If BildEinfuegen("imgFirma", firmenlogo, BREITE - 28 - 72, 134, 72, 72) Then textBreite = BREITE - 52 - 84
+
     y = 134
-    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True
-    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False
-    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False
+    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True, textBreite
+    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False, textBreite
+    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False, textBreite
     y = y + 6
-    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False
-    Zeile "lblSystem", "", SystemText(), y, False
+    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False, textBreite
+    Zeile "lblSystem", "", SystemText(), y, False, textBreite
 
     With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & EinstellungOderLeer("Firma") & ". Alle Rechte vorbehalten.", _
                     24, HOEHE - 52, BREITE - 150, 14)
@@ -128,14 +116,39 @@ Private Function NeuesLabel(ByVal name As String, ByVal text As String, ByVal l 
 End Function
 
 ' Eine Textzeile; entfällt, wenn der Wert leer ist
-Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal wert As String, ByRef y As Single, ByVal fett As Boolean)
+Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal wert As String, ByRef y As Single, _
+                  ByVal fett As Boolean, ByVal zeilenBreite As Single)
     If Len(Trim$(wert)) = 0 Then Exit Sub
-    With NeuesLabel(name, vorsatz & wert, 24, y, BREITE - 52, 15)
+    With NeuesLabel(name, vorsatz & wert, 24, y, zeilenBreite, 15)
         .Font.Name = "Segoe UI": .Font.Size = 9: .Font.Bold = fett
         .ForeColor = RGB(48, 48, 48)
     End With
     y = y + 16
 End Sub
+
+' Bild aus Datei einfügen. Liefert True, wenn die Datei existiert (der Platz wird
+' dann freigehalten). Ladefehler landen im Protokoll und verhindern nie die Anzeige.
+Private Function BildEinfuegen(ByVal name As String, ByVal pfad As String, ByVal l As Single, ByVal t As Single, _
+                               ByVal w As Single, ByVal h As Single) As Boolean
+    Dim fehler As String
+    If Len(pfad) = 0 Then Exit Function
+    If Len(Dir$(pfad)) = 0 Then Exit Function
+    BildEinfuegen = True
+    On Error Resume Next
+    With Me.Controls.Add("Forms.Image.1", name)
+        .Left = l: .Top = t: .Width = w: .Height = h
+        .BorderStyle = fmBorderStyleNone
+        .BackStyle = fmBackStyleTransparent
+        .PictureSizeMode = fmPictureSizeModeZoom
+        .Picture = LoadPicture(pfad)
+        If Err.Number <> 0 Then fehler = Err.Description
+    End With
+    If Len(fehler) > 0 Then
+        Protokoll "Warnung", "Logo konnte nicht geladen werden (" & pfad & "): " & fehler & _
+                  " - erlaubt sind echte BMP-, JPG- oder GIF-Dateien (kein PNG/WebP)."
+    End If
+    On Error GoTo 0
+End Function
 
 Private Function StammOderLeer(ByVal schluessel As String) As String
     On Error Resume Next

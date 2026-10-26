@@ -21,7 +21,7 @@ def name(n,ref): wb.defined_names[n]=DefinedName(n,attr_text=ref)
 ws=wb.active; ws.title="Start"
 ws.column_dimensions['A'].width=4; ws.column_dimensions['B'].width=26; ws.column_dimensions['C'].width=100
 lines=[("PDF2E",Font(bold=True,size=22,color="7A4A12")),
-("PDF-Rechnungen als E-Rechnung (ZUGFeRD)  |  Version 1.0.3",Font(size=11,color="555555")),
+("PDF-Rechnungen als E-Rechnung (ZUGFeRD)  |  Version 1.1.0",Font(size=11,color="555555")),
 ("",None),
 ("Ablauf",SEC),
 ("1. Makro 'RechnungEinlesen' starten und die BSI-PDF auswählen.",None),
@@ -169,12 +169,14 @@ for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xp
 ("Entwickler","Frank Hentzschel","Wird im Info-Fenster angezeigt"),
 ("Firma","office & database development","Firmenbezeichnung für Info-Fenster und Copyright"),
 ("Kontakt","Frank.Hentzschel@gmx.de","z. B. E-Mail oder Webseite für Support"),
-("Logo-Datei","","Vollständiger Pfad zum Logo (BMP, JPG oder GIF, kein PNG), z. B. C:\\PDF2E\\logo.jpg"),
+("Anwendungslogo","","Logo von PDF2E oben im Info-Fenster (BMP, JPG oder GIF, kein PNG), z. B. C:\\PDF2E\\pdf2e_logo.jpg"),
+("Firmenlogo","","Logo des Entwicklers unten im Info-Fenster (BMP, JPG oder GIF, kein PNG)"),
 ("E-Rechnung-Adapter","STUB","STUB = Testlauf ohne Smart Tools (keine gültige E-Rechnung), SMARTTOOLS = echte Erzeugung")],2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 ws=wb.create_sheet("Versionshistorie")
 header(ws,["Version","Datum","Art","Änderung"],[10,12,16,100])
-for i,row in enumerate([("1.0.3","26.10.2026","Fehlerbehebung","Fehler beim Laden des Logos werden im Protokoll gemeldet"),
+for i,row in enumerate([("1.1.0","26.10.2026","Neue Funktion","Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen \"Anwendungslogo\" und \"Firmenlogo\")"),
+("1.0.3","26.10.2026","Fehlerbehebung","Fehler beim Laden des Logos werden im Protokoll gemeldet"),
 ("1.0.2","26.10.2026","Fehlerbehebung","Schaltflächen als Formen statt Formularsteuerelemente (Anzeigefehler); Versionszeile im Blatt Start wird automatisch nachgeführt"),
 ("1.0.1","26.10.2026","Fehlerbehebung","Umgebrochene Leergutzeilen (pdftotext unter Windows) werden zusammengeführt; Option \"Textdatei behalten\""),
 ("1.0.0","26.10.2026","Erstversion","Einlesen BSI-PDF, Prüfung, Stub-Adapter, Splash- und Info-Fenster, Schaltflächen")],2):

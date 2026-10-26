@@ -30,7 +30,7 @@ Kundenneutrales Werkzeug, Stand 26.10.2026. Erster Kunde ist die Krug-Bräu. Kun
 6. **Kompilieren:** *Debuggen > Kompilieren VBAProject*. Es dürfen keine Fehler erscheinen.
 7. **Einstellungen** im gleichnamigen Blatt ausfüllen:
    - Pfad zu pdftotext, Eingangs- und Ausgabeordner
-   - **Firma**, Kontakt, Logo-Datei (BMP, JPG oder GIF, kein PNG)
+   - **Firma**, Kontakt, Anwendungslogo (oben) und Firmenlogo (unten), jeweils BMP, JPG oder GIF, kein PNG
    - den Adapter auf `STUB` lassen
 8. **Schaltflächen:** Mit Alt+F8 einmalig `PDF2E_Einrichten` ausführen. Das Makro legt auf „Start“ und „Rechnung“ die Schaltflächen *PDF einlesen*, *Prüfen*, *E-Rechnung erzeugen* und *Info* an.
 9. Speichern, schließen und neu öffnen. Der Splash erscheint 3 Sekunden lang, ein Klick schließt ihn sofort.
