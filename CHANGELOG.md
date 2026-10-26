@@ -3,6 +3,13 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## 1.4.0 – 26.10.2026
+
+- **Neue Funktion:** Schaltfläche „E-Mail erstellen“ (vor „Info“). Outlook öffnet einen Entwurf an die E-Mail-Adresse des Empfängers, mit der E-Rechnung als Anhang. Die Mail wird nicht automatisch gesendet.
+- Betreff, Text, CC, BCC, Signatur und Absenderkonto stehen im neuen Blatt „Mailvorlage“ mit Platzhaltern wie `{Rechnungsnummer}` oder `{Betrag}`. Fehlt das Blatt, legt das Programm es mit einer Standardvorlage an.
+- Im Testmodus (Adapter STUB) beginnt der Betreff mit „TEST - keine gültige E-Rechnung“.
+- Voraussetzung: klassisches Outlook für Windows.
+
 ## 1.3.0 – 26.10.2026
 
 - **Neue Funktion:** Das Firmenlogo steht im Info-Fenster standardmäßig links, bündig mit dem Anwendungslogo. Mit der Einstellung „Firmenlogo-Position“ = RECHTS steht es wie bisher rechts.

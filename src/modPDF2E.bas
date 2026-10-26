@@ -11,7 +11,7 @@ Attribute VB_Name = "modPDF2E"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.3.0"
+Public Const TOOL_VERSION As String = "1.4.0"
 Public Const TOOL_STAND As String = "26.10.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 
@@ -90,6 +90,7 @@ Public Sub PDF2E_Einrichten()
     SchaltflaechenAnlegen ThisWorkbook.Worksheets("Start"), "B2"
     SchaltflaechenAnlegen ThisWorkbook.Worksheets(BLATT_RECHNUNG), "E2"
     StartblattAktualisieren
+    MailvorlageSicherstellen
     MsgBox "Schaltflächen angelegt.", vbInformation, TOOL_NAME
 End Sub
 
@@ -98,8 +99,8 @@ End Sub
 Private Sub SchaltflaechenAnlegen(ByVal ws As Worksheet, ByVal startZelle As String)
     Dim beschriftung As Variant, makro As Variant, i As Long
     Dim l As Double, t As Double, shp As Shape
-    beschriftung = Array("PDF einlesen", "Prüfen", "E-Rechnung erzeugen", "Info")
-    makro = Array("RechnungEinlesen", "PruefenStarten", "ZugferdErzeugen", "InfoAnzeigen")
+    beschriftung = Array("PDF einlesen", "Prüfen", "E-Rechnung erzeugen", "E-Mail erstellen", "Info")
+    makro = Array("RechnungEinlesen", "PruefenStarten", "ZugferdErzeugen", "EMailErstellen", "InfoAnzeigen")
 
     ' Vorhandene PDF2E-Schaltflächen entfernen (auch die Formularsteuerelemente bis 1.0.1)
     For i = ws.Shapes.Count To 1 Step -1

@@ -47,6 +47,14 @@ PDF2E verwendet das übliche Schema HAUPT.NEBEN.KORREKTUR (Semantic Versioning):
 
 Die Version steht als Konstante `TOOL_VERSION` in `modPDF2E`. Jede Änderung kommt zusätzlich ins Blatt „Versionshistorie“.
 
+## E-Mail-Versand
+
+Nach „E-Rechnung erzeugen“ öffnet die Schaltfläche **E-Mail erstellen** einen Outlook-Entwurf. Er geht an die E-Mail-Adresse aus dem Blatt „Empfaenger“ und hat die E-Rechnung als Anhang. Der Anwender prüft den Entwurf, ergänzt ihn bei Bedarf und sendet selbst.
+
+Betreff und Text stehen im Blatt **Mailvorlage**. Platzhalter: `{Rechnungsnummer}`, `{Rechnungsdatum}`, `{Betrag}`, `{Faellig}`, `{Zahlungsbedingung}`, `{Kundennummer}`, `{Kunde}`, `{Lieferort}`, `{Lieferschein}`, `{Absender}`, `{Dateiname}`. Außerdem lassen sich dort CC, BCC, Signatur (Ja/Nein) und ein abweichendes Absenderkonto einstellen.
+
+Voraussetzung ist das klassische Outlook für Windows. Das „neue Outlook“ bietet keine Schnittstelle für VBA.
+
 ## Test mit den Mustern
 
 Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, Nettosumme, MwSt und Rechnungsbetrag stimmen jeweils mit dem PDF überein:
