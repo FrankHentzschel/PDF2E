@@ -3,6 +3,10 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## 1.0.3 – 26.10.2026
+
+- **Fehlerbehebung:** Kann das Info-Fenster die Logo-Datei nicht laden, steht der Grund jetzt im Protokoll. Bisher blieb die Fläche ohne Hinweis leer. Anlass: Eine WebP-Datei mit der Endung .gif wurde nicht angezeigt.
+
 ## 1.0.2 – 26.10.2026
 
 - **Fehlerbehebung:** Die Schaltflächen wurden in neueren Excel-Versionen teils als „Das Bild kann nicht angezeigt werden“ dargestellt. Sie sind jetzt abgerundete Formen statt Formularsteuerelemente. `PDF2E_Einrichten` ersetzt die alten Schaltflächen.

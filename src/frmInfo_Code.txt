@@ -16,7 +16,7 @@ Private Const HOEHE As Single = 300
 Private WithEvents mOk As MSForms.CommandButton
 
 Private Sub UserForm_Initialize()
-    Dim farbe As Long, y As Single, logo As String, x0 As Single
+    Dim farbe As Long, y As Single, logo As String, x0 As Single, fehler As String
     farbe = RGB(122, 74, 18)        ' PDF2E-Braun
 
     Me.Caption = TOOL_NAME
@@ -42,7 +42,12 @@ Private Sub UserForm_Initialize()
                 .BackStyle = fmBackStyleTransparent
                 .PictureSizeMode = fmPictureSizeModeZoom
                 .Picture = LoadPicture(logo)
+                If Err.Number <> 0 Then fehler = Err.Description
             End With
+            If Len(fehler) > 0 Then
+                Protokoll "Warnung", "Logo konnte nicht geladen werden (" & logo & "): " & fehler & _
+                          " - erlaubt sind echte BMP-, JPG- oder GIF-Dateien (kein PNG/WebP)."
+            End If
             On Error GoTo 0
             x0 = 120
         End If
