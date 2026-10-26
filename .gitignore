@@ -1,0 +1,9 @@
+# Excel-Sperr- und Temporärdateien
+~$*
+*.tmp
+# Arbeitsmappen werden aus vorlage/ erzeugt bzw. als Release-Anhang verteilt
+*.xlsx
+*.xlsm
+*.xlam
+# Python
+__pycache__/

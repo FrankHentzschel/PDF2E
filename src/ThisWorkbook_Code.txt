@@ -1,0 +1,10 @@
+'==============================================================================
+' Code für "DieseArbeitsmappe" (ThisWorkbook)
+' Einrichtung: Im VBA-Editor Doppelklick auf "DieseArbeitsmappe" und diesen
+' Text einfügen.
+'==============================================================================
+Option Explicit
+
+Private Sub Workbook_Open()
+    PDF2E_Start
+End Sub

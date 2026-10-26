@@ -1,0 +1,15 @@
+# VBA-Quellen: im Arbeitsverzeichnis Windows-1252 mit CRLF (wie der VBA-Editor
+# sie exportiert und importiert), im Repository UTF-8 - so zeigt GitHub die
+# Umlaute korrekt an und Diffs bleiben lesbar.
+*.bas  text working-tree-encoding=CP1252 eol=crlf
+*.cls  text working-tree-encoding=CP1252 eol=crlf
+src/*.txt text working-tree-encoding=CP1252 eol=crlf
+
+*.py   text eol=lf
+*.md   text eol=lf
+tests/pdftotext/*.txt text eol=lf
+
+*.xlsx binary
+*.xlsm binary
+*.xlam binary
+*.pdf  binary

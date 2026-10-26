@@ -1,0 +1,138 @@
+'==============================================================================
+' Code für die UserForm "frmInfo" (PDF2E Splash- und Info-Fenster)
+'
+' Einrichtung: Im VBA-Editor Einfügen > UserForm, im Eigenschaftenfenster
+' (Name) = frmInfo setzen, dann diesen gesamten Text in das Codefenster der
+' UserForm einfügen (Rechtsklick auf frmInfo > Code anzeigen).
+' Alle Bedienelemente werden zur Laufzeit erzeugt - auf der Form selbst muss
+' nichts platziert werden.
+'==============================================================================
+Option Explicit
+
+Public AlsSplash As Boolean
+
+Private Const BREITE As Single = 430
+Private Const HOEHE As Single = 300
+Private WithEvents mOk As MSForms.CommandButton
+
+Private Sub UserForm_Initialize()
+    Dim farbe As Long, y As Single, logo As String, x0 As Single
+    farbe = RGB(122, 74, 18)        ' PDF2E-Braun
+
+    Me.Caption = TOOL_NAME
+    Me.BackColor = vbWhite
+    Me.Width = BREITE
+    Me.Height = HOEHE
+
+    ' Farbband oben
+    With NeuesLabel("lblBand", "", 0, 0, BREITE, 8)
+        .BackStyle = fmBackStyleOpaque
+        .BackColor = farbe
+    End With
+
+    ' Logo (BMP, JPG, GIF; PNG wird von LoadPicture nicht unterstützt)
+    x0 = 24
+    logo = EinstellungOderLeer("Logo-Datei")
+    If Len(logo) > 0 Then
+        If Len(Dir$(logo)) > 0 Then
+            On Error Resume Next
+            With Me.Controls.Add("Forms.Image.1", "imgLogo")
+                .Left = 24: .Top = 28: .Width = 80: .Height = 80
+                .BorderStyle = fmBorderStyleNone
+                .BackStyle = fmBackStyleTransparent
+                .PictureSizeMode = fmPictureSizeModeZoom
+                .Picture = LoadPicture(logo)
+            End With
+            On Error GoTo 0
+            x0 = 120
+        End If
+    End If
+
+    With NeuesLabel("lblName", TOOL_NAME, x0, 22, BREITE - x0 - 20, 40)
+        .Font.Name = "Segoe UI": .Font.Size = 26: .Font.Bold = True
+        .ForeColor = farbe
+    End With
+    With NeuesLabel("lblUntertitel", TOOL_UNTERTITEL, x0, 64, BREITE - x0 - 20, 18)
+        .Font.Name = "Segoe UI": .Font.Size = 10
+        .ForeColor = RGB(64, 64, 64)
+    End With
+    With NeuesLabel("lblVersion", VersionText(), x0, 86, BREITE - x0 - 20, 16)
+        .Font.Name = "Segoe UI": .Font.Size = 9
+        .ForeColor = RGB(110, 110, 110)
+    End With
+
+    ' Trennlinie
+    With NeuesLabel("lblLinie", "", 24, 122, BREITE - 52, 1)
+        .BackStyle = fmBackStyleOpaque
+        .BackColor = RGB(220, 220, 220)
+    End With
+
+    y = 134
+    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True
+    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False
+    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False
+    y = y + 6
+    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False
+    Zeile "lblSystem", "", SystemText(), y, False
+
+    With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & EinstellungOderLeer("Firma") & ". Alle Rechte vorbehalten.", _
+                    24, HOEHE - 52, BREITE - 150, 14)
+        .Font.Name = "Segoe UI": .Font.Size = 8
+        .ForeColor = RGB(140, 140, 140)
+    End With
+
+    Set mOk = Me.Controls.Add("Forms.CommandButton.1", "cmdOk")
+    With mOk
+        .Caption = "OK"
+        .Left = BREITE - 110: .Top = HOEHE - 62: .Width = 80: .Height = 24
+        .Default = True: .Cancel = True
+    End With
+End Sub
+
+' Splash: ohne OK-Schaltfläche, nicht modal, schließt per Zeitgeber oder Klick.
+' Info: mit OK-Schaltfläche, modal.
+Public Sub Anzeigen(ByVal splash As Boolean)
+    AlsSplash = splash
+    mOk.Visible = Not splash
+    If splash Then
+        Me.Show vbModeless
+        Me.Repaint
+        DoEvents
+    Else
+        Me.Show vbModal
+    End If
+End Sub
+
+Private Sub mOk_Click()
+    Unload Me
+End Sub
+
+Private Sub UserForm_Click()
+    If AlsSplash Then Unload Me
+End Sub
+
+Private Function NeuesLabel(ByVal name As String, ByVal text As String, ByVal l As Single, ByVal t As Single, _
+                            ByVal w As Single, ByVal h As Single) As MSForms.Label
+    Dim lbl As MSForms.Label
+    Set lbl = Me.Controls.Add("Forms.Label.1", name)
+    lbl.Caption = text
+    lbl.Left = l: lbl.Top = t: lbl.Width = w: lbl.Height = h
+    lbl.BackStyle = fmBackStyleTransparent
+    lbl.WordWrap = False
+    Set NeuesLabel = lbl
+End Function
+
+' Eine Textzeile; entfällt, wenn der Wert leer ist
+Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal wert As String, ByRef y As Single, ByVal fett As Boolean)
+    If Len(Trim$(wert)) = 0 Then Exit Sub
+    With NeuesLabel(name, vorsatz & wert, 24, y, BREITE - 52, 15)
+        .Font.Name = "Segoe UI": .Font.Size = 9: .Font.Bold = fett
+        .ForeColor = RGB(48, 48, 48)
+    End With
+    y = y + 16
+End Sub
+
+Private Function StammOderLeer(ByVal schluessel As String) As String
+    On Error Resume Next
+    StammOderLeer = Stamm(schluessel)
+End Function

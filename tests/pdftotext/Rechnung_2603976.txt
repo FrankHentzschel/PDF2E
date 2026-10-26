@@ -1,0 +1,77 @@
+        Markgrafen
+        Getränkevertrieb GmbH
+        Lichtenfelser Str. 6
+
+                                                                 R E C H N U N G
+        95326 Kulmbach
+
+        per E-Mail                                               11770    2603976       25.10.2026
+
+
+        Wir lieferten an: MGV - Stadtsteinach
+                          Getränkemarkt Hainbergstrasse 15
+                          95346 Stadtsteinach
+
+
+   ARTNR BEZEICHNUNG                    Ka/Fa     Hl./Fl.        PREIS   BETRAG EUR
+  ──────────────────────────────────────────────────────────────────────────────────
+  149943 Lieferschein:    4918 vom 20.10.2026      3
+       1 Lagerbier 0,5 / P11               10        200         9,400        94,00
+       3 Festbier 0,5 / P13                 5        100         9,500        47,50
+       4 Bockbier 0,5 / P16                 5        100        10,750        53,75
+         * bernstein *
+       5 Bernstein Radler 0,5 / P 5         5        100         9,100        45,50
+      11 Breitenlesauer Hell 0,33 / P11     5        100         7,600        38,00
+      15 Breitenlesauer Hell 0,5 / P11     10        200         9,500        95,00
+     300 Kirsch Gaas-Seidla 0,5 l          10        200        11,200       112,00
+     308 Urstoff - Keller 0,5 / P12        10        200         9,500        95,00
+       6 Cola Mix 0,5                      10        200         6,300        63,00
+      84 Lagerbier Dose 5,0L/ P11           1     0,05000        8,450         8,45
+      94 Hell Dose 5,0L / P11               1     0,05000        8,450         8,45
+     322 Gaas - 5 Liter Dose                1     0,05000        9,050         9,05
+     320 Kellerbier Dose 5,0/P12            1     0,05000        8,450         8,45
+     100 Palette(n)                         2
+         Leergutrückgabe:
+   99030 Palette                            2
+  Aktion                            Eigenbier Flasche                50 Ka/F     0,50         25,00-
+  Aktion                  Biermischgetränk             10 Ka/F     0,50        5,00-
+  ──────────────────────────────────────────────────────────────────────────────────
+         WARENWERT:                                                          648,15
+
+   Marktnummer: 907406
+   ILN: 4014418074061
+   gam406@markgrafen.com
+   Rechnung per Mail *
+   ──────────────────────────────────────────────────────────────────────────────────
+   LEERGUT-KONTO:            ALTER     MENGE  MENGE NEUER MENGE  PFAND         PFAND
+                             SALDO LIEFERUNG ZURÜCK SALDO  DIFF.  SATZ        BETRAG
+99001 Euro 0,5                            65           65    65   3,10        201,50
+99010 Gourmet 0,33                         5            5     5   3,10         15,50
+99030 Palette                                        2       2
+  ──────────────────────────────────────────────────────────────────────────────────
+         ÜBERTRAG:                                                           865,15
+    Markgrafen
+    Getränkevertrieb GmbH
+    Lichtenfelser Str. 6
+
+                                                         R E C H N U N G
+    95326 Kulmbach                                                 Blatt:   2
+
+    per E-Mail                                           11770   2603976    25.10.2026
+
+
+    Wir lieferten an: MGV - Stadtsteinach
+                      Getränkemarkt Hainbergstrasse 15
+                      95346 Stadtsteinach
+
+
+ ARTNR BEZEICHNUNG                    Ka/Fa      Hl./Fl.        PREIS  BETRAG EUR
+──────────────────────────────────────────────────────────────────────────────────
+       ÜBERTRAG:                                                           865,15
+──────────────────────────────────────────────────────────────────────────────────
+                            Zwischensumme (incl.       217,00 Pfand)       865,15
+                          + 19,00 % MwSt    (auf       865,15 )            164,38
+                            ──────────────────────────────────────────────────────
+                            RECHNUNGSBETRAG                        EUR   1.029,53
+                            ══════════════════════════════════════════════════════
+
