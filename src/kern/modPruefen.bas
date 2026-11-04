@@ -1,6 +1,6 @@
 Attribute VB_Name = "modPruefen"
 '==============================================================================
-' Prüfung vor dem Erzeugen: Pflichtangaben und Summenabgleich mit dem PDF
+' Prüfung vor dem Erzeugen: Pflichtangaben und Summenabgleich mit der Quellrechnung
 '==============================================================================
 Option Explicit
 
@@ -48,6 +48,8 @@ Public Function RechnungPruefen() As Boolean
         If Len(Stamm(CStr(k))) = 0 Then Fehler "Brauerei-Stammdaten: '" & k & "' fehlt."
     Next k
 
+    PlatzhalterPruefen
+
     ' Positionen
     Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
     letzte = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
@@ -59,13 +61,13 @@ Public Function RechnungPruefen() As Boolean
             erwartet = RundenKfm(CCur(ws.Cells(z, SP_MENGE).Value) * CCur(ws.Cells(z, SP_PREIS).Value))
             If erwartet <> CCur(ws.Cells(z, SP_BETRAG).Value) Then
                 Fehler "Zeile " & z & ": Menge x Preis = " & Format$(erwartet, "#,##0.00") & _
-                       ", Betrag laut PDF = " & Format$(ws.Cells(z, SP_BETRAG).Value, "#,##0.00")
+                       ", Betrag laut Rechnung = " & Format$(ws.Cells(z, SP_BETRAG).Value, "#,##0.00")
             End If
         End If
         If typ = "Pfand" Then pfand = pfand + ws.Cells(z, SP_BETRAG).Value Else ware = ware + ws.Cells(z, SP_BETRAG).Value
     Next z
 
-    ' Summenabgleich mit den Werten aus dem PDF
+    ' Summenabgleich mit den Werten aus der Quellrechnung (Felder f_PDF_*)
     Abgleich "Warenwert (Ware - Aktionen)", ware, Feld("f_PDF_Warenwert").Value
     Abgleich "Pfand", pfand, Feld("f_PDF_Pfand").Value
     Abgleich "Nettosumme", Feld("f_Netto").Value, Feld("f_PDF_Netto").Value
@@ -81,6 +83,28 @@ Private Sub Pflicht(ByVal feldName As String, ByVal bezeichnung As String)
     If Len(Trim$(CStr(Feld(feldName).Value))) = 0 Then Fehler bezeichnung & " fehlt."
 End Sub
 
+' Platzhalter in den Stammdaten (z. B. bei neuen Kunden, solange echte Daten fehlen).
+' Mit dem Adapter SMARTTOOLS ist das ein Fehler, damit keine echte Rechnung mit
+' Fantasiedaten entsteht; im Testmodus (STUB) nur eine Warnung.
+Private Sub PlatzhalterPruefen()
+    Dim muster As Variant, blatt As Variant, c As Range, m As Variant, meldung As String
+    muster = Array("DE123456789", "TESTDEFFXXX", "HRB 12345", "123/456/78901", "DE87123456781234567890", "DE58876543211234567890")
+    For Each blatt In Array("Brauerei", "Bankkonten")
+        For Each c In ThisWorkbook.Worksheets(blatt).UsedRange
+            For Each m In muster
+                If InStr(1, Replace(CStr(c.Value), " ", ""), Replace(m, " ", ""), vbTextCompare) > 0 Then
+                    meldung = "Platzhalter im Blatt '" & blatt & "', Zelle " & c.Address(False, False) & ": " & c.Value
+                    If UCase$(EinstellungOderLeer("E-Rechnung-Adapter")) = "STUB" Then
+                        Protokoll "Warnung", meldung
+                    Else
+                        Fehler meldung & " - bitte die echten Daten eintragen."
+                    End If
+                End If
+            Next m
+        Next c
+    Next blatt
+End Sub
+
 Private Sub GlnPruefen(ByVal feldName As String, ByVal bezeichnung As String)
     Dim s As String, i As Long, summe As Long
     s = Trim$(CStr(Feld(feldName).Value))
@@ -94,9 +118,9 @@ End Sub
 
 Private Sub Abgleich(ByVal was As String, ByVal berechnet As Variant, ByVal laut As Variant)
     If Len(CStr(laut)) = 0 Then
-        Fehler was & ": Wert aus dem PDF fehlt."
+        Fehler was & ": Wert aus der Rechnung fehlt."
     ElseIf RundenKfm(CCur(berechnet)) <> RundenKfm(CCur(laut)) Then
-        Fehler was & ": berechnet " & Format$(berechnet, "#,##0.00") & ", laut PDF " & Format$(laut, "#,##0.00")
+        Fehler was & ": berechnet " & Format$(berechnet, "#,##0.00") & ", laut Rechnung " & Format$(laut, "#,##0.00")
     End If
 End Sub
 

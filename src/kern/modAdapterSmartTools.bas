@@ -383,8 +383,3 @@ Private Function GlnBereinigt(ByVal gln As Variant) As String
         If Mid$(s, i, 1) Like "#" Then GlnBereinigt = GlnBereinigt & Mid$(s, i, 1)
     Next i
 End Function
-
-Private Function StammOderLeer(ByVal schluessel As String) As String
-    On Error Resume Next
-    StammOderLeer = Stamm(schluessel)
-End Function

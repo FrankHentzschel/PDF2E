@@ -336,34 +336,3 @@ Private Sub EmpfaengerSetzen(links As Collection, rePLZ As Object)
     Feld("f_KPLZ").Value = "'" & m.SubMatches(0)
     Feld("f_KOrt").Value = Trim$(m.SubMatches(1))
 End Sub
-
-Private Sub PositionAnhaengen(ByVal typ As String, ByVal artNr As String, ByVal bez As String, _
-                              ByVal menge As Double, ByVal einheit As String, ByVal preis As Currency, _
-                              ByVal betrag As Currency, ByVal info As String)
-    Dim ws As Worksheet, z As Long
-    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
-    z = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row + 1
-    ws.Cells(z, SP_TYP).Value = typ
-    ws.Cells(z, SP_ARTNR).Value = "'" & artNr
-    ws.Cells(z, SP_BEZ).Value = bez
-    ws.Cells(z, SP_MENGE).Value = menge
-    ws.Cells(z, SP_EINHEIT).Value = einheit
-    ws.Cells(z, SP_PREIS).Value = preis
-    ws.Cells(z, SP_BETRAG).Value = betrag
-    ws.Cells(z, SP_INFO).Value = "'" & info
-End Sub
-
-' Bei genau einem MwSt-Satz gilt er für alle Zeilen. Bei mehreren muss der Anwender zuordnen.
-Private Sub SteuersatzSetzen(saetze As Collection)
-    Dim ws As Worksheet, z As Long, letzte As Long
-    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
-    letzte = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
-    If saetze.Count = 1 Then
-        For z = 2 To letzte
-            ws.Cells(z, SP_USTSATZ).Value = saetze(1)
-            ws.Cells(z, SP_USTKAT).Value = "S"
-        Next z
-    Else
-        Protokoll "Warnung", saetze.Count & " MwSt-Sätze auf der Rechnung. Bitte Spalte 'USt-Satz' je Position ausfüllen."
-    End If
-End Sub

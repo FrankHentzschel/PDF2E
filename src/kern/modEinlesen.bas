@@ -1,6 +1,8 @@
 Attribute VB_Name = "modEinlesen"
 '==============================================================================
-' Ablauf "PDF-Rechnung einlesen": Auswahl, Auslesen, Vorgaben, Prüfung
+' Ablauf "Rechnung einlesen": Auswahl, Auslesen, Vorgaben, Prüfung.
+' Auswahl und Auslesen der Quelle liefert das Produkt (modProdukt:
+' QuelleAuswaehlen, QuelleEinlesen), der Rest ist für PDF2E und XL2E gleich.
 '==============================================================================
 Option Explicit
 
@@ -15,7 +17,7 @@ Private Const FELDER_LEEREN As String = _
 
 Public Sub RechnungEinlesen()
     Dim pfad As String
-    pfad = PdfAuswaehlen()
+    pfad = QuelleAuswaehlen()
     If Len(pfad) = 0 Then Exit Sub
 
     On Error GoTo Fehler
@@ -26,10 +28,7 @@ Public Sub RechnungEinlesen()
     Feld("f_Quelldatei").Value = pfad
     Protokoll "Info", "Einlesen: " & pfad
 
-    Select Case UCase$(Einstellung("Layout"))
-        Case "BSI": ParseBSI PdfZuText(pfad), Einstellung("Layout-Variante")
-        Case Else: Err.Raise vbObjectError + 20, , "Unbekanntes Layout '" & Einstellung("Layout") & "' (Blatt Einstellungen)."
-    End Select
+    QuelleEinlesen pfad
 
     VorgabenSetzen
 
@@ -45,17 +44,6 @@ Fehler:
     Protokoll "Fehler", Err.Description
     MsgBox "Einlesen fehlgeschlagen:" & vbLf & Err.Description, vbExclamation
 End Sub
-
-Private Function PdfAuswaehlen() As String
-    With Application.FileDialog(msoFileDialogFilePicker)
-        .Title = "BSI-Rechnung (PDF) auswählen"
-        .AllowMultiSelect = False
-        .Filters.Clear
-        .Filters.Add "PDF-Dateien", "*.pdf"
-        If Len(Einstellung("Eingangsordner")) > 0 Then .InitialFileName = Einstellung("Eingangsordner") & "\"
-        If .Show = -1 Then PdfAuswaehlen = .SelectedItems(1)
-    End With
-End Function
 
 Private Sub ArbeitsblaetterLeeren()
     Dim n As Variant, ws As Worksheet
@@ -81,7 +69,7 @@ End Sub
 Private Sub VorgabenSetzen()
     Dim wsE As Worksheet, z As Long
     Set wsE = ThisWorkbook.Worksheets("Empfaenger")
-    z = TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value))
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
 
     If z > 0 Then
         If Len(wsE.Cells(z, 3).Value) > 0 Then Feld("f_KEmail").Value = wsE.Cells(z, 3).Value
@@ -99,7 +87,7 @@ Private Sub VorgabenSetzen()
         If z > 0 Then Feld("f_Kondition").Value = ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(z, 1).Value
     End If
 
-    If TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value)) = 0 Then EmpfaengerAnlegen
+    If TabellenZeile("Empfaenger", EmpfaengerSchluessel()) = 0 Then EmpfaengerAnlegen
     ReweErkennen
 End Sub
 
@@ -112,7 +100,7 @@ Private Sub EmpfaengerAnlegen()
     Set wsE = ThisWorkbook.Worksheets("Empfaenger")
     z = wsE.Cells(wsE.Rows.Count, 1).End(xlUp).Row + 1
     wsE.Cells(z, 1).NumberFormat = "@"
-    wsE.Cells(z, 1).Value = CStr(Feld("f_KundenNr").Value)
+    wsE.Cells(z, 1).Value = EmpfaengerSchluessel()
     wsE.Cells(z, 2).Value = Feld("f_KName").Value
     wsE.Cells(z, 3).Value = Feld("f_KEmail").Value
     wsE.Cells(z, 4).Value = Feld("f_KUstId").Value
@@ -120,7 +108,7 @@ Private Sub EmpfaengerAnlegen()
     wsE.Cells(z, 7).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & _
                             " aus RE " & Feld("f_RechNr").Value & " - Konto/Kondition leer = Standard"
     wsE.Range(wsE.Cells(z, 1), wsE.Cells(z, SP_E_VORGABEN)).Interior.Color = RGB(255, 248, 225)
-    Protokoll "Info", "Neuer Empfänger " & Feld("f_KundenNr").Value & " (" & Feld("f_KName").Value & _
+    Protokoll "Info", "Neuer Empfänger " & EmpfaengerSchluessel() & " (" & Feld("f_KName").Value & _
                       ") im Blatt 'Empfaenger' angelegt. Abweichendes Konto oder Kondition dort eintragen."
 End Sub
 
@@ -129,7 +117,7 @@ End Sub
 Private Sub ReweErkennen()
     Dim wsE As Worksheet, z As Long
     VorgabenSpalteSicherstellen
-    z = TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value))
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
     If z = 0 Then Exit Sub
     Set wsE = ThisWorkbook.Worksheets("Empfaenger")
     If Len(Trim$(CStr(wsE.Cells(z, SP_E_VORGABEN).Value))) > 0 Then Exit Sub
@@ -143,7 +131,7 @@ End Sub
 ' "Vorgaben"), z. B. REWE. Leer = keine.
 Public Function EmpfaengerVorgabe() As String
     Dim z As Long
-    z = TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value))
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
     If z > 0 Then EmpfaengerVorgabe = UCase$(Trim$(CStr(ThisWorkbook.Worksheets("Empfaenger").Cells(z, SP_E_VORGABEN).Value)))
 End Function
 
