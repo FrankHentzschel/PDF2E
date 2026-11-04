@@ -68,7 +68,7 @@ REWE (REWE-Zentralfinanz, Startpaket E-Rechnung 1.7 vom 14.07.2026) verlangt unt
 - Beim Einlesen wird ein Rechnungsempfänger, dessen Name mit „REWE“ beginnt und der eine RE-GLN hat, im Blatt „Empfaenger“ in der Spalte **Vorgaben** mit `REWE` markiert. Von Hand geht das genauso.
 - Die **USt-IdNr. von REWE** steht nicht auf der BSI-Rechnung. Sie muss einmal im Blatt „Empfaenger“ eingetragen werden, sonst meldet die Prüfung einen Fehler.
 - Der Hinweistext steht in der Einstellung „REWE Hinweis AAK“.
-- Der Mailtext an REWE darf keine buchungsrelevanten Inhalte enthalten. Seit 1.6.0 lässt der E-Mail-Entwurf an REWE Betrag, Fälligkeit und Zahlungsbedingung automatisch weg: „über {Betrag} EUR“ wird aus dem Satz gestrichen, jede andere Zeile mit `{Betrag}`, `{Faellig}` oder `{Zahlungsbedingung}` entfällt. Die Mailvorlage bleibt für alle anderen Empfänger unverändert.
+- Der Mailtext an REWE darf keine buchungsrelevanten Inhalte enthalten (Startpaket: „keine buchungsrelevanten Inhalte im E-Mail-Text“, ohne nähere Festlegung). Seit 1.6.0 bekommt REWE deshalb einen neutralen Text ohne Rechnungsdaten: Anrede, „anbei erhalten Sie unsere E-Rechnung im ZUGFeRD-Format“, Gruß. Der Text steht im Blatt „Mailvorlage“ in der Zeile **Text REWE**. Fehlt die Zeile (Mappen vor 1.6.0), gilt dieser Standard. Betrag, Fälligkeit und Zahlungsbedingung werden auch dort immer entfernt. Der Betreff bleibt wie in der Vorlage, z. B. „Rechnung 2603587 vom 27.09.2026“.
 - Noch nicht umgesetzt: Bestellnummer (BT-13), Kostenstelle (BT-19), Konditionsschlüssel (OSI) und Profil EXTENDED. Die BSI-Rechnungen enthalten diese Angaben nicht.
 
 ## Versionsnummern

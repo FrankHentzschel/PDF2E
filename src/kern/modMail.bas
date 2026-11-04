@@ -37,12 +37,16 @@ Public Sub EMailErstellen()
     an = Trim$(CStr(Feld("f_KEmail").Value))
     betreff = VorlageWert("Betreff")
     text = VorlageWert("Text")
-    ' REWE: keine buchungsrelevanten Inhalte in der Mail. Betrag, Fälligkeit und
-    ' Zahlungsbedingung werden automatisch weggelassen, ohne Rückfrage.
+    ' REWE: keine buchungsrelevanten Inhalte im Mailtext. Statt der normalen
+    ' Vorlage gilt ein neutraler Text ohne Rechnungsdaten (Zeile "Text REWE",
+    ' fehlt sie, der eingebaute Standard). Betrag, Fälligkeit und
+    ' Zahlungsbedingung werden zur Sicherheit immer entfernt.
     If EmpfaengerVorgabe() = "REWE" Then
-        betreff = OhneBuchungsangaben(betreff)
-        If Len(betreff) = 0 Then betreff = "Rechnung {Rechnungsnummer} vom {Rechnungsdatum}"
+        text = VorlageWert("Text REWE")
+        If Len(text) = 0 Then text = StandardTextREWE()
         text = OhneBuchungsangaben(text)
+        betreff = OhneBuchungsangaben(betreff)
+        If Len(betreff) = 0 Then betreff = "Rechnung {Rechnungsnummer}"
     End If
     betreff = PlatzhalterErsetzen(betreff)
     text = PlatzhalterErsetzen(text)
@@ -105,6 +109,7 @@ Public Sub MailvorlageSicherstellen()
         Array("Feld", "Inhalt", "Hinweis"), _
         Array("Betreff", "Rechnung {Rechnungsnummer} vom {Rechnungsdatum}", "Platzhalter siehe unten"), _
         Array("Text", "", "Zeilenumbruch in der Zelle mit Alt+Eingabe"), _
+        Array("Text REWE", "", "Text für REWE-Empfänger: ohne Rechnungsdaten (REWE: keine buchungsrelevanten Inhalte)"), _
         Array("CC", "", "optional, mehrere Adressen mit ; trennen"), _
         Array("BCC", "", "optional, z. B. eigene Adresse für die Ablage"), _
         Array("Signatur einfügen", "Ja", "Ja = Outlook-Standardsignatur unter dem Text, Nein = ohne"), _
@@ -116,6 +121,7 @@ Public Sub MailvorlageSicherstellen()
         ws.Cells(i + 1, 1).Resize(1, 3).Value = zeilen(i)
     Next i
     ws.Cells(3, 2).Value = StandardText()      ' einzeln, da länger als 255 Zeichen
+    ws.Cells(4, 2).Value = StandardTextREWE()
     With ws.Range("A1:C1")
         .Font.Bold = True
         .Font.Color = vbWhite
@@ -124,12 +130,13 @@ Public Sub MailvorlageSicherstellen()
     ws.Columns(1).ColumnWidth = 20
     ws.Columns(2).ColumnWidth = 90
     ws.Columns(3).ColumnWidth = 55
-    ws.Range("B2:B7").Interior.Color = RGB(255, 248, 225)
-    ws.Range("B2:B9").WrapText = True
-    ws.Range("A1:C9").VerticalAlignment = xlTop
-    ws.Range("C2:C9").Font.Italic = True
-    ws.Range("C2:C9").Font.Color = RGB(119, 119, 119)
+    ws.Range("B2:B8").Interior.Color = RGB(255, 248, 225)
+    ws.Range("B2:B10").WrapText = True
+    ws.Range("A1:C10").VerticalAlignment = xlTop
+    ws.Range("C2:C10").Font.Italic = True
+    ws.Range("C2:C10").Font.Color = RGB(119, 119, 119)
     ws.Rows(3).AutoFit
+    ws.Rows(4).AutoFit
     If Not vorher Is Nothing Then vorher.Activate
     Protokoll "Info", "Blatt '" & BLATT_MAILVORLAGE & "' mit Standardvorlage angelegt."
 End Sub
@@ -171,6 +178,14 @@ Private Function PlatzhalterErsetzen(ByVal s As String) As String
     s = Replace(s, "{Absender}", Stamm("Name"))
     s = Replace(s, "{Dateiname}", Mid$(CStr(Feld("f_Ausgabedatei").Value), InStrRev(CStr(Feld("f_Ausgabedatei").Value), "\") + 1))
     PlatzhalterErsetzen = s
+End Function
+
+' Neutraler Mailtext für REWE: nur Anrede, Hinweis auf die E-Rechnung, Gruß
+Private Function StandardTextREWE() As String
+    StandardTextREWE = "Sehr geehrte Damen und Herren," & vbLf & vbLf & _
+        "anbei erhalten Sie unsere E-Rechnung im ZUGFeRD-Format." & vbLf & vbLf & _
+        "Mit freundlichen Grüßen" & vbLf & _
+        "{Absender}"
 End Function
 
 ' Entfernt Betrag, Fälligkeit und Zahlungsbedingung aus einer Vorlage (vor dem
