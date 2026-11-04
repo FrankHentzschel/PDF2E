@@ -4,7 +4,7 @@
 
 Das Tool liest die PDF ein, zeigt die Daten zur Kontrolle an und ergänzt sie aus Stammdaten wie Bankkonto und Zahlungskondition. Danach prüft es die Summen gegen das PDF und bettet das XML über die SmartTools-E-Rechnungsbibliothek ins PDF ein.
 
-Aktueller Stand: **1.0.1**, Smart-Tools-Anbindung noch als Stub. Siehe [CHANGELOG.md](CHANGELOG.md).
+Aktueller Stand: **1.5.0**, mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Aufbau
 
@@ -26,4 +26,4 @@ Aktueller Stand: **1.0.1**, Smart-Tools-Anbindung noch als Stub. Siehe [CHANGELO
 
 ## Voraussetzungen
 
-Windows mit Excel 2016 oder neuer und `pdftotext.exe` aus den [Xpdf command line tools](https://www.xpdfreader.com/download.html). Später kommt die SmartTools E-Rechnung VBA-Bibliothek dazu.
+Windows mit Excel 2016 oder neuer und `pdftotext.exe` aus den [Xpdf command line tools](https://www.xpdfreader.com/download.html). Für echte E-Rechnungen zusätzlich die SmartTools E-Rechnung VBA-Bibliothek mit Lizenz je Arbeitsplatz.

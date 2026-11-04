@@ -33,7 +33,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+-?)\s*$")
     Set reAkt = NeuesRegex("^\s*Aktion\s+(.+?)\s+(\d+)\s+Ka/F\s+([\d.,]+)\s+([\d.,]+)-\s*$")
-    Set reLG = NeuesRegex("^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:.*\s)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
+    Set reLG = NeuesRegex("^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:(.*\S)\s+)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
     Set reWW = NeuesRegex("WARENWERT:\s+([\d.,]+-?)")
     Set reZS = NeuesRegex("Zwischensumme\s+\(incl\.\s+([\d.,]+-?)\s+Pfand\)\s+([\d.,]+-?)")
     Set reSt = NeuesRegex("([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
@@ -220,11 +220,73 @@ Private Function Ueberlagern(ByVal a As String, ByVal b As String) As String
     Ueberlagern = erg
 End Function
 
+' Leergutzeile übernehmen. Gruppen: 0 ArtNr, 1 Bezeichnung, 2 Mengen vor MENGE DIFF.,
+' 3 MENGE DIFF., 4 Pfandsatz, 5 Pfandbetrag.
+' Standard (Einstellung "Pfand aufteilen" = Ja): Lieferung und Rücknahme als zwei
+' Positionen mit positiver bzw. negativer Menge, wie es z. B. REWE verlangt
+' (keine Saldierung). Lässt sich die Zeile nicht eindeutig aufteilen, bleibt es
+' bei einer Position mit der Differenz und einer Warnung im Protokoll.
 Private Sub PfandAnhaengen(ByVal m As Object)
-    PositionAnhaengen "Pfand", m.SubMatches(0), "Pfand " & Trim$(m.SubMatches(1)), _
-        CDbl(ZahlDE(m.SubMatches(2))), Einstellung("Einheit Pfand"), ZahlDE(m.SubMatches(3)), _
-        ZahlDE(m.SubMatches(4)), ""
+    Dim artNr As String, bez As String, einheit As String
+    Dim diff As Double, satz As Currency, betrag As Currency, lief As Double, zur As Double
+
+    artNr = m.SubMatches(0)
+    bez = "Pfand " & Trim$(m.SubMatches(1))
+    einheit = Einstellung("Einheit Pfand")
+    diff = CDbl(ZahlDE(m.SubMatches(3)))
+    satz = ZahlDE(m.SubMatches(4))
+    betrag = ZahlDE(m.SubMatches(5))
+
+    If UCase$(EinstellungOderLeer("Pfand aufteilen")) <> "NEIN" Then
+        If LeergutAufteilen(CStr(m.SubMatches(2)), diff, lief, zur) Then
+            If lief <> 0 Then PositionAnhaengen "Pfand", artNr, bez & " Lieferung", lief, einheit, satz, RundenKfm(CCur(lief) * satz), ""
+            If zur <> 0 Then PositionAnhaengen "Pfand", artNr, bez & " Rücknahme", -zur, einheit, satz, RundenKfm(CCur(-zur) * satz), ""
+            Exit Sub
+        End If
+        Protokoll "Warnung", "Pfand nicht in Lieferung und Rücknahme aufteilbar, Differenz übernommen: " & Trim$(m.Value)
+    End If
+    PositionAnhaengen "Pfand", artNr, bez, diff, einheit, satz, betrag, ""
 End Sub
+
+' Lieferung und Rücknahme aus den Mengen vor MENGE DIFF. bestimmen. "mitte" enthält
+' eine Auswahl aus ALTER SALDO, LIEFERUNG, ZURÜCK (leere Spalten fehlen im Text)
+' und als letzte Zahl NEUER SALDO. Es gilt LIEFERUNG - ZURÜCK = DIFF und
+' ALT + DIFF = NEU. Gesucht ist die eindeutige Zuordnung, die beides erfüllt.
+' Mit tests/parser_test.py (leergut_aufteilen) abgleichen.
+Private Function LeergutAufteilen(ByVal mitte As String, ByVal diff As Double, _
+                                  ByRef lief As Double, ByRef zur As Double) As Boolean
+    Dim t() As String, w() As Double, n As Long, i As Long, k As Long, maske As Long, bits As Long
+    Dim v(0 To 2) As Double, neu As Double, anzahl As Long, tL As Double, tZ As Double
+
+    mitte = Trim$(mitte)
+    If Len(mitte) = 0 Then Exit Function
+    Do While InStr(mitte, "  ") > 0: mitte = Replace(mitte, "  ", " "): Loop
+    t = Split(mitte, " ")
+    n = UBound(t)                       ' Anzahl Werte vor NEUER SALDO
+    If n > 3 Then Exit Function
+    ReDim w(0 To n)
+    For i = 0 To n
+        If Not t(i) Like "*#*" Then Exit Function
+        w(i) = CDbl(ZahlDE(t(i)))
+    Next i
+    neu = w(n)
+
+    For maske = 0 To 7                  ' Bit 0 = ALT, 1 = LIEFERUNG, 2 = ZURÜCK
+        bits = (maske And 1) + ((maske And 2) \ 2) + ((maske And 4) \ 4)
+        If bits = n Then
+            i = 0
+            For k = 0 To 2
+                If maske And (2 ^ k) Then v(k) = w(i): i = i + 1 Else v(k) = 0
+            Next k
+            If v(1) - v(2) = diff And v(0) + diff = neu Then
+                If anzahl = 0 Or v(1) <> tL Or v(2) <> tZ Then anzahl = anzahl + 1
+                tL = v(1): tZ = v(2)
+            End If
+        End If
+    Next maske
+
+    If anzahl = 1 Then lief = tL: zur = tZ: LeergutAufteilen = True
+End Function
 
 Private Sub LieferortLesen(zeilen() As String, ByVal i As Long)
     Dim z As Collection, s As String, m As Object

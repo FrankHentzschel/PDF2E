@@ -4,6 +4,9 @@ Attribute VB_Name = "modEinlesen"
 '==============================================================================
 Option Explicit
 
+' Spalte "Vorgaben" im Blatt "Empfaenger" (z. B. REWE)
+Public Const SP_E_VORGABEN As Long = 8
+
 ' Eingabefelder, die vor jedem Einlesen geleert werden (Formelfelder fehlen bewusst)
 Private Const FELDER_LEEREN As String = _
     "f_Quelldatei,f_RechNr,f_RechDatum,f_LSNr,f_LSDatum,f_KundenNr,f_KGLN,f_KName,f_KStrasse,f_KPLZ,f_KOrt," & _
@@ -97,6 +100,7 @@ Private Sub VorgabenSetzen()
     End If
 
     If TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value)) = 0 Then EmpfaengerAnlegen
+    ReweErkennen
 End Sub
 
 ' Neuen Rechnungsempfänger mit den aktuellen Vorgaben ins Blatt "Empfaenger"
@@ -115,7 +119,45 @@ Private Sub EmpfaengerAnlegen()
     ' Konto und Kondition bleiben leer = es gilt der jeweilige Standard-Eintrag
     wsE.Cells(z, 7).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & _
                             " aus RE " & Feld("f_RechNr").Value & " - Konto/Kondition leer = Standard"
-    wsE.Range(wsE.Cells(z, 1), wsE.Cells(z, 7)).Interior.Color = RGB(255, 248, 225)
+    wsE.Range(wsE.Cells(z, 1), wsE.Cells(z, SP_E_VORGABEN)).Interior.Color = RGB(255, 248, 225)
     Protokoll "Info", "Neuer Empfänger " & Feld("f_KundenNr").Value & " (" & Feld("f_KName").Value & _
                       ") im Blatt 'Empfaenger' angelegt. Abweichendes Konto oder Kondition dort eintragen."
+End Sub
+
+' REWE-Zentralregulierung erkennen (Rechnungsempfänger mit RE-GLN, Name beginnt
+' mit "REWE") und in der Spalte "Vorgaben" vermerken, sofern dort nichts steht.
+Private Sub ReweErkennen()
+    Dim wsE As Worksheet, z As Long
+    VorgabenSpalteSicherstellen
+    z = TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value))
+    If z = 0 Then Exit Sub
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    If Len(Trim$(CStr(wsE.Cells(z, SP_E_VORGABEN).Value))) > 0 Then Exit Sub
+    If UCase$(Left$(Trim$(CStr(Feld("f_KName").Value)), 4)) = "REWE" And Len(Feld("f_KGLN").Value) > 0 Then
+        wsE.Cells(z, SP_E_VORGABEN).Value = "REWE"
+        Protokoll "Info", "Empfänger " & Feld("f_KundenNr").Value & " als REWE erkannt (Blatt 'Empfaenger', Spalte 'Vorgaben')."
+    End If
+End Sub
+
+' Sondervorgaben des aktuellen Rechnungsempfängers (Blatt "Empfaenger", Spalte
+' "Vorgaben"), z. B. REWE. Leer = keine.
+Public Function EmpfaengerVorgabe() As String
+    Dim z As Long
+    z = TabellenZeile("Empfaenger", CStr(Feld("f_KundenNr").Value))
+    If z > 0 Then EmpfaengerVorgabe = UCase$(Trim$(CStr(ThisWorkbook.Worksheets("Empfaenger").Cells(z, SP_E_VORGABEN).Value)))
+End Function
+
+' Ältere Arbeitsmappen: Überschrift der Spalte "Vorgaben" ergänzen
+Private Sub VorgabenSpalteSicherstellen()
+    With ThisWorkbook.Worksheets("Empfaenger").Cells(1, SP_E_VORGABEN)
+        If Len(.Value) = 0 Then
+            .Value = "Vorgaben"
+            .Font.Bold = True
+            .Interior.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Interior.Color
+            .Font.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Font.Color
+            .AddComment "Sondervorgaben des Empfängers: REWE = Vorgaben der REWE-Zentralregulierung " & _
+                        "(Hinweis Entgeltminderungen, Pflicht: RE-GLN, Lieferort-GLN, USt-IdNr.)"
+            .ColumnWidth = 14
+        End If
+    End With
 End Sub

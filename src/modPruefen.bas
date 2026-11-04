@@ -26,6 +26,22 @@ Public Function RechnungPruefen() As Boolean
         Fehler "Bankkonto '" & Feld("f_Konto").Value & "' gibt es im Blatt 'Bankkonten' nicht."
     End If
 
+    ' GLN (13 Stellen mit Prüfziffer), sofern angegeben
+    GlnPruefen "f_KGLN", "GLN Rechnungsempfänger"
+    GlnPruefen "f_LGLN", "GLN Lieferort"
+
+    ' Sondervorgaben des Empfängers (Blatt "Empfaenger", Spalte "Vorgaben")
+    If EmpfaengerVorgabe() = "REWE" Then
+        Pflicht "f_KGLN", "REWE: GLN Rechnungsempfänger (RE-GLN)"
+        Pflicht "f_LGLN", "REWE: GLN Lieferort (WE-GLN)"
+        If Len(Trim$(CStr(Feld("f_KUstId").Value))) = 0 Then
+            Fehler "REWE: USt-IdNr. des Rechnungsempfängers fehlt. Bitte im Blatt 'Empfaenger' (Spalte USt-IdNr.) eintragen."
+        End If
+        If UCase$(EinstellungOderLeer("Pfand aufteilen")) = "NEIN" Then
+            Fehler "REWE: Pfand muss in Lieferung und Rücknahme aufgeteilt sein (Einstellung 'Pfand aufteilen' = Ja)."
+        End If
+    End If
+
     ' Pflichtangaben Brauerei
     Dim k As Variant
     For Each k In Array("Name", "Straße", "PLZ", "Ort", "Land", "USt-IdNr")
@@ -63,6 +79,17 @@ End Function
 
 Private Sub Pflicht(ByVal feldName As String, ByVal bezeichnung As String)
     If Len(Trim$(CStr(Feld(feldName).Value))) = 0 Then Fehler bezeichnung & " fehlt."
+End Sub
+
+Private Sub GlnPruefen(ByVal feldName As String, ByVal bezeichnung As String)
+    Dim s As String, i As Long, summe As Long
+    s = Trim$(CStr(Feld(feldName).Value))
+    If Len(s) = 0 Then Exit Sub
+    If Len(s) <> 13 Or Not s Like String$(13, "#") Then Fehler bezeichnung & " '" & s & "' hat nicht 13 Ziffern.": Exit Sub
+    For i = 1 To 12
+        summe = summe + CLng(Mid$(s, i, 1)) * IIf(i Mod 2 = 0, 3, 1)
+    Next i
+    If (10 - summe Mod 10) Mod 10 <> CLng(Right$(s, 1)) Then Fehler bezeichnung & " '" & s & "': Prüfziffer stimmt nicht."
 End Sub
 
 Private Sub Abgleich(ByVal was As String, ByVal berechnet As Variant, ByVal laut As Variant)

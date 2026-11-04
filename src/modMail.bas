@@ -37,6 +37,16 @@ Public Sub EMailErstellen()
     an = Trim$(CStr(Feld("f_KEmail").Value))
     betreff = PlatzhalterErsetzen(VorlageWert("Betreff"))
     text = PlatzhalterErsetzen(VorlageWert("Text"))
+    ' REWE: keine buchungsrelevanten Inhalte im Mailtext, eine Rechnung je Mail
+    If EmpfaengerVorgabe() = "REWE" Then
+        If InStr(VorlageWert("Text"), "{Betrag}") > 0 Or InStr(VorlageWert("Text"), "{Faellig}") > 0 Or _
+           InStr(VorlageWert("Text"), "{Zahlungsbedingung}") > 0 Then
+            Protokoll "Warnung", "REWE verlangt einen Mailtext ohne buchungsrelevante Inhalte. " & _
+                                 "Betrag, Fälligkeit und Zahlungsbedingung bitte vor dem Senden aus dem Text entfernen."
+            MsgBox "Hinweis REWE: Der Mailtext darf keine buchungsrelevanten Inhalte enthalten " & _
+                   "(Betrag, Fälligkeit, Zahlungsbedingung). Bitte im Entwurf entfernen.", vbInformation, TOOL_NAME
+        End If
+    End If
     If UCase$(EinstellungOderLeer("E-Rechnung-Adapter")) = "STUB" Then
         betreff = "TEST - keine gültige E-Rechnung - " & betreff
     End If
