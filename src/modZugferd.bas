@@ -6,7 +6,7 @@ Attribute VB_Name = "modZugferd"
 ' "E-Rechnung-Adapter"):
 '   STUB        modAdapterStub: kopiert die PDF und schreibt die Daten als XML
 '               daneben. KEINE gültige E-Rechnung, nur zum Testen des Ablaufs.
-'   SMARTTOOLS  modAdapterSmartTools: Smart-Tools-Bibliothek (nach Lieferung)
+'   SMARTTOOLS  modAdapterSmartTools: Smart-Tools-Bibliothek, Profil EN16931
 '==============================================================================
 Option Explicit
 

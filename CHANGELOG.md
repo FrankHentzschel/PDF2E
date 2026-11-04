@@ -3,6 +3,15 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## 1.5.0 – 04.11.2026
+
+- **Neue Funktion: echte E-Rechnung mit Smart Tools.** Mit der Einstellung „E-Rechnung-Adapter“ = `SMARTTOOLS` erzeugt PDF2E eine ZUGFeRD-Rechnung im Profil EN16931. Die Bibliothek bettet `factur-x.xml` in eine Kopie der BSI-PDF ein und wandelt sie in PDF/A-3. Vor dem Speichern prüft die Bibliothek die Rechnung (`Validate`). Bei Regelverletzungen entsteht keine Datei, die Meldungen stehen im Protokoll und im Prüfbericht.
+- Übergeben werden unter anderem: GLN von Rechnungsempfänger und Lieferort mit Schema 0088, USt-IdNr. des Empfängers, Lieferschein, Lieferdatum, Bankverbindung, Zahlungsbedingung und Fälligkeit. Aktionen gehen als Abschlag auf Belegebene in die Rechnung. Pfandpositionen sind als Pfand gekennzeichnet (DEPOSIT_SYSTEM / RETURNABLE).
+- **Neue Funktion:** Leergut wird in Lieferung (positive Menge) und Rücknahme (negative Menge) aufgeteilt, statt nur die Differenz zu übernehmen. REWE verlangt das. Einstellung „Pfand aufteilen“ (Standard Ja).
+- **Neue Funktion:** REWE-Vorgaben je Empfänger (Blatt „Empfaenger“, neue Spalte „Vorgaben“). Ein REWE-Empfänger mit RE-GLN wird beim Einlesen erkannt und markiert. Dann gilt: Hinweis auf Entgeltminderungen (Code AAK) in der Rechnung; RE-GLN, Lieferort-GLN und USt-IdNr. sind Pflicht; beim E-Mail-Entwurf erscheint ein Hinweis, wenn der Text Betrag, Fälligkeit oder Zahlungsbedingung enthält.
+- Die Prüfung kontrolliert GLN auf 13 Ziffern und Prüfziffer.
+- Neue optionale Einträge: Brauerei „GLN“; Einstellungen „Pfand aufteilen“, „Pfandart“, „Prüfbericht anzeigen“, „REWE Hinweis AAK“. Fehlen sie, gelten die Standardwerte.
+
 ## 1.4.0 – 26.10.2026
 
 - **Neue Funktion:** Schaltfläche „E-Mail erstellen“ (vor „Info“). Outlook öffnet einen Entwurf an die E-Mail-Adresse des Empfängers, mit der E-Rechnung als Anhang. Die Mail wird nicht automatisch gesendet.

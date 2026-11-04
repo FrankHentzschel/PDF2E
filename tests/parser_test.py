@@ -16,7 +16,7 @@ import sys
 RE_LS = re.compile(r"^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
 RE_POS = re.compile(r"^\s*(\d+)\s+(.+?)\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+-?)\s*$")
 RE_AKT = re.compile(r"^\s*Aktion\s+(.+?)\s+(\d+)\s+Ka/F\s+([\d.,]+)\s+([\d.,]+)-\s*$")
-RE_LG = re.compile(r"^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:.*\s)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
+RE_LG = re.compile(r"^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:(.*\S)\s+)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
 RE_WW = re.compile(r"WARENWERT:\s+([\d.,]+-?)")
 RE_ZS = re.compile(r"Zwischensumme\s+\(incl\.\s+([\d.,]+-?)\s+Pfand\)\s+([\d.,]+-?)")
 RE_ST = re.compile(r"([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
@@ -41,8 +41,33 @@ def zahl(s):
     return -v if neg else v
 
 
+def leergut_aufteilen(mitte, diff):
+    """Lieferung und Rücknahme aus den Mengen vor MENGE DIFF. bestimmen.
+
+    mitte: Zahlen zwischen Bezeichnung und MENGE DIFF., also eine Auswahl aus
+    ALTER SALDO, LIEFERUNG, ZURÜCK (leere Spalten fehlen) und NEUER SALDO.
+    Es gilt LIEFERUNG - ZURÜCK = DIFF und ALT + DIFF = NEU. Gesucht ist die
+    eindeutige Zuordnung, die beides erfüllt. Ergebnis (lief, zur) oder None.
+    """
+    werte = [zahl(t) for t in mitte.split()] if mitte else []
+    if not werte:
+        return None
+    neu, vorne = werte[-1], werte[:-1]
+    if len(vorne) > 3:
+        return None
+    loesungen = set()
+    for maske in range(8):                      # Bit 0 = ALT, 1 = LIEF, 2 = ZUR
+        if bin(maske).count("1") != len(vorne):
+            continue
+        it = iter(vorne)
+        alt, lief, zur = [next(it) if maske & (1 << k) else 0.0 for k in range(3)]
+        if abs(lief - zur - diff) < 1e-9 and abs(alt + diff - neu) < 1e-9:
+            loesungen.add((lief, zur))
+    return loesungen.pop() if len(loesungen) == 1 else None
+
+
 def parse(text):
-    r = {"ware": 0.0, "pfand": 0.0, "mwst": 0.0, "satz": None, "zeilenfehler": [], "warnungen": []}
+    r = {"ware": 0.0, "pfand": 0.0, "mwst": 0.0, "satz": None, "zeilenfehler": [], "warnungen": [], "pfandzeilen": []}
     modus = "pos"
     lg_offen = ""   # unvollständige Leergutzeile (Rohzeile mit Einrückung)
 
@@ -53,10 +78,19 @@ def parse(text):
         lg_offen = ""
 
     def pfand(m):
-        menge, satz, betrag = zahl(m[3]), zahl(m[4]), zahl(m[5])
-        r["pfand"] += betrag
+        menge, satz, betrag = zahl(m[4]), zahl(m[5]), zahl(m[6])
         if abs(round(menge * satz, 2) - betrag) > 0.005:
             r["zeilenfehler"].append(m[0].strip())
+        teile = leergut_aufteilen(m[3], menge)
+        if teile is None:
+            r["warnungen"].append("Pfand nicht aufteilbar: " + m[0].strip())
+            r["pfand"] += betrag
+            return
+        lief, zur = teile
+        for mg in (lief, -zur):
+            if mg:
+                r["pfand"] += round(mg * satz, 2)
+                r["pfandzeilen"].append((m[1], mg, satz))
 
     for seite in text.split("\f"):
         zeilen = seite.split("\n")
@@ -147,6 +181,8 @@ def pruefe(pfad):
     fehler += [f"Zeile Menge x Preis: {z}" for z in r["zeilenfehler"]]
     fehler += r["warnungen"]
     print(("OK    " if not fehler else "FEHLER") + "  " + os.path.basename(pfad))
+    for art, mg, satz in r["pfandzeilen"]:
+        print(f"        Pfand {art}: {mg:+g} x {satz:.2f}")
     for f in fehler:
         print("        " + f)
     return not fehler

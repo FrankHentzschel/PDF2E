@@ -127,7 +127,7 @@ ws=wb.create_sheet("Brauerei")
 header(ws,["Angabe","Wert","Hinweis"],[22,45,45])
 data=[("Name","Konrad Krug Brauerei und Tanzsaal GmbH","BT-27"),("Straße","Breitenlesau 1b","BT-35"),("PLZ","91344","BT-38"),("Ort","Waischenfeld","BT-37"),("Land","DE","BT-40"),
 ("USt-IdNr","DE132316559","BT-31, von Frank bestätigt"),("Steuernummer","208/130/70031","BT-32"),("Registernummer","HRB 1273, Amtsgericht Bayreuth","BT-30"),
-("Geschäftsführer","Konrad Krug",""),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
+("Geschäftsführer","Konrad Krug",""),("GLN","","BT-29, Schema 0088; eigene GLN der Brauerei (von REWE gewünscht), leer = keine"),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
 for i,(a,b,c) in enumerate(data,2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; x.number_format='@'; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 
@@ -146,7 +146,7 @@ for i,row in enumerate([("Sofort","Zahlbar sofort ohne Abzug.",0,"x"),("14 Tage 
 
 # Empfaenger
 ws=wb.create_sheet("Empfaenger")
-header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung"],[11,36,30,16,26,26,30])
+header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben"],[11,36,30,16,26,26,30,14])
 for j,v in enumerate(["11770","Markgrafen Getränkevertrieb GmbH","gam406@markgrafen.com","","","","Beispiel aus Muster RE 2603976; E-Mail bitte bestätigen"],1):
     c=ws.cell(2,j,v); c.fill=INP
 ws["A2"].number_format='@'
@@ -164,7 +164,11 @@ for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xp
 ("Layout-Variante","STANDARD","Abweichungen je Kunde innerhalb des BSI-Layouts; STANDARD = wie Muster Krug-Bräu"),
 ("Einheit Ware","C62","UN/ECE-Code; C62 = Stück (Kasten/Fass)"),
 ("Einheit Pfand","C62",""),
-("Profil","EN16931","ZUGFeRD-Profil"),
+("Pfand aufteilen","Ja","Ja = Leergut-Lieferung und -Rücknahme als getrennte Positionen (REWE-Pflicht), Nein = nur die Differenz"),
+("Pfandart","RETURNABLE","Kennzeichnung der Pfandpositionen: RETURNABLE (Mehrweg) oder DISPOSABLE (Einweg)"),
+("Profil","EN16931","ZUGFeRD-Profil (derzeit nur EN16931)"),
+("Prüfbericht anzeigen","Ja","Ja = bei Regelverletzungen den Prüfbericht von Smart Tools anzeigen"),
+("REWE Hinweis AAK","Bezüglich der Entgeltminderungen verweisen wir auf die aktuellen Zahlungs- und Konditionsvereinbarungen","Pflichttext für Empfänger mit Vorgaben = REWE (BT-22, Code AAK)"),
 ("Quellcode-Ordner","","Nur Entwicklung: Zielordner für PDF2E_Exportieren (leer = Unterordner src neben der Mappe)"),
 ("Textdatei behalten","Nein","Ja = pdftotext-Ausgabe im TEMP-Ordner behalten (Fehlersuche), Pfad steht im Protokoll"),
 ("Entwickler","Frank Hentzschel","Wird im Info-Fenster angezeigt"),
@@ -177,7 +181,8 @@ for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xp
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 ws=wb.create_sheet("Versionshistorie")
 header(ws,["Version","Datum","Art","Änderung"],[10,12,16,100])
-for i,row in enumerate([("1.4.0","26.10.2026","Neue Funktion","E-Mail-Entwurf in Outlook mit der E-Rechnung als Anhang, Text aus dem Blatt Mailvorlage (Platzhalter)"),
+for i,row in enumerate([("1.5.0","04.11.2026","Neue Funktion","Smart-Tools-Adapter (ZUGFeRD EN16931, Prüfung vor dem Speichern); Pfand getrennt nach Lieferung und Rücknahme; REWE-Vorgaben je Empfänger (Hinweis AAK, Pflicht RE-GLN, WE-GLN, USt-IdNr.); GLN-Prüfziffer"),
+("1.4.0","26.10.2026","Neue Funktion","E-Mail-Entwurf in Outlook mit der E-Rechnung als Anhang, Text aus dem Blatt Mailvorlage (Platzhalter)"),
 ("1.3.0","26.10.2026","Neue Funktion","Firmenlogo im Info-Fenster standardmäßig links, wahlweise rechts (Einstellung \"Firmenlogo-Position\")"),
 ("1.2.0","26.10.2026","Neue Funktion","Neue Rechnungsempfänger werden automatisch im Blatt Empfaenger angelegt; Fehlerbehebung: umgebrochene Leergutzeilen der echten Windows-Ausgabe (Pfandteil vor der Artikelzeile) werden spaltengenau zusammengeführt"),
 ("1.1.0","26.10.2026","Neue Funktion","Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen \"Anwendungslogo\" und \"Firmenlogo\")"),
