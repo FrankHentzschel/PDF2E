@@ -35,18 +35,17 @@ Public Sub EMailErstellen()
 
     MailvorlageSicherstellen
     an = Trim$(CStr(Feld("f_KEmail").Value))
-    betreff = PlatzhalterErsetzen(VorlageWert("Betreff"))
-    text = PlatzhalterErsetzen(VorlageWert("Text"))
-    ' REWE: keine buchungsrelevanten Inhalte im Mailtext, eine Rechnung je Mail
+    betreff = VorlageWert("Betreff")
+    text = VorlageWert("Text")
+    ' REWE: keine buchungsrelevanten Inhalte in der Mail. Betrag, Fälligkeit und
+    ' Zahlungsbedingung werden automatisch weggelassen, ohne Rückfrage.
     If EmpfaengerVorgabe() = "REWE" Then
-        If InStr(VorlageWert("Text"), "{Betrag}") > 0 Or InStr(VorlageWert("Text"), "{Faellig}") > 0 Or _
-           InStr(VorlageWert("Text"), "{Zahlungsbedingung}") > 0 Then
-            Protokoll "Warnung", "REWE verlangt einen Mailtext ohne buchungsrelevante Inhalte. " & _
-                                 "Betrag, Fälligkeit und Zahlungsbedingung bitte vor dem Senden aus dem Text entfernen."
-            MsgBox "Hinweis REWE: Der Mailtext darf keine buchungsrelevanten Inhalte enthalten " & _
-                   "(Betrag, Fälligkeit, Zahlungsbedingung). Bitte im Entwurf entfernen.", vbInformation, TOOL_NAME
-        End If
+        betreff = OhneBuchungsangaben(betreff)
+        If Len(betreff) = 0 Then betreff = "Rechnung {Rechnungsnummer} vom {Rechnungsdatum}"
+        text = OhneBuchungsangaben(text)
     End If
+    betreff = PlatzhalterErsetzen(betreff)
+    text = PlatzhalterErsetzen(text)
     If UCase$(EinstellungOderLeer("E-Rechnung-Adapter")) = "STUB" Then
         betreff = "TEST - keine gültige E-Rechnung - " & betreff
     End If
@@ -172,6 +171,32 @@ Private Function PlatzhalterErsetzen(ByVal s As String) As String
     s = Replace(s, "{Absender}", Stamm("Name"))
     s = Replace(s, "{Dateiname}", Mid$(CStr(Feld("f_Ausgabedatei").Value), InStrRev(CStr(Feld("f_Ausgabedatei").Value), "\") + 1))
     PlatzhalterErsetzen = s
+End Function
+
+' Entfernt Betrag, Fälligkeit und Zahlungsbedingung aus einer Vorlage (vor dem
+' Ersetzen der Platzhalter). "über {Betrag} EUR" wird aus dem Satz gestrichen,
+' jede andere Zeile mit einem dieser Platzhalter entfällt ganz.
+Private Function OhneBuchungsangaben(ByVal s As String) As String
+    Dim zeilen() As String, i As Long, z As String, erg As String, vorher As String, re As Object
+
+    s = Replace(Replace(s, vbCrLf, vbLf), vbCr, vbLf)
+    vorher = s
+    Set re = NeuesRegex("\s*(über|in Höhe von)\s+\{Betrag\}\s*(EUR|Euro|€)?")
+    re.Global = True
+    s = re.Replace(s, "")
+    zeilen = Split(s, vbLf)
+    For i = 0 To UBound(zeilen)
+        z = zeilen(i)
+        If InStr(z, "{Betrag}") = 0 And InStr(z, "{Faellig}") = 0 And InStr(z, "{Zahlungsbedingung}") = 0 Then
+            erg = erg & z & vbLf
+        End If
+    Next i
+    If Len(erg) > 0 Then erg = Left$(erg, Len(erg) - 1)
+    Do While InStr(erg, vbLf & vbLf & vbLf) > 0             ' doppelte Leerzeilen zusammenfassen
+        erg = Replace(erg, vbLf & vbLf & vbLf, vbLf & vbLf)
+    Loop
+    If erg <> vorher Then Protokoll "Info", "REWE: Betrag, Fälligkeit und Zahlungsbedingung aus der Mail weggelassen."
+    OhneBuchungsangaben = erg
 End Function
 
 Private Function DatumText(ByVal v As Variant) As String

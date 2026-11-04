@@ -17,6 +17,7 @@ Erstversion für Brauereien, deren BSI-Software Rechnungen als Excel-Datei ausgi
 - **Umbau:** PDF2E und XL2E nutzen denselben Kern (`src/kern`). Produktspezifisch ist nur `modProdukt` mit Name, Version und Datenquelle. `modPDF2E` heißt jetzt `modAnwendung`, `PDF2E_Start` ruft `AnwendungStart` auf. Update-Schritte in der Anleitung.
 - **Neue Funktion:** Einstellung „Sammelkundennummern“. Bei diesen Kundennummern legt das Programm je Kunde einen eigenen Empfänger an (Schlüssel Kundennr. / Name / PLZ).
 - **Neue Funktion:** Die Prüfung erkennt Platzhalter in den Stammdaten (z. B. `DE123456789`, BIC `TESTDEFFXXX`). Mit Smart Tools ist das ein Fehler, im Testmodus eine Warnung.
+- **Geändert:** E-Mail an REWE enthält Betrag, Fälligkeit und Zahlungsbedingung nicht mehr. Das Programm lässt sie automatisch weg, statt nur einen Hinweis anzuzeigen.
 - Beschriftungen „laut PDF“ heißen in der Prüfung jetzt „laut Rechnung“.
 
 ## PDF2E 1.5.0 – 04.11.2026
