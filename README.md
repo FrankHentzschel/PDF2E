@@ -23,7 +23,7 @@ Aktueller Stand: **PDF2E 1.6.0** und **XL2E 1.0.0**, beide mit Smart-Tools-Anbin
 | `vorlage/build_xlsx.py` | Erzeugt `PDF2E.xlsx` oder `XL2E.xlsx` (Blätter, Feldnamen, Formeln, Auswahllisten) |
 | `vorlage/pakete.py` | Erzeugt die Auslieferungs-ZIPs beider Produkte |
 | `tests/pdftotext/`, `tests/parser_test.py` | Muster und Regressionstest der PDF-Einleselogik |
-| `tests/xlsx/`, `tests/xl_parser_test.py` | Muster und Regressionstest der Excel-Einleselogik |
+| `tests/xl_parser_test.py` | Regressionstest der Excel-Einleselogik; die Muster in `tests/xlsx/` liegen nicht im Repository |
 | `ANLEITUNG.md`, `ANLEITUNG_XL2E.md` | Einrichtung, Test und bekannte Grenzen |
 
 Der Kern ruft nur, was `modProdukt` festlegt: die Konstanten `TOOL_NAME`, `TOOL_VERSION`, `TOOL_STAND`, `TOOL_UNTERTITEL`, `QUELLE_SCHALTFLAECHE` und die Prozeduren `QuelleAuswaehlen`, `QuelleEinlesen`, `QuellPdfErstellen`. Ein weiteres Quellformat braucht nur ein neues Produktverzeichnis.

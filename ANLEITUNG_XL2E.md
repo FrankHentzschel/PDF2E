@@ -74,7 +74,7 @@ Einstellung „Briefkopf“ = Nein lässt Kopf- und Fußzeile so, wie sie in der
 
 ## Test mit den Mustern
 
-Die Auswertungslogik ist an drei Musterrechnungen gegengeprüft (`tests/xlsx`, Python-Nachbau `tests/xl_parser_test.py`). Warenwert, Pfand, Zwischensumme, MwSt und Rechnungsbetrag stimmen jeweils überein:
+Die Auswertungslogik ist an drei Musterrechnungen gegengeprüft (Python-Nachbau `tests/xl_parser_test.py`). Warenwert, Pfand, Zwischensumme, MwSt und Rechnungsbetrag stimmen jeweils überein:
 
 | Rechnung | Kundennr. | Besonderheit |
 | --- | --- | --- |
