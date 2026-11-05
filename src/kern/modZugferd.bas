@@ -1,10 +1,11 @@
 Attribute VB_Name = "modZugferd"
 '==============================================================================
-' ZUGFeRD erzeugen: PDF kopieren, XML per Smart Tools einbetten und validieren
+' ZUGFeRD erzeugen: PDF bereitstellen (modProdukt.QuellPdfErstellen),
+' XML per Smart Tools einbetten und validieren
 '
 ' Die eigentliche Erzeugung übernimmt ein Adapter (Blatt Einstellungen,
 ' "E-Rechnung-Adapter"):
-'   STUB        modAdapterStub: kopiert die PDF und schreibt die Daten als XML
+'   STUB        modAdapterStub: lässt die PDF unverändert und schreibt die Daten als XML
 '               daneben. KEINE gültige E-Rechnung, nur zum Testen des Ablaufs.
 '   SMARTTOOLS  modAdapterSmartTools: Smart-Tools-Bibliothek, Profil EN16931
 '==============================================================================
@@ -30,7 +31,7 @@ Public Sub ZugferdErzeugen()
     End If
 
     On Error GoTo Fehler
-    FileCopy quelle, ziel          ' Original-PDF bleibt unverändert
+    QuellPdfErstellen quelle, ziel ' PDF2E: Kopie der Original-PDF, XL2E: PDF aus der Excel-Rechnung
     Select Case adapter
         Case "STUB": StubEinbetten ziel
         Case "SMARTTOOLS": SmartToolsEinbetten ziel

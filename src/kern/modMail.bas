@@ -35,18 +35,21 @@ Public Sub EMailErstellen()
 
     MailvorlageSicherstellen
     an = Trim$(CStr(Feld("f_KEmail").Value))
-    betreff = PlatzhalterErsetzen(VorlageWert("Betreff"))
-    text = PlatzhalterErsetzen(VorlageWert("Text"))
-    ' REWE: keine buchungsrelevanten Inhalte im Mailtext, eine Rechnung je Mail
+    betreff = VorlageWert("Betreff")
+    text = VorlageWert("Text")
+    ' REWE: keine buchungsrelevanten Inhalte im Mailtext. Statt der normalen
+    ' Vorlage gilt ein neutraler Text ohne Rechnungsdaten (Zeile "Text REWE",
+    ' fehlt sie, der eingebaute Standard). Betrag, Fälligkeit und
+    ' Zahlungsbedingung werden zur Sicherheit immer entfernt.
     If EmpfaengerVorgabe() = "REWE" Then
-        If InStr(VorlageWert("Text"), "{Betrag}") > 0 Or InStr(VorlageWert("Text"), "{Faellig}") > 0 Or _
-           InStr(VorlageWert("Text"), "{Zahlungsbedingung}") > 0 Then
-            Protokoll "Warnung", "REWE verlangt einen Mailtext ohne buchungsrelevante Inhalte. " & _
-                                 "Betrag, Fälligkeit und Zahlungsbedingung bitte vor dem Senden aus dem Text entfernen."
-            MsgBox "Hinweis REWE: Der Mailtext darf keine buchungsrelevanten Inhalte enthalten " & _
-                   "(Betrag, Fälligkeit, Zahlungsbedingung). Bitte im Entwurf entfernen.", vbInformation, TOOL_NAME
-        End If
+        text = VorlageWert("Text REWE")
+        If Len(text) = 0 Then text = StandardTextREWE()
+        text = OhneBuchungsangaben(text)
+        betreff = OhneBuchungsangaben(betreff)
+        If Len(betreff) = 0 Then betreff = "Rechnung {Rechnungsnummer}"
     End If
+    betreff = PlatzhalterErsetzen(betreff)
+    text = PlatzhalterErsetzen(text)
     If UCase$(EinstellungOderLeer("E-Rechnung-Adapter")) = "STUB" Then
         betreff = "TEST - keine gültige E-Rechnung - " & betreff
     End If
@@ -59,6 +62,7 @@ Public Sub EMailErstellen()
         Err.Raise vbObjectError + 40, , "Outlook konnte nicht gestartet werden. Erforderlich ist das " & _
                                        "klassische Outlook für Windows (nicht das 'neue Outlook')."
     End If
+    AbsenderListeAktualisieren ol               ' Auswahlliste im Blatt Mailvorlage auffrischen
 
     Set mail = ol.CreateItem(0)                 ' 0 = olMailItem
     With mail
@@ -106,10 +110,12 @@ Public Sub MailvorlageSicherstellen()
         Array("Feld", "Inhalt", "Hinweis"), _
         Array("Betreff", "Rechnung {Rechnungsnummer} vom {Rechnungsdatum}", "Platzhalter siehe unten"), _
         Array("Text", "", "Zeilenumbruch in der Zelle mit Alt+Eingabe"), _
+        Array("Text REWE", "", "Text für REWE-Empfänger: ohne Rechnungsdaten (REWE: keine buchungsrelevanten Inhalte)"), _
         Array("CC", "", "optional, mehrere Adressen mit ; trennen"), _
         Array("BCC", "", "optional, z. B. eigene Adresse für die Ablage"), _
         Array("Signatur einfügen", "Ja", "Ja = Outlook-Standardsignatur unter dem Text, Nein = ohne"), _
-        Array("Absenderkonto", "", "optional: E-Mail-Adresse des Outlook-Kontos, leer = Standardkonto"), _
+        Array("Absenderkonto", "", "optional: Absender-Adresse, z. B. rechnung@firma.de. Auswahl = Konten aus Outlook; " & _
+              "gemeinsames Postfach eintippen (Recht 'Senden als' nötig). Leer = Standardkonto"), _
         Array("", "", ""), _
         Array("Platzhalter", "{Rechnungsnummer} {Rechnungsdatum} {Betrag} {Faellig} {Zahlungsbedingung} " & _
               "{Kundennummer} {Kunde} {Lieferort} {Lieferschein} {Absender} {Dateiname}", ""))
@@ -117,6 +123,7 @@ Public Sub MailvorlageSicherstellen()
         ws.Cells(i + 1, 1).Resize(1, 3).Value = zeilen(i)
     Next i
     ws.Cells(3, 2).Value = StandardText()      ' einzeln, da länger als 255 Zeichen
+    ws.Cells(4, 2).Value = StandardTextREWE()
     With ws.Range("A1:C1")
         .Font.Bold = True
         .Font.Color = vbWhite
@@ -125,12 +132,13 @@ Public Sub MailvorlageSicherstellen()
     ws.Columns(1).ColumnWidth = 20
     ws.Columns(2).ColumnWidth = 90
     ws.Columns(3).ColumnWidth = 55
-    ws.Range("B2:B7").Interior.Color = RGB(255, 248, 225)
-    ws.Range("B2:B9").WrapText = True
-    ws.Range("A1:C9").VerticalAlignment = xlTop
-    ws.Range("C2:C9").Font.Italic = True
-    ws.Range("C2:C9").Font.Color = RGB(119, 119, 119)
+    ws.Range("B2:B8").Interior.Color = RGB(255, 248, 225)
+    ws.Range("B2:B10").WrapText = True
+    ws.Range("A1:C10").VerticalAlignment = xlTop
+    ws.Range("C2:C10").Font.Italic = True
+    ws.Range("C2:C10").Font.Color = RGB(119, 119, 119)
     ws.Rows(3).AutoFit
+    ws.Rows(4).AutoFit
     If Not vorher Is Nothing Then vorher.Activate
     Protokoll "Info", "Blatt '" & BLATT_MAILVORLAGE & "' mit Standardvorlage angelegt."
 End Sub
@@ -174,6 +182,40 @@ Private Function PlatzhalterErsetzen(ByVal s As String) As String
     PlatzhalterErsetzen = s
 End Function
 
+' Neutraler Mailtext für REWE: nur Anrede, Hinweis auf die E-Rechnung, Gruß
+Private Function StandardTextREWE() As String
+    StandardTextREWE = "Sehr geehrte Damen und Herren," & vbLf & vbLf & _
+        "anbei erhalten Sie unsere E-Rechnung im ZUGFeRD-Format." & vbLf & vbLf & _
+        "Mit freundlichen Grüßen" & vbLf & _
+        "{Absender}"
+End Function
+
+' Entfernt Betrag, Fälligkeit und Zahlungsbedingung aus einer Vorlage (vor dem
+' Ersetzen der Platzhalter). "über {Betrag} EUR" wird aus dem Satz gestrichen,
+' jede andere Zeile mit einem dieser Platzhalter entfällt ganz.
+Private Function OhneBuchungsangaben(ByVal s As String) As String
+    Dim zeilen() As String, i As Long, z As String, erg As String, vorher As String, re As Object
+
+    s = Replace(Replace(s, vbCrLf, vbLf), vbCr, vbLf)
+    vorher = s
+    Set re = NeuesRegex("\s*(über|in Höhe von)\s+\{Betrag\}\s*(EUR|Euro|€)?")
+    re.Global = True
+    s = re.Replace(s, "")
+    zeilen = Split(s, vbLf)
+    For i = 0 To UBound(zeilen)
+        z = zeilen(i)
+        If InStr(z, "{Betrag}") = 0 And InStr(z, "{Faellig}") = 0 And InStr(z, "{Zahlungsbedingung}") = 0 Then
+            erg = erg & z & vbLf
+        End If
+    Next i
+    If Len(erg) > 0 Then erg = Left$(erg, Len(erg) - 1)
+    Do While InStr(erg, vbLf & vbLf & vbLf) > 0             ' doppelte Leerzeilen zusammenfassen
+        erg = Replace(erg, vbLf & vbLf & vbLf, vbLf & vbLf)
+    Loop
+    If erg <> vorher Then Protokoll "Info", "REWE: Betrag, Fälligkeit und Zahlungsbedingung aus der Mail weggelassen."
+    OhneBuchungsangaben = erg
+End Function
+
 Private Function DatumText(ByVal v As Variant) As String
     If IsDate(v) Then DatumText = Format$(v, "dd.mm.yyyy")
 End Function
@@ -201,6 +243,10 @@ Private Function VorBodyEinfuegen(ByVal html As String, ByVal einfuegen As Strin
     End If
 End Function
 
+' Absender setzen: Ist die Adresse ein eigenes Konto im Outlook-Profil, wird
+' dieses Konto verwendet. Sonst wird im Namen der Adresse gesendet (gemeinsames
+' Postfach, z. B. rechnung@firma.de). Dafür braucht der Benutzer in Exchange bzw.
+' Microsoft 365 das Recht "Senden als" oder "Senden im Auftrag von".
 Private Sub KontoSetzen(ByVal ol As Object, ByVal mail As Object, ByVal adresse As String)
     Dim acc As Object
     For Each acc In ol.Session.Accounts
@@ -209,5 +255,55 @@ Private Sub KontoSetzen(ByVal ol As Object, ByVal mail As Object, ByVal adresse 
             Exit Sub
         End If
     Next acc
-    Protokoll "Warnung", "Absenderkonto '" & adresse & "' nicht in Outlook gefunden. Standardkonto verwendet."
+    mail.SentOnBehalfOfName = adresse
+    Protokoll "Info", "Absender '" & adresse & "' ist kein eigenes Outlook-Konto: Versand im Namen dieses Postfachs. " & _
+                      "Ohne das Recht 'Senden als' meldet der Mailserver nach dem Senden einen Fehler."
+End Sub
+
+' Makro: Absender-Auswahlliste im Blatt Mailvorlage aus Outlook füllen
+Public Sub OutlookAbsenderLesen()
+    Dim ol As Object
+    MailvorlageSicherstellen
+    On Error Resume Next
+    Set ol = GetObject(, "Outlook.Application")
+    If ol Is Nothing Then Set ol = CreateObject("Outlook.Application")
+    On Error GoTo 0
+    If ol Is Nothing Then
+        MsgBox "Outlook konnte nicht gestartet werden.", vbExclamation, TOOL_NAME
+        Exit Sub
+    End If
+    AbsenderListeAktualisieren ol
+    MsgBox "Die Outlook-Konten stehen jetzt im Blatt '" & BLATT_MAILVORLAGE & "' zur Auswahl " & _
+           "beim Feld 'Absenderkonto'.", vbInformation, TOOL_NAME
+End Sub
+
+' Schreibt die Adressen aller Outlook-Konten in Spalte E des Blatts Mailvorlage
+' und hängt sie als Auswahlliste an das Feld "Absenderkonto". Eigene Eingaben
+' (z. B. ein gemeinsames Postfach) bleiben erlaubt.
+Private Sub AbsenderListeAktualisieren(ByVal ol As Object)
+    Dim ws As Worksheet, c As Range, acc As Object, n As Long
+    On Error GoTo Ende
+    Set ws = ThisWorkbook.Worksheets(BLATT_MAILVORLAGE)
+    Set c = ws.Columns(1).Find(What:="Absenderkonto", LookIn:=xlValues, LookAt:=xlWhole)
+    If c Is Nothing Then Exit Sub
+    ws.Range("E1:E50").ClearContents
+    ws.Range("E1").Value = "Outlook-Konten (Auswahl)"
+    ws.Range("E1").Font.Bold = True
+    For Each acc In ol.Session.Accounts
+        If Len(acc.SmtpAddress) > 0 And n < 49 Then
+            n = n + 1
+            ws.Cells(n + 1, 5).Value = acc.SmtpAddress
+        End If
+    Next acc
+    ws.Columns(5).ColumnWidth = 34
+    With c.Offset(0, 1).Validation
+        .Delete
+        If n > 0 Then
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertInformation, _
+                 Formula1:="='" & BLATT_MAILVORLAGE & "'!$E$2:$E$" & (n + 1)
+            .IgnoreBlank = True
+            .ShowError = False                  ' andere Adresse eintippen bleibt erlaubt
+        End If
+    End With
+Ende:
 End Sub

@@ -1,6 +1,8 @@
-Attribute VB_Name = "modPDF2E"
+Attribute VB_Name = "modAnwendung"
 '==============================================================================
-' PDF2E - Programmname, Version, Start (Splash), Info und Einrichtung
+' Gemeinsamer Rahmen für PDF2E und XL2E: Start (Splash), Info, Prüfen,
+' Einrichtung der Schaltflächen. Name, Version und Quelle stehen je Produkt im
+' Modul modProdukt (src/pdf2e bzw. src/xl2e).
 '
 ' Versionierung nach Semantic Versioning (HAUPT.NEBEN.KORREKTUR):
 '   Fehlerbehebung          -> dritte Stelle +1          (1.0.0 -> 1.0.1)
@@ -10,15 +12,10 @@ Attribute VB_Name = "modPDF2E"
 '==============================================================================
 Option Explicit
 
-Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.5.0"
-Public Const TOOL_STAND As String = "04.11.2026"
-Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
-
 Private Const SPLASH_SEKUNDEN As Long = 3
 
 ' Aufruf aus ThisWorkbook.Workbook_Open
-Public Sub PDF2E_Start()
+Public Sub AnwendungStart()
     On Error Resume Next            ' Ein fehlender Splash darf den Start nie verhindern
     StartblattAktualisieren
     frmInfo.Anzeigen True
@@ -83,10 +80,10 @@ Public Function EinstellungOderLeer(ByVal schluessel As String) As String
 End Function
 
 '------------------------------------------------------------------------------
-' Einmalig ausführen: legt die Schaltflächen auf den Blättern "Start" und
-' "Rechnung" an (vorhandene PDF2E-Schaltflächen werden ersetzt).
+' Einmalig ausführen (über PDF2E_Einrichten bzw. XL2E_Einrichten): legt die
+' Schaltflächen auf den Blättern "Start" und "Rechnung" an (vorhandene werden ersetzt).
 '------------------------------------------------------------------------------
-Public Sub PDF2E_Einrichten()
+Public Sub Einrichten()
     SchaltflaechenAnlegen ThisWorkbook.Worksheets("Start"), "B2"
     SchaltflaechenAnlegen ThisWorkbook.Worksheets(BLATT_RECHNUNG), "E2"
     StartblattAktualisieren
@@ -99,12 +96,12 @@ End Sub
 Private Sub SchaltflaechenAnlegen(ByVal ws As Worksheet, ByVal startZelle As String)
     Dim beschriftung As Variant, makro As Variant, i As Long
     Dim l As Double, t As Double, shp As Shape
-    beschriftung = Array("PDF einlesen", "Prüfen", "E-Rechnung erzeugen", "E-Mail erstellen", "Info")
+    beschriftung = Array(QUELLE_SCHALTFLAECHE, "Prüfen", "E-Rechnung erzeugen", "E-Mail erstellen", "Info")
     makro = Array("RechnungEinlesen", "PruefenStarten", "ZugferdErzeugen", "EMailErstellen", "InfoAnzeigen")
 
-    ' Vorhandene PDF2E-Schaltflächen entfernen (auch die Formularsteuerelemente bis 1.0.1)
+    ' Vorhandene Schaltflächen entfernen (auch die Formularsteuerelemente von PDF2E bis 1.0.1)
     For i = ws.Shapes.Count To 1 Step -1
-        If Left$(ws.Shapes(i).Name, 6) = "PDF2E_" Then ws.Shapes(i).Delete
+        If Left$(ws.Shapes(i).Name, Len(TOOL_NAME) + 1) = TOOL_NAME & "_" Then ws.Shapes(i).Delete
     Next i
 
     l = ws.Range(startZelle).Left
@@ -112,7 +109,7 @@ Private Sub SchaltflaechenAnlegen(ByVal ws As Worksheet, ByVal startZelle As Str
     For i = 0 To UBound(beschriftung)
         Set shp = ws.Shapes.AddShape(5, l, t + i * 32, 160, 26)     ' 5 = msoShapeRoundedRectangle
         With shp
-            .Name = "PDF2E_" & makro(i)
+            .Name = TOOL_NAME & "_" & makro(i)
             .OnAction = makro(i)
             .Placement = xlFreeFloating
             .Fill.ForeColor.RGB = RGB(122, 74, 18)                  ' Braun wie die Tabellenköpfe

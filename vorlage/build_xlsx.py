@@ -1,11 +1,20 @@
 import sys
-# Erzeugt die Vorlage PDF2E.xlsx (Blätter, Feldnamen, Formeln, Auswahllisten).
-# Aufruf: python build_xlsx.py <Zieldatei.xlsx>   (benötigt openpyxl)
+# Erzeugt die Vorlage PDF2E.xlsx bzw. XL2E.xlsx (Blätter, Feldnamen, Formeln, Auswahllisten).
+# Aufruf: python build_xlsx.py <Zieldatei.xlsx> [pdf2e|xl2e]   (benötigt openpyxl)
+# Die Programmversion steht in src/<produkt>/modProdukt.bas.
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
+import os, re
 out=sys.argv[1]
+PROD=(sys.argv[2] if len(sys.argv)>2 else "pdf2e").lower()
+XL=PROD=="xl2e"
+_mp=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..","src",PROD,"modProdukt.bas"),encoding="cp1252").read()
+VERSION=re.search(r'TOOL_VERSION As String = "([^"]+)"',_mp)[1]
+NAME="XL2E" if XL else "PDF2E"
+UNTERTITEL=re.search(r'TOOL_UNTERTITEL As String = "([^"]+)"',_mp)[1]
+LAUT="laut Rechnung" if XL else "laut PDF"
 wb=Workbook()
 H=Font(bold=True,color="FFFFFF"); HF=PatternFill("solid",fgColor="7A4A12")
 SEC=Font(bold=True,size=12,color="7A4A12")
@@ -20,24 +29,24 @@ def name(n,ref): wb.defined_names[n]=DefinedName(n,attr_text=ref)
 # Start
 ws=wb.active; ws.title="Start"
 ws.column_dimensions['A'].width=4; ws.column_dimensions['B'].width=26; ws.column_dimensions['C'].width=100
-lines=[("PDF2E",Font(bold=True,size=22,color="7A4A12")),
-("PDF-Rechnungen als E-Rechnung (ZUGFeRD)  |  Version 1.4.0",Font(size=11,color="555555")),
+lines=[(NAME,Font(bold=True,size=22,color="7A4A12")),
+(f"{UNTERTITEL}  |  Version {VERSION}",Font(size=11,color="555555")),
 ("",None),
 ("Ablauf",SEC),
-("1. Makro 'RechnungEinlesen' starten und die BSI-PDF auswählen.",None),
+(("1. 'Excel einlesen' und die BSI-Excel-Rechnung auswählen (z. B. Blatt PA400_00)." if XL else "1. 'PDF einlesen' und die BSI-PDF auswählen."),None),
 ("2. Blatt 'Rechnung' und 'Positionen' prüfen, gelb hinterlegte Felder bei Bedarf ergänzen (Zahlungskondition, Bankkonto).",None),
 ("3. Status im Blatt 'Rechnung' muss 'OK' zeigen. Bei Fehlern das Blatt 'Protokoll' ansehen; nach Korrekturen 'RechnungPruefen' erneut ausführen.",None),
-("4. Makro 'ZugferdErzeugen' starten. Die ZUGFeRD-PDF landet im Ausgabeordner, das Original bleibt unverändert.",None),
-("   Solange in 'Einstellungen' der Adapter STUB eingestellt ist, entsteht nur eine Kopie der PDF plus Datei *.daten.xml zur Kontrolle (keine E-Rechnung).",Font(bold=True,color="B00000")),
+(("4. 'E-Rechnung erzeugen': XL2E macht aus der Excel-Rechnung ein PDF mit Briefkopf aus den Stammdaten und bettet die E-Rechnung ein. Das Original bleibt unverändert." if XL else "4. 'E-Rechnung erzeugen'. Die ZUGFeRD-PDF landet im Ausgabeordner, das Original bleibt unverändert."),None),
+("   Solange in 'Einstellungen' der Adapter STUB eingestellt ist, entsteht nur ein PDF ohne E-Rechnung plus Datei *.daten.xml zur Kontrolle.",Font(bold=True,color="B00000")),
 ("5. 'E-Mail erstellen': Outlook öffnet einen Entwurf mit der E-Rechnung als Anhang. Prüfen, ggf. ergänzen und selbst senden. Betreff und Text im Blatt 'Mailvorlage' pflegen.",None),
 ("",None),
 ("Einrichtung (einmalig)",SEC),
-("- Blatt 'Einstellungen': Pfad zu pdftotext.exe, Eingangs- und Ausgabeordner.",None),
+(("- Blatt 'Einstellungen': Eingangs- und Ausgabeordner, Briefkopf-Logo, Sammelkundennummern." if XL else "- Blatt 'Einstellungen': Pfad zu pdftotext.exe, Eingangs- und Ausgabeordner."),None),
 ("- Blätter 'Brauerei', 'Bankkonten', 'Zahlungskonditionen' pflegen; Standard-Einträge mit 'x' markieren.",None),
 ("- Blatt 'Empfaenger': neue Kunden werden beim Einlesen automatisch angelegt. Nur abweichendes Konto, Kondition oder E-Mail eintragen (leer = Standard).",None),
-("- Schaltflächen: einmalig das Makro 'PDF2E_Einrichten' ausführen (Alt+F8). Es legt die Schaltflächen hier und im Blatt 'Rechnung' an.",None),
+(f"- Schaltflächen: einmalig das Makro '{NAME}_Einrichten' ausführen (Alt+F8). Es legt die Schaltflächen hier und im Blatt 'Rechnung' an.",None),
 ("",None),
-("Farben: gelb = Eingabe/änderbar, grün = berechnet, grau = Wert laut PDF (zum Abgleich).",Font(italic=True))]
+(f"Farben: gelb = Eingabe/änderbar, grün = berechnet, grau = Wert {LAUT} (zum Abgleich).",Font(italic=True))]
 for i,(t,f) in enumerate(lines,1):
     c=ws.cell(i,3,t); c.alignment=Alignment(wrap_text=True)
     if f: c.font=f
@@ -82,11 +91,11 @@ rows=[
 ("Nettosumme (berechnet)","f_Netto","calc","Summe Positionen inkl. Pfand und Aktionen"),
 ("MwSt (berechnet)","f_MwSt","calc",""),
 ("Rechnungsbetrag (berechnet)","f_Brutto","calc",""),
-("Warenwert laut PDF","f_PDF_Warenwert","pdf",""),
-("Pfand laut PDF","f_PDF_Pfand","pdf",""),
-("Zwischensumme laut PDF","f_PDF_Netto","pdf",""),
-("MwSt laut PDF","f_PDF_MwSt","pdf",""),
-("Rechnungsbetrag laut PDF","f_PDF_Brutto","pdf",""),
+(f"Warenwert {LAUT}","f_PDF_Warenwert","pdf",""),
+(f"Pfand {LAUT}","f_PDF_Pfand","pdf",""),
+(f"Zwischensumme {LAUT}","f_PDF_Netto","pdf",""),
+(f"MwSt {LAUT}","f_PDF_MwSt","pdf",""),
+(f"Rechnungsbetrag {LAUT}","f_PDF_Brutto","pdf",""),
 ]
 r=1; cells={}
 for row in rows:
@@ -125,7 +134,10 @@ for i in range(2,501): ws[f"A{i}"].number_format="DD.MM.YYYY hh:mm:ss"
 # Brauerei
 ws=wb.create_sheet("Brauerei")
 header(ws,["Angabe","Wert","Hinweis"],[22,45,45])
-data=[("Name","Konrad Krug Brauerei und Tanzsaal GmbH","BT-27"),("Straße","Breitenlesau 1b","BT-35"),("PLZ","91344","BT-38"),("Ort","Waischenfeld","BT-37"),("Land","DE","BT-40"),
+data=[("Name","Privatbrauerei Fiedler GmbH","BT-27"),("Straße","Hauptstraße 28","BT-35"),("PLZ","09481","BT-38"),("Ort","Scheibenberg/Oberscheibe","BT-37"),("Land","DE","BT-40"),
+("USt-IdNr","DE123456789","BT-31, PLATZHALTER"),("Steuernummer","123/456/78901","BT-32, PLATZHALTER"),("Registernummer","HRB 12345, Amtsgericht Chemnitz","BT-30, PLATZHALTER"),
+("Geschäftsführer","Thomas Fiedler",""),("Kontakt Name","","BT-41"),("Telefon","037349 8249","BT-42"),("E-Mail","info@brauerei-fiedler.de","BT-43"),
+("Internet","www.brauerei-fiedler.de","nur Briefkopf"),("GLN","","BT-29, Schema 0088; leer = keine")] if XL else [("Name","Konrad Krug Brauerei und Tanzsaal GmbH","BT-27"),("Straße","Breitenlesau 1b","BT-35"),("PLZ","91344","BT-38"),("Ort","Waischenfeld","BT-37"),("Land","DE","BT-40"),
 ("USt-IdNr","DE132316559","BT-31, von Frank bestätigt"),("Steuernummer","208/130/70031","BT-32"),("Registernummer","HRB 1273, Amtsgericht Bayreuth","BT-30"),
 ("Geschäftsführer","Konrad Krug",""),("GLN","","BT-29, Schema 0088; eigene GLN der Brauerei (von REWE gewünscht), leer = keine"),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
 for i,(a,b,c) in enumerate(data,2):
@@ -134,7 +146,9 @@ for i,(a,b,c) in enumerate(data,2):
 # Bankkonten
 ws=wb.create_sheet("Bankkonten")
 header(ws,["Bezeichnung","Kontoinhaber","IBAN","BIC","Standard (x)"],[24,40,28,16,13])
-for i,row in enumerate([("Sparkasse Bayreuth","Konrad Krug Brauerei und Tanzsaal GmbH","DE58773501100000311274","BYLADEM1SBT","x"),
+for i,row in enumerate([("Volksbank Chemnitz eG","Privatbrauerei Fiedler GmbH","DE87123456781234567890","TESTDEFFXXX","x"),
+                        ("Erzgebirgssparkasse","Privatbrauerei Fiedler GmbH","DE58876543211234567890","TESTDEFFXXX","")] if XL else
+                       [("Sparkasse Bayreuth","Konrad Krug Brauerei und Tanzsaal GmbH","DE58773501100000311274","BYLADEM1SBT","x"),
                         ("Raiffeisenbank Waischenfeld","Konrad Krug Brauerei und Tanzsaal GmbH","DE49773657920000212997","GENODEF1HWA","")],2):
     for j,v in enumerate(row,1): ws.cell(i,j,v).fill=INP
 
@@ -147,7 +161,7 @@ for i,row in enumerate([("Sofort","Zahlbar sofort ohne Abzug.",0,"x"),("14 Tage 
 # Empfaenger
 ws=wb.create_sheet("Empfaenger")
 header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben"],[11,36,30,16,26,26,30,14])
-for j,v in enumerate(["11770","Markgrafen Getränkevertrieb GmbH","gam406@markgrafen.com","","","","Beispiel aus Muster RE 2603976; E-Mail bitte bestätigen"],1):
+for j,v in enumerate([] if XL else ["11770","Markgrafen Getränkevertrieb GmbH","gam406@markgrafen.com","","","","Beispiel aus Muster RE 2603976; E-Mail bitte bestätigen"],1):
     c=ws.cell(2,j,v); c.fill=INP
 ws["A2"].number_format='@'
 dv=DataValidation(type="list",formula1="=Bankkonten!$A$2:$A$20",allow_blank=True); ws.add_data_validation(dv); dv.add("E2:E500")
@@ -156,7 +170,7 @@ dv=DataValidation(type="list",formula1="=Zahlungskonditionen!$A$2:$A$50",allow_b
 # Einstellungen
 ws=wb.create_sheet("Einstellungen")
 header(ws,["Einstellung","Wert","Hinweis"],[22,50,60])
-for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools, 64-Bit-Version"),
+EINST=[("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools, 64-Bit-Version"),
 ("Eingangsordner",r"C:\Rechnungen\BSI","Ordner mit den BSI-PDFs"),
 ("Ausgabeordner",r"C:\Rechnungen\ZUGFeRD","Hier werden die ZUGFeRD-PDFs abgelegt"),
 ("Dateinamenszusatz","_ZUGFeRD","Dateiname = Rechnungsnummer + Zusatz + .pdf"),
@@ -177,11 +191,20 @@ for i,(a,b,c) in enumerate([("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xp
 ("Anwendungslogo","","Logo von PDF2E oben im Info-Fenster (BMP, JPG oder GIF, kein PNG), z. B. C:\\PDF2E\\pdf2e_logo.jpg"),
 ("Firmenlogo","","Logo des Entwicklers unten im Info-Fenster (BMP, JPG oder GIF, kein PNG)"),
 ("Firmenlogo-Position","LINKS","LINKS (Standard) oder RECHTS neben den Entwicklerangaben"),
-("E-Rechnung-Adapter","STUB","STUB = Testlauf ohne Smart Tools (keine gültige E-Rechnung), SMARTTOOLS = echte Erzeugung")],2):
+("E-Rechnung-Adapter","STUB","STUB = Testlauf ohne Smart Tools (keine gültige E-Rechnung), SMARTTOOLS = echte Erzeugung"),
+("Sammelkundennummern","12100" if XL else "","Kundennummern, unter denen viele Kunden abgerechnet werden (z. B. Festlichkeiten), durch Komma getrennt. Empfänger = Kundennr. / Name / PLZ")]
+if XL:
+    EINST=[e for e in EINST if e[0] not in ("pdftotext-Pfad","Layout","Layout-Variante","Textdatei behalten")]
+    EINST=[(a,{"Eingangsordner":r"C:\Rechnungen\BSI-Excel"}.get(a,b),{"Eingangsordner":"Ordner mit den BSI-Excel-Rechnungen"}.get(a,c)) for a,b,c in EINST]
+    EINST+=[("Quellblatt","PA400_00","Blatt der Excel-Rechnung; fehlt es, gilt das erste Blatt"),
+            ("Briefkopf","Ja","Ja = Absender, Logo, Register und Bank aus den Stammdaten in Kopf- und Fußzeile des PDF"),
+            ("Briefkopf-Logo","","Logo für die Kopfzeile, z. B. C:\\XL2E\\fiedler_logo_hoch.png (PNG oder JPG)")]
+for i,(a,b,c) in enumerate(EINST,2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 ws=wb.create_sheet("Versionshistorie")
 header(ws,["Version","Datum","Art","Änderung"],[10,12,16,100])
-for i,row in enumerate([("1.5.0","04.11.2026","Neue Funktion","Smart-Tools-Adapter (ZUGFeRD EN16931, Prüfung vor dem Speichern); Pfand getrennt nach Lieferung und Rücknahme; REWE-Vorgaben je Empfänger (Hinweis AAK, Pflicht RE-GLN, WE-GLN, USt-IdNr.); GLN-Prüfziffer"),
+HIST=[("1.0.0","04.11.2026","Erstversion","BSI-Excel-Rechnung (Blatt PA400_00) einlesen, PDF mit Briefkopf aus den Stammdaten, ZUGFeRD EN16931 mit Smart Tools, Fassbier je hl, Pfand getrennt, Sammelkundennummern; gemeinsamer Kern mit PDF2E 1.6.0")] if XL else [("1.6.0","04.11.2026","Neue Funktion","Gemeinsamer Kern mit XL2E (Module neu aufgeteilt: modAnwendung, modProdukt); Sammelkundennummern; Prüfung warnt vor Platzhaltern in den Stammdaten; E-Mail an REWE mit neutralem Text ohne Rechnungsdaten; Absender der E-Mail wählbar, auch gemeinsames Postfach"),
+("1.5.0","04.11.2026","Neue Funktion","Smart-Tools-Adapter (ZUGFeRD EN16931, Prüfung vor dem Speichern); Pfand getrennt nach Lieferung und Rücknahme; REWE-Vorgaben je Empfänger (Hinweis AAK, Pflicht RE-GLN, WE-GLN, USt-IdNr.); GLN-Prüfziffer"),
 ("1.4.0","26.10.2026","Neue Funktion","E-Mail-Entwurf in Outlook mit der E-Rechnung als Anhang, Text aus dem Blatt Mailvorlage (Platzhalter)"),
 ("1.3.0","26.10.2026","Neue Funktion","Firmenlogo im Info-Fenster standardmäßig links, wahlweise rechts (Einstellung \"Firmenlogo-Position\")"),
 ("1.2.0","26.10.2026","Neue Funktion","Neue Rechnungsempfänger werden automatisch im Blatt Empfaenger angelegt; Fehlerbehebung: umgebrochene Leergutzeilen der echten Windows-Ausgabe (Pfandteil vor der Artikelzeile) werden spaltengenau zusammengeführt"),
@@ -189,7 +212,8 @@ for i,row in enumerate([("1.5.0","04.11.2026","Neue Funktion","Smart-Tools-Adapt
 ("1.0.3","26.10.2026","Fehlerbehebung","Fehler beim Laden des Logos werden im Protokoll gemeldet"),
 ("1.0.2","26.10.2026","Fehlerbehebung","Schaltflächen als Formen statt Formularsteuerelemente (Anzeigefehler); Versionszeile im Blatt Start wird automatisch nachgeführt"),
 ("1.0.1","26.10.2026","Fehlerbehebung","Umgebrochene Leergutzeilen (pdftotext unter Windows) werden zusammengeführt; Option \"Textdatei behalten\""),
-("1.0.0","26.10.2026","Erstversion","Einlesen BSI-PDF, Prüfung, Stub-Adapter, Splash- und Info-Fenster, Schaltflächen")],2):
+("1.0.0","26.10.2026","Erstversion","Einlesen BSI-PDF, Prüfung, Stub-Adapter, Splash- und Info-Fenster, Schaltflächen")]
+for i,row in enumerate(HIST,2):
     for j,v in enumerate(row,1): ws.cell(i,j,v)
 ws["A2"].number_format='@'
 wb.save(out)
