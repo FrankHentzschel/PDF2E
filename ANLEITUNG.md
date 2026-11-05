@@ -17,16 +17,18 @@ Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kun
 | `src/modAdapterStub.bas` | Stub: schreibt alle Übergabedaten nach `<Ziel>.daten.xml` |
 | `src/modAdapterSmartTools.bas` | Smart Tools: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
 | `src/modEntwicklung.bas` | Nur Entwicklung: `PDF2E_Exportieren` schreibt alle Module für Git nach `src/` |
-| `src/frmInfo_Code.txt` | Code für das Splash- und Info-Fenster (UserForm) |
-| `src/ThisWorkbook_Code.txt` | Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
+| `src/frmInfo.frm` + `src/frmInfo.frx` | Splash- und Info-Fenster (UserForm, VBE-Export) |
+| `src/DieseArbeitsmappe.doccls` | Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
 
 ## Einrichtung (ca. 15 Minuten)
 
 1. **pdftotext:** Lade auf https://www.xpdfreader.com/download.html die *Xpdf command line tools* für Windows und lege `pdftotext.exe` (64-Bit) z. B. unter `C:\Tools\xpdf\` ab.
 2. **Mappe vorbereiten:** `PDF2E.xlsx` öffnen und als **Excel-Arbeitsmappe mit Makros (.xlsm)** speichern.
 3. **Module importieren:** VBA-Editor mit Alt+F11 öffnen. Über *Datei > Datei importieren* alle `.bas`-Dateien aus `src/` einlesen.
-4. **Info-Fenster anlegen:** *Einfügen > UserForm*. Im Eigenschaftenfenster bei (Name) `frmInfo` eintragen. Dann mit Rechtsklick auf `frmInfo` *Code anzeigen* wählen und den gesamten Inhalt von `frmInfo_Code.txt` einfügen. Auf der Form selbst nichts platzieren, die Elemente entstehen zur Laufzeit.
-5. **Start-Code:** Doppelklick auf *DieseArbeitsmappe* und den Inhalt von `ThisWorkbook_Code.txt` einfügen.
+4. **Info-Fenster importieren:** Ebenso `frmInfo.frm` importieren (`frmInfo.frx` muss im selben Ordner liegen).
+5. **Start-Code:** Doppelklick auf *DieseArbeitsmappe* und den Inhalt von `DieseArbeitsmappe.doccls` einfügen.
+
+   Mit [VbaSync](https://github.com/FrankHentzschel/VbaSync) erledigt „Alle importieren“ die Schritte 3 bis 5 in einem Durchgang.
 6. **Kompilieren:** *Debuggen > Kompilieren VBAProject*. Es dürfen keine Fehler erscheinen.
 7. **Einstellungen** im gleichnamigen Blatt ausfüllen:
    - Pfad zu pdftotext, Eingangs- und Ausgabeordner

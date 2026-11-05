@@ -10,7 +10,7 @@ Aktueller Stand: **1.5.0**, mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [
 
 | Pfad | Inhalt |
 | --- | --- |
-| `src/` | VBA-Quellcode (`.bas`), Code der UserForm und von „DieseArbeitsmappe“ als `_Code.txt`, **maßgebliche Quelle** |
+| `src/` | VBA-Quellcode im VbaSync-Format: Module `.bas`, UserForm `.frm` + `.frx`, „DieseArbeitsmappe“ als `.doccls`, **maßgebliche Quelle** |
 | `vorlage/build_xlsx.py` | Erzeugt die Arbeitsmappe `PDF2E.xlsx` (Blätter, Feldnamen, Formeln, Auswahllisten) |
 | `tests/pdftotext/` | pdftotext-Ausgaben der Muster-Rechnungen |
 | `tests/parser_test.py` | Regressionstest der Einleselogik (Python-Nachbau der Suchmuster) |
@@ -19,7 +19,7 @@ Aktueller Stand: **1.5.0**, mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [
 ## Arbeitsweise mit Git
 
 - **Quelle:** Die Dateien in `src/` sind maßgeblich. Arbeitsmappen (`.xlsx/.xlsm`) stehen nicht im Repository. Für Kunden werden sie als Anhang eines GitHub-Releases verteilt.
-- **Änderungen in Excel:** Makro `PDF2E_Exportieren` ausführen. Es schreibt alle Module nach `src/`. Danach committen. Einmalig dafür im Trust Center den „Zugriff auf das VBA-Projektobjektmodell“ erlauben.
+- **Änderungen in Excel:** Mit [VbaSync](https://github.com/FrankHentzschel/VbaSync) „Alle exportieren“ nach `src/`. Danach committen. Einmalig dafür im Trust Center den „Zugriff auf das VBA-Projektobjektmodell“ erlauben.
 - **Kodierung:** Im Arbeitsverzeichnis Windows-1252 mit CRLF, wie es der VBA-Editor braucht. Im Repository liegt UTF-8. Das regelt `.gitattributes` automatisch.
 - **Versionen:** `TOOL_VERSION` in `src/modPDF2E.bas`, Eintrag in `CHANGELOG.md` und im Blatt „Versionshistorie“ (`vorlage/build_xlsx.py`), dazu ein Git-Tag `vX.Y.Z`.
 - **Vor jedem Release:** `python tests/parser_test.py` muss für alle Muster `OK` melden.

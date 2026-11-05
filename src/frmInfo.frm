@@ -1,3 +1,18 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} frmInfo 
+   Caption         =   "Info"
+   ClientHeight    =   3040
+   ClientLeft      =   110
+   ClientTop       =   450
+   ClientWidth     =   4580
+   OleObjectBlob   =   "frmInfo.frx":0000
+   StartUpPosition =   1  'Fenstermitte
+End
+Attribute VB_Name = "frmInfo"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
 '==============================================================================
 ' Code für die UserForm "frmInfo" (PDF2E Splash- und Info-Fenster)
 '
@@ -14,6 +29,7 @@ Public AlsSplash As Boolean
 Private Const BREITE As Single = 430
 Private Const HOEHE As Single = 300
 Private WithEvents mOk As MSForms.CommandButton
+Attribute mOk.VB_VarHelpID = -1
 
 Private Sub UserForm_Initialize()
     Dim farbe As Long, y As Single, x0 As Single, firmenlogo As String, textLinks As Single, textBreite As Single
@@ -35,15 +51,15 @@ Private Sub UserForm_Initialize()
     If BildEinfuegen("imgAnwendung", EinstellungOderLeer("Anwendungslogo"), 24, 24, 84, 84) Then x0 = 120
 
     With NeuesLabel("lblName", TOOL_NAME, x0, 22, BREITE - x0 - 20, 40)
-        .Font.Name = "Segoe UI": .Font.Size = 26: .Font.Bold = True
+        .Font.name = "Segoe UI": .Font.Size = 26: .Font.Bold = True
         .ForeColor = farbe
     End With
     With NeuesLabel("lblUntertitel", TOOL_UNTERTITEL, x0, 64, BREITE - x0 - 20, 18)
-        .Font.Name = "Segoe UI": .Font.Size = 10
+        .Font.name = "Segoe UI": .Font.Size = 10
         .ForeColor = RGB(64, 64, 64)
     End With
     With NeuesLabel("lblVersion", VersionText(), x0, 86, BREITE - x0 - 20, 16)
-        .Font.Name = "Segoe UI": .Font.Size = 9
+        .Font.name = "Segoe UI": .Font.Size = 9
         .ForeColor = RGB(110, 110, 110)
     End With
 
@@ -76,7 +92,7 @@ Private Sub UserForm_Initialize()
 
     With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & EinstellungOderLeer("Firma") & ". Alle Rechte vorbehalten.", _
                     24, HOEHE - 52, BREITE - 150, 14)
-        .Font.Name = "Segoe UI": .Font.Size = 8
+        .Font.name = "Segoe UI": .Font.Size = 8
         .ForeColor = RGB(140, 140, 140)
     End With
 
@@ -122,11 +138,11 @@ Private Function NeuesLabel(ByVal name As String, ByVal text As String, ByVal l 
 End Function
 
 ' Eine Textzeile; entfällt, wenn der Wert leer ist
-Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal wert As String, ByRef y As Single, _
+Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal Wert As String, ByRef y As Single, _
                   ByVal fett As Boolean, ByVal zeilenLinks As Single, ByVal zeilenBreite As Single)
-    If Len(Trim$(wert)) = 0 Then Exit Sub
-    With NeuesLabel(name, vorsatz & wert, zeilenLinks, y, zeilenBreite, 15)
-        .Font.Name = "Segoe UI": .Font.Size = 9: .Font.Bold = fett
+    If Len(Trim$(Wert)) = 0 Then Exit Sub
+    With NeuesLabel(name, vorsatz & Wert, zeilenLinks, y, zeilenBreite, 15)
+        .Font.name = "Segoe UI": .Font.Size = 9: .Font.Bold = fett
         .ForeColor = RGB(48, 48, 48)
     End With
     y = y + 16
@@ -136,7 +152,7 @@ End Sub
 ' dann freigehalten). Ladefehler landen im Protokoll und verhindern nie die Anzeige.
 Private Function BildEinfuegen(ByVal name As String, ByVal pfad As String, ByVal l As Single, ByVal t As Single, _
                                ByVal w As Single, ByVal h As Single) As Boolean
-    Dim fehler As String
+    Dim Fehler As String
     If Len(pfad) = 0 Then Exit Function
     If Len(Dir$(pfad)) = 0 Then Exit Function
     BildEinfuegen = True
@@ -147,10 +163,10 @@ Private Function BildEinfuegen(ByVal name As String, ByVal pfad As String, ByVal
         .BackStyle = fmBackStyleTransparent
         .PictureSizeMode = fmPictureSizeModeZoom
         .Picture = LoadPicture(pfad)
-        If Err.Number <> 0 Then fehler = Err.Description
+        If Err.Number <> 0 Then Fehler = Err.Description
     End With
-    If Len(fehler) > 0 Then
-        Protokoll "Warnung", "Logo konnte nicht geladen werden (" & pfad & "): " & fehler & _
+    If Len(Fehler) > 0 Then
+        Protokoll "Warnung", "Logo konnte nicht geladen werden (" & pfad & "): " & Fehler & _
                   " - erlaubt sind echte BMP-, JPG- oder GIF-Dateien (kein PNG/WebP)."
     End If
     On Error GoTo 0
@@ -160,3 +176,5 @@ Private Function StammOderLeer(ByVal schluessel As String) As String
     On Error Resume Next
     StammOderLeer = Stamm(schluessel)
 End Function
+
+
