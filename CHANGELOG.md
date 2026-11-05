@@ -7,6 +7,7 @@ Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible 
 
 - REWE-Mail: Statt nur zu warnen, verwendet der E-Mail-Entwurf für REWE-Empfänger einen neutralen Text (Zeile „Text REWE“ im Blatt „Mailvorlage“, sonst eingebauter Standard). Betrag, Fälligkeit und Zahlungsbedingung werden aus Betreff und Text entfernt.
 - Beim Öffnen ist immer das Blatt „Start“ aktiv, nicht das zuletzt bearbeitete.
+- Tabellenblätter ohne eigenen Code: `Option Explicit` entfernt, die leeren `TabelleN.doccls` entfallen.
 - Quellen im VbaSync-Format: UserForm als `frmInfo.frm` + `.frx`, Dokumentmodule als `.doccls` (statt `_Code.txt`).
 
 ## 1.5.0 – 04.11.2026
