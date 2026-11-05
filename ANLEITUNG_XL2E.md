@@ -60,6 +60,10 @@ Besonderheiten:
 
 Unter der Kundennummer 12100 rechnet die Brauerei viele verschiedene Kunden ab. Bei Nummern aus der Einstellung **Sammelkundennummern** legt XL2E im Blatt „Empfaenger“ je Kunde einen eigenen Eintrag an. Der Schlüssel lautet `Kundennr. / Name / PLZ`. E-Mail-Adresse, Bankkonto und Zahlungskondition lassen sich so je Kunde hinterlegen.
 
+## E-Mail-Versand
+
+Wie bei PDF2E (siehe dort): Outlook-Entwurf mit der E-Rechnung als Anhang, Texte im Blatt „Mailvorlage“. Der Absender ist im Feld **Absenderkonto** wählbar, auch ein gemeinsames Postfach wie `rechnung@firma.de` (Recht „Senden als“ nötig).
+
 ## Briefkopf im PDF
 
 | Bereich | Inhalt |

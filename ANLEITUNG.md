@@ -97,7 +97,14 @@ Nach „E-Rechnung erzeugen“ öffnet die Schaltfläche **E-Mail erstellen** ei
 
 Betreff und Text stehen im Blatt **Mailvorlage**. Platzhalter: `{Rechnungsnummer}`, `{Rechnungsdatum}`, `{Betrag}`, `{Faellig}`, `{Zahlungsbedingung}`, `{Kundennummer}`, `{Kunde}`, `{Lieferort}`, `{Lieferschein}`, `{Absender}`, `{Dateiname}`. Außerdem lassen sich dort CC, BCC, Signatur (Ja/Nein) und ein abweichendes Absenderkonto einstellen.
 
-Voraussetzung ist das klassische Outlook für Windows. Das „neue Outlook“ bietet keine Schnittstelle für VBA.
+**Absender:** Im Blatt „Mailvorlage“ legt das Feld **Absenderkonto** fest, von welcher Adresse die Mail kommt. Leer bedeutet: das Standardkonto des angemeldeten Outlook-Benutzers.
+
+- Beim ersten „E-Mail erstellen“ (oder mit dem Makro `OutlookAbsenderLesen`) schreibt das Programm alle Konten aus Outlook in Spalte E. Das Feld bietet sie dann als Auswahl an.
+- Ein **gemeinsames Postfach** wie `rechnung@firma.de` lässt sich auch eintippen, wenn es kein eigenes Konto in Outlook ist. Die Mail geht dann im Namen dieses Postfachs. Dafür muss der IT-Dienstleister jedem Benutzer das Recht „Senden als“ (oder „Senden im Auftrag von“) auf dieses Postfach geben. Fehlt das Recht, meldet der Mailserver erst nach dem Senden einen Fehler.
+- So kommen alle Rechnungen von derselben Adresse, egal an welchem Arbeitsplatz sie erstellt werden. Das ist bei REWE wichtig: Dort werden nur angemeldete Absenderadressen angenommen (RZD-Starterkit 1.09, bis zu 5 Adressen; für die RZF beim Onboarding klären).
+- Der Entwurf zeigt im Feld „Von“, welcher Absender gilt. Bitte vor dem Senden kurz prüfen.
+
+Voraussetzung ist das klassische Outlook für Windows. Das „neue Outlook“ bietet keine Schnittstelle für VBA. Ob später ein Versand ohne Outlook (SMTP oder Microsoft Graph) nötig ist, wird mit dem IT-Dienstleister geklärt.
 
 ## Test mit den Mustern
 

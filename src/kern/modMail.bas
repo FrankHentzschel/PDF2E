@@ -62,6 +62,7 @@ Public Sub EMailErstellen()
         Err.Raise vbObjectError + 40, , "Outlook konnte nicht gestartet werden. Erforderlich ist das " & _
                                        "klassische Outlook für Windows (nicht das 'neue Outlook')."
     End If
+    AbsenderListeAktualisieren ol               ' Auswahlliste im Blatt Mailvorlage auffrischen
 
     Set mail = ol.CreateItem(0)                 ' 0 = olMailItem
     With mail
@@ -113,7 +114,8 @@ Public Sub MailvorlageSicherstellen()
         Array("CC", "", "optional, mehrere Adressen mit ; trennen"), _
         Array("BCC", "", "optional, z. B. eigene Adresse für die Ablage"), _
         Array("Signatur einfügen", "Ja", "Ja = Outlook-Standardsignatur unter dem Text, Nein = ohne"), _
-        Array("Absenderkonto", "", "optional: E-Mail-Adresse des Outlook-Kontos, leer = Standardkonto"), _
+        Array("Absenderkonto", "", "optional: Absender-Adresse, z. B. rechnung@firma.de. Auswahl = Konten aus Outlook; " & _
+              "gemeinsames Postfach eintippen (Recht 'Senden als' nötig). Leer = Standardkonto"), _
         Array("", "", ""), _
         Array("Platzhalter", "{Rechnungsnummer} {Rechnungsdatum} {Betrag} {Faellig} {Zahlungsbedingung} " & _
               "{Kundennummer} {Kunde} {Lieferort} {Lieferschein} {Absender} {Dateiname}", ""))
@@ -241,6 +243,10 @@ Private Function VorBodyEinfuegen(ByVal html As String, ByVal einfuegen As Strin
     End If
 End Function
 
+' Absender setzen: Ist die Adresse ein eigenes Konto im Outlook-Profil, wird
+' dieses Konto verwendet. Sonst wird im Namen der Adresse gesendet (gemeinsames
+' Postfach, z. B. rechnung@firma.de). Dafür braucht der Benutzer in Exchange bzw.
+' Microsoft 365 das Recht "Senden als" oder "Senden im Auftrag von".
 Private Sub KontoSetzen(ByVal ol As Object, ByVal mail As Object, ByVal adresse As String)
     Dim acc As Object
     For Each acc In ol.Session.Accounts
@@ -249,5 +255,55 @@ Private Sub KontoSetzen(ByVal ol As Object, ByVal mail As Object, ByVal adresse 
             Exit Sub
         End If
     Next acc
-    Protokoll "Warnung", "Absenderkonto '" & adresse & "' nicht in Outlook gefunden. Standardkonto verwendet."
+    mail.SentOnBehalfOfName = adresse
+    Protokoll "Info", "Absender '" & adresse & "' ist kein eigenes Outlook-Konto: Versand im Namen dieses Postfachs. " & _
+                      "Ohne das Recht 'Senden als' meldet der Mailserver nach dem Senden einen Fehler."
+End Sub
+
+' Makro: Absender-Auswahlliste im Blatt Mailvorlage aus Outlook füllen
+Public Sub OutlookAbsenderLesen()
+    Dim ol As Object
+    MailvorlageSicherstellen
+    On Error Resume Next
+    Set ol = GetObject(, "Outlook.Application")
+    If ol Is Nothing Then Set ol = CreateObject("Outlook.Application")
+    On Error GoTo 0
+    If ol Is Nothing Then
+        MsgBox "Outlook konnte nicht gestartet werden.", vbExclamation, TOOL_NAME
+        Exit Sub
+    End If
+    AbsenderListeAktualisieren ol
+    MsgBox "Die Outlook-Konten stehen jetzt im Blatt '" & BLATT_MAILVORLAGE & "' zur Auswahl " & _
+           "beim Feld 'Absenderkonto'.", vbInformation, TOOL_NAME
+End Sub
+
+' Schreibt die Adressen aller Outlook-Konten in Spalte E des Blatts Mailvorlage
+' und hängt sie als Auswahlliste an das Feld "Absenderkonto". Eigene Eingaben
+' (z. B. ein gemeinsames Postfach) bleiben erlaubt.
+Private Sub AbsenderListeAktualisieren(ByVal ol As Object)
+    Dim ws As Worksheet, c As Range, acc As Object, n As Long
+    On Error GoTo Ende
+    Set ws = ThisWorkbook.Worksheets(BLATT_MAILVORLAGE)
+    Set c = ws.Columns(1).Find(What:="Absenderkonto", LookIn:=xlValues, LookAt:=xlWhole)
+    If c Is Nothing Then Exit Sub
+    ws.Range("E1:E50").ClearContents
+    ws.Range("E1").Value = "Outlook-Konten (Auswahl)"
+    ws.Range("E1").Font.Bold = True
+    For Each acc In ol.Session.Accounts
+        If Len(acc.SmtpAddress) > 0 And n < 49 Then
+            n = n + 1
+            ws.Cells(n + 1, 5).Value = acc.SmtpAddress
+        End If
+    Next acc
+    ws.Columns(5).ColumnWidth = 34
+    With c.Offset(0, 1).Validation
+        .Delete
+        If n > 0 Then
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertInformation, _
+                 Formula1:="='" & BLATT_MAILVORLAGE & "'!$E$2:$E$" & (n + 1)
+            .IgnoreBlank = True
+            .ShowError = False                  ' andere Adresse eintippen bleibt erlaubt
+        End If
+    End With
+Ende:
 End Sub

@@ -18,6 +18,7 @@ Erstversion für Brauereien, deren BSI-Software Rechnungen als Excel-Datei ausgi
 - **Neue Funktion:** Einstellung „Sammelkundennummern“. Bei diesen Kundennummern legt das Programm je Kunde einen eigenen Empfänger an (Schlüssel Kundennr. / Name / PLZ).
 - **Neue Funktion:** Die Prüfung erkennt Platzhalter in den Stammdaten (z. B. `DE123456789`, BIC `TESTDEFFXXX`). Mit Smart Tools ist das ein Fehler, im Testmodus eine Warnung.
 - **Geändert:** E-Mail an REWE mit neutralem Text ohne Rechnungsdaten (neue Zeile „Text REWE“ im Blatt Mailvorlage, sonst eingebauter Standard). Kein Hinweisfenster mehr.
+- **Neue Funktion:** Absender der E-Mail wählbar (Feld „Absenderkonto“ im Blatt Mailvorlage, Auswahl aus den Outlook-Konten). Ein gemeinsames Postfach wie rechnung@firma.de geht auch ohne eigenes Konto (Versand im Namen des Postfachs, Recht „Senden als“ nötig).
 - Beschriftungen „laut PDF“ heißen in der Prüfung jetzt „laut Rechnung“.
 
 ## PDF2E 1.5.0 – 04.11.2026
