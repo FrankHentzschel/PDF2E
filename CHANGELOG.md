@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## Nicht veröffentlicht (Stand der Mappe, Export 05.11.2026)
+
+- REWE-Mail: Statt nur zu warnen, verwendet der E-Mail-Entwurf für REWE-Empfänger einen neutralen Text (Zeile „Text REWE“ im Blatt „Mailvorlage“, sonst eingebauter Standard). Betrag, Fälligkeit und Zahlungsbedingung werden aus Betreff und Text entfernt.
+- Quellen im VbaSync-Format: UserForm als `frmInfo.frm` + `.frx`, Dokumentmodule als `.doccls` (statt `_Code.txt`).
+
 ## 1.5.0 – 04.11.2026
 
 - **Neue Funktion: echte E-Rechnung mit Smart Tools.** Mit der Einstellung „E-Rechnung-Adapter“ = `SMARTTOOLS` erzeugt PDF2E eine ZUGFeRD-Rechnung im Profil EN16931. Die Bibliothek bettet `factur-x.xml` in eine Kopie der BSI-PDF ein und wandelt sie in PDF/A-3. Vor dem Speichern prüft die Bibliothek die Rechnung (`Validate`). Bei Regelverletzungen entsteht keine Datei, die Meldungen stehen im Protokoll und im Prüfbericht.
