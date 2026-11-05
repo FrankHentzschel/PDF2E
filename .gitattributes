@@ -3,6 +3,9 @@
 # Umlaute korrekt an und Diffs bleiben lesbar.
 *.bas  text working-tree-encoding=CP1252 eol=crlf
 *.cls  text working-tree-encoding=CP1252 eol=crlf
+*.frm  text working-tree-encoding=CP1252 eol=crlf
+*.doccls text working-tree-encoding=CP1252 eol=crlf
+*.frx  binary
 src/*.txt text working-tree-encoding=CP1252 eol=crlf
 
 *.py   text eol=lf

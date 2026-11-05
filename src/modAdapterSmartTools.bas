@@ -55,7 +55,7 @@ Public Sub SmartToolsEinbetten(ByVal zielPdf As String)
     verstoesse = inv.Validate()
     If UBound(verstoesse) >= 0 Then
         For i = LBound(verstoesse) To UBound(verstoesse)
-            Protokoll "Fehler", "E-Rechnung " & verstoesse(i).Id & ": " & verstoesse(i).Description & _
+            Protokoll "Fehler", "E-Rechnung " & verstoesse(i).ID & ": " & verstoesse(i).Description & _
                                 IIf(Len(verstoesse(i).Location) > 0, " (" & verstoesse(i).Location & ")", "")
         Next i
         If UCase$(EinstellungOderLeer("Prüfbericht anzeigen")) <> "NEIN" Then inv.ShowValidationReport
@@ -134,7 +134,7 @@ End Sub
 Private Sub VerkaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
     Dim gln As String
     With inv.Seller
-        .Name = Stamm("Name")                                   ' BT-27
+        .name = Stamm("Name")                                   ' BT-27
         .PostalAddress.AddressLine1 = Stamm("Straße")           ' BT-35
         .PostalAddress.PostCode = Stamm("PLZ")                  ' BT-38
         .PostalAddress.City = Stamm("Ort")                      ' BT-37
@@ -146,7 +146,7 @@ Private Sub VerkaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_Z
             .ElectronicAddress.Value = Stamm("E-Mail")          ' BT-34
             .ElectronicAddress.SchemeCode = ElectronicAddressCode_EM
         End If
-        If Len(Stamm("Kontakt Name")) > 0 Then .Contact.Name = Stamm("Kontakt Name")        ' BT-41
+        If Len(Stamm("Kontakt Name")) > 0 Then .Contact.name = Stamm("Kontakt Name")        ' BT-41
         If Len(Stamm("Telefon")) > 0 Then .Contact.TelephoneNumber = Stamm("Telefon")       ' BT-42
         If Len(Stamm("E-Mail")) > 0 Then .Contact.EmailAddress = Stamm("E-Mail")            ' BT-43
         gln = StammOderLeer("GLN")
@@ -156,16 +156,16 @@ End Sub
 
 Private Sub KaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
     With inv.Buyer
-        .Name = CStr(Feld("f_KName").Value)                     ' BT-44
+        .name = CStr(Feld("f_KName").Value)                     ' BT-44
         .PostalAddress.AddressLine1 = CStr(Feld("f_KStrasse").Value)   ' BT-50
         .PostalAddress.PostCode = CStr(Feld("f_KPLZ").Value)    ' BT-53
         .PostalAddress.City = CStr(Feld("f_KOrt").Value)        ' BT-52
         .PostalAddress.CountryCode = LandCode(CStr(Feld("f_KLand").Value))   ' BT-55
         If Len(Feld("f_KGLN").Value) > 0 Then                   ' BT-46: GLN mit Schema 0088
-            .Id.Value = GlnBereinigt(Feld("f_KGLN").Value)
-            .Id.SchemeCode = ID_GLN
+            .ID.Value = GlnBereinigt(Feld("f_KGLN").Value)
+            .ID.SchemeCode = ID_GLN
         ElseIf Len(Feld("f_KundenNr").Value) > 0 Then           ' sonst Kundennummer ohne Schema
-            .Id.Value = CStr(Feld("f_KundenNr").Value)
+            .ID.Value = CStr(Feld("f_KundenNr").Value)
         End If
         If Len(Feld("f_KUstId").Value) > 0 Then .VatId = CStr(Feld("f_KUstId").Value)        ' BT-48
         If Len(Feld("f_KEmail").Value) > 0 Then
@@ -180,10 +180,10 @@ Private Sub LieferungSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZU
         If IsDate(Feld("f_LSDatum").Value) Then .ActualDeliveryDate = Feld("f_LSDatum").Value   ' BT-72
         If Len(Feld("f_LSNr").Value) > 0 Then .DespatchAdviceId = CStr(Feld("f_LSNr").Value)    ' BT-16
         If Len(Feld("f_LName").Value) > 0 Or Len(Feld("f_LGLN").Value) > 0 Then
-            .ShipTo.Name = CStr(Feld("f_LName").Value)          ' BT-70
+            .ShipTo.name = CStr(Feld("f_LName").Value)          ' BT-70
             If Len(Feld("f_LGLN").Value) > 0 Then               ' BT-71: GLN mit Schema 0088
-                .ShipTo.Id.Value = GlnBereinigt(Feld("f_LGLN").Value)
-                .ShipTo.Id.SchemeCode = ID_GLN
+                .ShipTo.ID.Value = GlnBereinigt(Feld("f_LGLN").Value)
+                .ShipTo.ID.SchemeCode = ID_GLN
             End If
             If Len(Feld("f_LPLZ").Value) > 0 Or Len(Feld("f_LOrt").Value) > 0 Then
                 .ShipTo.PostalAddress.AddressLine1 = CStr(Feld("f_LZeile2").Value)   ' BT-75
@@ -243,7 +243,7 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
             Set pos = New SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_InvoiceLine
             With pos
                 .ID = CStr(nr)                                                      ' BT-126
-                .Item.Name = CStr(ws.Cells(z, SP_BEZ).Value)                        ' BT-153
+                .Item.name = CStr(ws.Cells(z, SP_BEZ).Value)                        ' BT-153
                 If Len(ws.Cells(z, SP_ARTNR).Value) > 0 Then .Item.SellerAssignedId = CStr(ws.Cells(z, SP_ARTNR).Value)   ' BT-155
                 .InvoicedQuantity = ws.Cells(z, SP_MENGE).Value                     ' BT-129 (Rücknahme negativ)
                 .InvoicedQuantityUnitCode = EinheitCode(CStr(ws.Cells(z, SP_EINHEIT).Value))   ' BT-130
@@ -299,16 +299,16 @@ End Sub
 ' (Dokumentation: EN16931.GlobalIdentifier, .ItemAttribute, .InvoiceNote,
 ' .InvoiceAllowance). Bei einem Übersetzungsfehler hier den Namen anpassen.
 '------------------------------------------------------------------------------
-Private Function NeueKennung(ByVal wert As String, ByVal schema As Long) As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_GlobalIdentifier
+Private Function NeueKennung(ByVal Wert As String, ByVal schema As Long) As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_GlobalIdentifier
     Set NeueKennung = New SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_GlobalIdentifier
-    NeueKennung.Value = GlnBereinigt(wert)
+    NeueKennung.Value = GlnBereinigt(Wert)
     NeueKennung.SchemeCode = schema
 End Function
 
-Private Function NeuesMerkmal(ByVal name As String, ByVal wert As String) As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_ItemAttribute
+Private Function NeuesMerkmal(ByVal name As String, ByVal Wert As String) As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_ItemAttribute
     Set NeuesMerkmal = New SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_ItemAttribute
-    NeuesMerkmal.Name = name
-    NeuesMerkmal.Value = wert
+    NeuesMerkmal.name = name
+    NeuesMerkmal.Value = Wert
 End Function
 
 Private Function NeueNotiz(ByVal text As String, ByVal qualifizierung As Long) As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_InvoiceNote
