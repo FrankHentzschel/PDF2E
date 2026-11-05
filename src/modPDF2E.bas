@@ -30,7 +30,7 @@ Public Sub SplashSchliessen()
     Dim f As Object
     On Error Resume Next
     For Each f In VBA.UserForms
-        If f.Name = "frmInfo" Then
+        If f.name = "frmInfo" Then
             If f.AlsSplash Then Unload f
         End If
     Next f
@@ -105,7 +105,7 @@ Private Sub SchaltflaechenAnlegen(ByVal ws As Worksheet, ByVal startZelle As Str
 
     ' Vorhandene PDF2E-Schaltflächen entfernen (auch die Formularsteuerelemente bis 1.0.1)
     For i = ws.Shapes.Count To 1 Step -1
-        If Left$(ws.Shapes(i).Name, 6) = "PDF2E_" Then ws.Shapes(i).Delete
+        If Left$(ws.Shapes(i).name, 6) = "PDF2E_" Then ws.Shapes(i).Delete
     Next i
 
     l = ws.Range(startZelle).Left
@@ -113,14 +113,14 @@ Private Sub SchaltflaechenAnlegen(ByVal ws As Worksheet, ByVal startZelle As Str
     For i = 0 To UBound(beschriftung)
         Set shp = ws.Shapes.AddShape(5, l, t + i * 32, 160, 26)     ' 5 = msoShapeRoundedRectangle
         With shp
-            .Name = "PDF2E_" & makro(i)
+            .name = "PDF2E_" & makro(i)
             .OnAction = makro(i)
             .Placement = xlFreeFloating
             .Fill.ForeColor.RGB = RGB(122, 74, 18)                  ' Braun wie die Tabellenköpfe
             .Line.Visible = msoFalse
             With .TextFrame2
                 .VerticalAnchor = 3                                 ' msoAnchorMiddle
-                .TextRange.Text = beschriftung(i)
+                .TextRange.text = beschriftung(i)
                 .TextRange.ParagraphFormat.Alignment = 2            ' msoAlignCenter
                 .TextRange.Font.Size = 10
                 .TextRange.Font.Bold = msoTrue

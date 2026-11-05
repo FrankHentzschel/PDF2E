@@ -123,7 +123,7 @@ Private Sub Wert(ByVal eltern As Object, ByVal bt As String, ByVal name As Strin
     Dim e As Object
     Set e = mDoc.createElement(name)
     e.setAttribute "bt", bt
-    e.Text = CStr(inhalt)
+    e.text = CStr(inhalt)
     eltern.appendChild e
 End Sub
 

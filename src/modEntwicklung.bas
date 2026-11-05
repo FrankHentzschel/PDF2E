@@ -22,10 +22,10 @@ Public Sub PDF2E_Exportieren()
     For Each comp In ThisWorkbook.VBProject.VBComponents
         Select Case comp.Type
             Case 1          ' Standardmodul
-                comp.Export ziel & "\" & comp.Name & ".bas"
+                comp.Export ziel & "\" & comp.name & ".bas"
                 anzahl = anzahl + 1
             Case 2          ' Klassenmodul
-                comp.Export ziel & "\" & comp.Name & ".cls"
+                comp.Export ziel & "\" & comp.name & ".cls"
                 anzahl = anzahl + 1
             Case 3, 100     ' UserForm, DieseArbeitsmappe/Tabellen: nur der Code als Text
                 If comp.CodeModule.CountOfLines > 0 Then
@@ -45,10 +45,10 @@ End Sub
 
 ' "DieseArbeitsmappe" heißt intern je nach Sprache unterschiedlich - einheitlich exportieren
 Private Function DateiName(ByVal comp As Object) As String
-    If comp.Type = 100 And comp.Name = ThisWorkbook.CodeName Then
+    If comp.Type = 100 And comp.name = ThisWorkbook.CodeName Then
         DateiName = "ThisWorkbook"
     Else
-        DateiName = comp.Name
+        DateiName = comp.name
     End If
 End Function
 
