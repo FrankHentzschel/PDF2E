@@ -33,7 +33,7 @@ Die Module sind neu aufgeteilt, damit PDF2E und XL2E denselben Code nutzen. Die 
 
 1. Vorhandene `PDF2E.xlsm` sichern (Kopie anlegen).
 2. VBA-Editor (Alt+F11): das Modul **`modPDF2E` entfernen** (Rechtsklick > *Entfernen*, Export mit *Nein*). Es heißt jetzt `modAnwendung`; bleibt es stehen, meldet der Editor doppelte Namen.
-3. Mit VbaSync „Alle importieren“ aus dem Ordner `vba` (oder `src\pdf2e`). Vorhandene Module werden ersetzt, neue (`modAnwendung`, `modProdukt`) hinzugefügt, *DieseArbeitsmappe* bekommt den neuen Code (`AnwendungStart`).
+3. Mit VbaSync „Alle importieren“ aus dem Ordner `vba` des ZIP (nicht aus einem alten Exportordner, der noch `modPDF2E.bas` enthält). Vorhandene Module werden ersetzt, neue (`modAnwendung`, `modProdukt`) hinzugefügt, *DieseArbeitsmappe* bekommt den neuen Code (`AnwendungStart`).
 4. *Debuggen > Kompilieren VBAProject*.
 5. Alt+F8 > `PDF2E_Einrichten` einmal ausführen. Die Schaltflächen werden neu angelegt.
 6. Optional im Blatt „Einstellungen“ eine Zeile **Sammelkundennummern** ergänzen (siehe unten). Das Blatt „Pfandartikel“ entsteht beim nächsten Einlesen von selbst.
