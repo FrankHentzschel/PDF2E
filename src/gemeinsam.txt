@@ -1,0 +1,15 @@
+# Module, die in allen Produktordnern (src/pdf2e, src/xl2e, ...) identisch sein mÃ¼ssen.
+# PrÃ¼fen:   python tools/abgleich.py
+# Kopieren: python tools/abgleich.py --von pdf2e   (Stand aus src/pdf2e in die anderen Ordner)
+DieseArbeitsmappe.doccls
+frmInfo.frm
+frmInfo.frx
+modAdapterSmartTools.bas
+modAdapterStub.bas
+modAnwendung.bas
+modEinlesen.bas
+modEntwicklung.bas
+modHilfen.bas
+modMail.bas
+modPruefen.bas
+modZugferd.bas

@@ -1,0 +1,181 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} frmInfo 
+   Caption         =   "Info"
+   ClientHeight    =   3040
+   ClientLeft      =   90
+   ClientTop       =   370
+   ClientWidth     =   3810
+   OleObjectBlob   =   "frmInfo.frx":0000
+   StartUpPosition =   1  'Fenstermitte
+End
+Attribute VB_Name = "frmInfo"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+
+'==============================================================================
+' Code für die UserForm "frmInfo" (Splash- und Info-Fenster von PDF2E und XL2E)
+'
+' Einrichtung: Im VBA-Editor Einfügen > UserForm, im Eigenschaftenfenster
+' (Name) = frmInfo setzen, dann diesen gesamten Text in das Codefenster der
+' UserForm einfügen (Rechtsklick auf frmInfo > Code anzeigen).
+' Alle Bedienelemente werden zur Laufzeit erzeugt - auf der Form selbst muss
+' nichts platziert werden.
+'==============================================================================
+Option Explicit
+
+Public AlsSplash As Boolean
+
+Private Const BREITE As Single = 430
+Private Const HOEHE As Single = 300
+Private WithEvents mOk As MSForms.CommandButton
+Attribute mOk.VB_VarHelpID = -1
+
+Private Sub UserForm_Initialize()
+    Dim farbe As Long, y As Single, x0 As Single, firmenlogo As String, textLinks As Single, textBreite As Single
+    farbe = RGB(122, 74, 18)        ' Braun der Tabellenköpfe
+
+    Me.Caption = TOOL_NAME
+    Me.BackColor = vbWhite
+    Me.Width = BREITE
+    Me.Height = HOEHE
+
+    ' Farbband oben
+    With NeuesLabel("lblBand", "", 0, 0, BREITE, 8)
+        .BackStyle = fmBackStyleOpaque
+        .BackColor = farbe
+    End With
+
+    ' Anwendungslogo oben links (BMP, JPG, GIF; PNG wird von LoadPicture nicht unterstützt)
+    x0 = 24
+    If BildEinfuegen("imgAnwendung", EinstellungOderLeer("Anwendungslogo"), 24, 24, 84, 84) Then x0 = 120
+
+    With NeuesLabel("lblName", TOOL_NAME, x0, 22, BREITE - x0 - 20, 40)
+        .Font.name = "Segoe UI": .Font.Size = 26: .Font.Bold = True
+        .ForeColor = farbe
+    End With
+    With NeuesLabel("lblUntertitel", TOOL_UNTERTITEL, x0, 64, BREITE - x0 - 20, 18)
+        .Font.name = "Segoe UI": .Font.Size = 10
+        .ForeColor = RGB(64, 64, 64)
+    End With
+    With NeuesLabel("lblVersion", VersionText(), x0, 86, BREITE - x0 - 20, 16)
+        .Font.name = "Segoe UI": .Font.Size = 9
+        .ForeColor = RGB(110, 110, 110)
+    End With
+
+    ' Trennlinie
+    With NeuesLabel("lblLinie", "", 24, 122, BREITE - 52, 1)
+        .BackStyle = fmBackStyleOpaque
+        .BackColor = RGB(220, 220, 220)
+    End With
+
+    ' Firmenlogo des Entwicklers neben dem Entwicklerblock, Standard links (bündig
+    ' mit dem Anwendungslogo), mit Einstellung "Firmenlogo-Position" = RECHTS rechts.
+    ' "Logo-Datei" ist der Schlüssel bis 1.0.x und gilt als Firmenlogo weiter.
+    firmenlogo = EinstellungOderLeer("Firmenlogo")
+    If Len(firmenlogo) = 0 Then firmenlogo = EinstellungOderLeer("Logo-Datei")
+    textLinks = 24
+    textBreite = BREITE - 52
+    If UCase$(EinstellungOderLeer("Firmenlogo-Position")) = "RECHTS" Then
+        If BildEinfuegen("imgFirma", firmenlogo, BREITE - 28 - 84, 134, 84, 84) Then textBreite = BREITE - 52 - 96
+    Else
+        If BildEinfuegen("imgFirma", firmenlogo, 24, 134, 84, 84) Then textLinks = 120: textBreite = BREITE - 120 - 28
+    End If
+
+    y = 134
+    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True, textLinks, textBreite
+    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False, textLinks, textBreite
+    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False, textLinks, textBreite
+    y = y + 6
+    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False, textLinks, textBreite
+    Zeile "lblSystem", "", SystemText(), y, False, textLinks, textBreite
+
+    With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & EinstellungOderLeer("Firma") & ". Alle Rechte vorbehalten.", _
+                    24, HOEHE - 52, BREITE - 150, 14)
+        .Font.name = "Segoe UI": .Font.Size = 8
+        .ForeColor = RGB(140, 140, 140)
+    End With
+
+    Set mOk = Me.Controls.Add("Forms.CommandButton.1", "cmdOk")
+    With mOk
+        .Caption = "OK"
+        .Left = BREITE - 110: .Top = HOEHE - 62: .Width = 80: .Height = 24
+        .Default = True: .Cancel = True
+    End With
+End Sub
+
+' Splash: ohne OK-Schaltfläche, nicht modal, schließt per Zeitgeber oder Klick.
+' Info: mit OK-Schaltfläche, modal.
+Public Sub Anzeigen(ByVal splash As Boolean)
+    AlsSplash = splash
+    mOk.Visible = Not splash
+    If splash Then
+        Me.Show vbModeless
+        Me.Repaint
+        DoEvents
+    Else
+        Me.Show vbModal
+    End If
+End Sub
+
+Private Sub mOk_Click()
+    Unload Me
+End Sub
+
+Private Sub UserForm_Click()
+    If AlsSplash Then Unload Me
+End Sub
+
+Private Function NeuesLabel(ByVal name As String, ByVal text As String, ByVal l As Single, ByVal t As Single, _
+                            ByVal w As Single, ByVal h As Single) As MSForms.Label
+    Dim lbl As MSForms.Label
+    Set lbl = Me.Controls.Add("Forms.Label.1", name)
+    lbl.Caption = text
+    lbl.Left = l: lbl.Top = t: lbl.Width = w: lbl.Height = h
+    lbl.BackStyle = fmBackStyleTransparent
+    lbl.WordWrap = False
+    Set NeuesLabel = lbl
+End Function
+
+' Eine Textzeile; entfällt, wenn der Wert leer ist
+Private Sub Zeile(ByVal name As String, ByVal vorsatz As String, ByVal Wert As String, ByRef y As Single, _
+                  ByVal fett As Boolean, ByVal zeilenLinks As Single, ByVal zeilenBreite As Single)
+    If Len(Trim$(Wert)) = 0 Then Exit Sub
+    With NeuesLabel(name, vorsatz & Wert, zeilenLinks, y, zeilenBreite, 15)
+        .Font.name = "Segoe UI": .Font.Size = 9: .Font.Bold = fett
+        .ForeColor = RGB(48, 48, 48)
+    End With
+    y = y + 16
+End Sub
+
+' Bild aus Datei einfügen. Liefert True, wenn die Datei existiert (der Platz wird
+' dann freigehalten). Ladefehler landen im Protokoll und verhindern nie die Anzeige.
+Private Function BildEinfuegen(ByVal name As String, ByVal pfad As String, ByVal l As Single, ByVal t As Single, _
+                               ByVal w As Single, ByVal h As Single) As Boolean
+    Dim Fehler As String
+    If Len(pfad) = 0 Then Exit Function
+    If Len(Dir$(pfad)) = 0 Then Exit Function
+    BildEinfuegen = True
+    On Error Resume Next
+    With Me.Controls.Add("Forms.Image.1", name)
+        .Left = l: .Top = t: .Width = w: .Height = h
+        .BorderStyle = fmBorderStyleNone
+        .BackStyle = fmBackStyleTransparent
+        .PictureSizeMode = fmPictureSizeModeZoom
+        .Picture = LoadPicture(pfad)
+        If Err.Number <> 0 Then Fehler = Err.Description
+    End With
+    If Len(Fehler) > 0 Then
+        Protokoll "Warnung", "Logo konnte nicht geladen werden (" & pfad & "): " & Fehler & _
+                  " - erlaubt sind echte BMP-, JPG- oder GIF-Dateien (kein PNG/WebP)."
+    End If
+    On Error GoTo 0
+End Function
+
+Private Function StammOderLeer(ByVal schluessel As String) As String
+    On Error Resume Next
+    StammOderLeer = Stamm(schluessel)
+End Function
+
+

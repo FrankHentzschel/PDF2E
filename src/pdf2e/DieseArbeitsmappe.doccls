@@ -6,5 +6,5 @@
 Option Explicit
 
 Private Sub Workbook_Open()
-    PDF2E_Start
+    AnwendungStart
 End Sub

@@ -15,7 +15,7 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
 '==============================================================================
-' Code für die UserForm "frmInfo" (PDF2E Splash- und Info-Fenster)
+' Code für die UserForm "frmInfo" (Splash- und Info-Fenster von PDF2E und XL2E)
 '
 ' Einrichtung: Im VBA-Editor Einfügen > UserForm, im Eigenschaftenfenster
 ' (Name) = frmInfo setzen, dann diesen gesamten Text in das Codefenster der
@@ -34,7 +34,7 @@ Attribute mOk.VB_VarHelpID = -1
 
 Private Sub UserForm_Initialize()
     Dim farbe As Long, y As Single, x0 As Single, firmenlogo As String, textLinks As Single, textBreite As Single
-    farbe = RGB(122, 74, 18)        ' PDF2E-Braun
+    farbe = RGB(122, 74, 18)        ' Braun der Tabellenköpfe
 
     Me.Caption = TOOL_NAME
     Me.BackColor = vbWhite

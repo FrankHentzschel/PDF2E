@@ -1,30 +1,48 @@
-# PDF2E 1.5.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.6.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
 ## Inhalt
 
+PDF2E und XL2E teilen sich seit PDF2E 1.6.0 denselben Kern. Im ZIP liegen alle benötigten Module gemeinsam im Ordner `vba/`.
+
 | Datei | Zweck |
 | --- | --- |
-| `PDF2E.xlsx` | Arbeitsmappe ohne Makros; erzeugt mit `python vorlage/build_xlsx.py PDF2E.xlsx` oder als Anhang eines Releases |
-| `src/modPDF2E.bas` | Name, Version, Splash beim Start, Info-Fenster, Schaltflächen anlegen (`PDF2E_Einrichten`) |
-| `src/modHilfen.bas` | Einstellungen, Feldzugriff, Zahlen und Datumswerte, RegExp, Protokoll |
-| `src/modPdfText.bas` | Ruft `pdftotext -layout` auf und liest den Text ein |
-| `src/modParserBSI.bas` | Einlese-Vorlage für BSI-Rechnungen, Variante je Kunde über die Einstellung „Layout-Variante“ |
-| `src/modEinlesen.bas` | Makro **RechnungEinlesen** |
-| `src/modPruefen.bas` | Prüfung: Pflichtangaben, Menge × Preis, Summenabgleich mit dem PDF |
-| `src/modZugferd.bas` | Makro **ZugferdErzeugen**, ruft den Adapter auf |
-| `src/modAdapterStub.bas` | Stub: schreibt alle Übergabedaten nach `<Ziel>.daten.xml` |
-| `src/modAdapterSmartTools.bas` | Smart Tools: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
-| `src/modEntwicklung.bas` | Nur Entwicklung: `PDF2E_Exportieren` schreibt alle Module für Git nach `src/` |
-| `src/frmInfo.frm` + `src/frmInfo.frx` | Splash- und Info-Fenster (UserForm, VBE-Export) |
-| `src/DieseArbeitsmappe.doccls` | Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
+| `PDF2E.xlsx` | Arbeitsmappe ohne Makros |
+| `modProdukt.bas` | **nur PDF2E:** Name, Version, Dateiauswahl für PDF, Aufruf der Einlese-Vorlage |
+| `modPdfText.bas` | **nur PDF2E:** ruft `pdftotext -layout` auf und liest den Text ein |
+| `modParserBSI.bas` | **nur PDF2E:** Einlese-Vorlage für BSI-PDF-Rechnungen, Variante über die Einstellung „Layout-Variante“ |
+| `Tabelle1.doccls` … | **nur PDF2E:** Blattmodule (leer bis auf `Option Explicit`) |
+| `modAnwendung.bas` | gemeinsam: Splash beim Start, Info-Fenster, Schaltflächen anlegen (`PDF2E_Einrichten`) |
+| `modHilfen.bas` | gemeinsam: Einstellungen, Feldzugriff, Zahlen, Datum, RegExp, Protokoll, Positionen anlegen |
+| `modEinlesen.bas` | gemeinsam: Makro **RechnungEinlesen**, Empfänger und Pfandartikel anlegen |
+| `modPruefen.bas` | gemeinsam: Pflichtangaben, Menge × Preis, Summenabgleich, GLN, GTIN, Platzhalter in Stammdaten |
+| `modZugferd.bas` | gemeinsam: Makro **ZugferdErzeugen**, ruft den Adapter auf |
+| `modAdapterStub.bas` | gemeinsam: Testlauf ohne Smart Tools, schreibt `<Ziel>.daten.xml` |
+| `modAdapterSmartTools.bas` | gemeinsam: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
+| `modMail.bas` | gemeinsam: E-Mail-Entwurf in Outlook |
+| `modEntwicklung.bas` | gemeinsam, nur Entwicklung: älterer Export ohne VbaSync |
+| `frmInfo.frm` + `frmInfo.frx` | gemeinsam: Splash- und Info-Fenster (UserForm) |
+| `DieseArbeitsmappe.doccls` | gemeinsam: Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
+
+„Gemeinsam“ heißt: dieselbe Datei steht auch in XL2E.
+
+## Update von 1.5.0 auf 1.6.0
+
+Die Module sind neu aufgeteilt, damit PDF2E und XL2E denselben Code nutzen. Die Stammdaten in der Mappe bleiben erhalten.
+
+1. Vorhandene `PDF2E.xlsm` sichern (Kopie anlegen).
+2. VBA-Editor (Alt+F11): das Modul **`modPDF2E` entfernen** (Rechtsklick > *Entfernen*, Export mit *Nein*). Es heißt jetzt `modAnwendung`; bleibt es stehen, meldet der Editor doppelte Namen.
+3. Mit VbaSync „Alle importieren“ aus dem Ordner `vba` des ZIP (nicht aus einem alten Exportordner, der noch `modPDF2E.bas` enthält). Vorhandene Module werden ersetzt, neue (`modAnwendung`, `modProdukt`) hinzugefügt, *DieseArbeitsmappe* bekommt den neuen Code (`AnwendungStart`).
+4. *Debuggen > Kompilieren VBAProject*.
+5. Alt+F8 > `PDF2E_Einrichten` einmal ausführen. Die Schaltflächen werden neu angelegt.
+6. Optional im Blatt „Einstellungen“ eine Zeile **Sammelkundennummern** ergänzen (siehe unten). Das Blatt „Pfandartikel“ entsteht beim nächsten Einlesen von selbst.
 
 ## Einrichtung (ca. 15 Minuten)
 
 1. **pdftotext:** Lade auf https://www.xpdfreader.com/download.html die *Xpdf command line tools* für Windows und lege `pdftotext.exe` (64-Bit) z. B. unter `C:\Tools\xpdf\` ab.
 2. **Mappe vorbereiten:** `PDF2E.xlsx` öffnen und als **Excel-Arbeitsmappe mit Makros (.xlsm)** speichern.
-3. **Module importieren:** VBA-Editor mit Alt+F11 öffnen. Über *Datei > Datei importieren* alle `.bas`-Dateien aus `src/` einlesen.
+3. **Module importieren:** VBA-Editor mit Alt+F11 öffnen. Über *Datei > Datei importieren* alle `.bas`-Dateien aus `vba/` einlesen.
 4. **Info-Fenster importieren:** Ebenso `frmInfo.frm` importieren (`frmInfo.frx` muss im selben Ordner liegen).
 5. **Start-Code:** Doppelklick auf *DieseArbeitsmappe* und den Inhalt von `DieseArbeitsmappe.doccls` einfügen.
 
@@ -54,8 +72,22 @@ REWE (REWE-Zentralfinanz, Startpaket E-Rechnung 1.7 vom 14.07.2026) verlangt unt
 - Beim Einlesen wird ein Rechnungsempfänger, dessen Name mit „REWE“ beginnt und der eine RE-GLN hat, im Blatt „Empfaenger“ in der Spalte **Vorgaben** mit `REWE` markiert. Von Hand geht das genauso.
 - Die **USt-IdNr. von REWE** steht nicht auf der BSI-Rechnung. Sie muss einmal im Blatt „Empfaenger“ eingetragen werden, sonst meldet die Prüfung einen Fehler.
 - Der Hinweistext steht in der Einstellung „REWE Hinweis AAK“.
-- Der Mailtext an REWE darf keine buchungsrelevanten Inhalte enthalten. Beim E-Mail-Entwurf erscheint ein Hinweis, wenn die Vorlage Betrag, Fälligkeit oder Zahlungsbedingung enthält.
+- Der Mailtext an REWE darf keine buchungsrelevanten Inhalte enthalten (Startpaket: „keine buchungsrelevanten Inhalte im E-Mail-Text“, ohne nähere Festlegung). Seit 1.6.0 bekommt REWE deshalb einen neutralen Text ohne Rechnungsdaten: Anrede, „anbei erhalten Sie unsere E-Rechnung im ZUGFeRD-Format“, Gruß. Der Text steht im Blatt „Mailvorlage“ in der Zeile **Text REWE**. Fehlt die Zeile (Mappen vor 1.6.0), gilt dieser Standard. Betrag, Fälligkeit und Zahlungsbedingung werden auch dort immer entfernt. Der Betreff bleibt wie in der Vorlage, z. B. „Rechnung 2603587 vom 27.09.2026“.
 - Noch nicht umgesetzt: Bestellnummer (BT-13), Kostenstelle (BT-19), Konditionsschlüssel (OSI) und Profil EXTENDED. Die BSI-Rechnungen enthalten diese Angaben nicht.
+
+## EDEKA-Empfänger und GTIN für Pfand
+
+EDEKA verlangt laut Auskunft gegenüber der Brauerei (November 2026):
+
+- Bei negativen Positionen sind Menge und Positionsbetrag negativ, der Preis positiv. So erzeugt PDF2E Pfand-Rücknahmen seit 1.5.0.
+- Lieferung und Rückgabe stehen auch dann als zwei Positionen in der E-Rechnung, wenn sie gleich groß sind (Differenz 0). Im PDF darf die Zeile ohne Betrag bleiben.
+- Pfandpositionen tragen eine **eigene GTIN** des Pfandartikels, nicht die des Warenartikels.
+
+Umsetzung:
+
+- Beim Einlesen wird ein Empfänger, dessen Name „EDEKA“ enthält, im Blatt „Empfaenger“ in der Spalte **Vorgaben** mit `EDEKA` markiert. Andere Händler, die über EDEKA abrechnen, dort von Hand markieren.
+- Das Blatt **Pfandartikel** sammelt alle Leergut-Nummern aus den Rechnungen automatisch. Die GTIN trägt der Anwender einmal ein; sie steht nicht auf der BSI-Rechnung. Fehlt sie bei einem EDEKA-Empfänger, meldet die Prüfung einen Fehler.
+- Weitere Vorgaben, etwa die EDEKA-Bestellnummer (BT-13), sind nicht umgesetzt: Sie stehen nicht auf der BSI-Rechnung.
 
 ## Versionsnummern
 
@@ -67,7 +99,15 @@ PDF2E verwendet das übliche Schema HAUPT.NEBEN.KORREKTUR (Semantic Versioning):
 | neue Funktion | 1.0.1 → 1.1.0 |
 | inkompatible Änderung, z. B. neues Stammdatenformat | 1.4.2 → 2.0.0 |
 
-Die Version steht als Konstante `TOOL_VERSION` in `modPDF2E`. Jede Änderung kommt zusätzlich ins Blatt „Versionshistorie“.
+Die Version steht als Konstante `TOOL_VERSION` in `modProdukt`. Jede Änderung kommt zusätzlich ins Blatt „Versionshistorie“.
+
+## Sammelkundennummern
+
+Manche Kunden werden unter einer gemeinsamen Kundennummer abgerechnet, etwa Festlichkeiten oder Barverkäufe. Solche Nummern stehen in der Einstellung **Sammelkundennummern**, mehrere durch Komma getrennt. Bei diesen Nummern legt das Programm im Blatt „Empfaenger“ je Kunde einen eigenen Eintrag an, mit dem Schlüssel `Kundennr. / Name / PLZ`, zum Beispiel `12100 / Gasthof Linde / 09481`. E-Mail-Adresse und Vorgaben gelten dann für genau diesen Kunden.
+
+## Stammdaten mit Platzhaltern
+
+Die Prüfung meldet Werte, die erkennbar Platzhalter sind (z. B. `DE123456789`, `HRB 12345`, BIC `TESTDEFFXXX`). Im Testmodus (STUB) ist das eine Warnung, mit Smart Tools ein Fehler. So entsteht keine echte E-Rechnung mit Musterdaten.
 
 ## E-Mail-Versand
 
@@ -75,7 +115,14 @@ Nach „E-Rechnung erzeugen“ öffnet die Schaltfläche **E-Mail erstellen** ei
 
 Betreff und Text stehen im Blatt **Mailvorlage**. Platzhalter: `{Rechnungsnummer}`, `{Rechnungsdatum}`, `{Betrag}`, `{Faellig}`, `{Zahlungsbedingung}`, `{Kundennummer}`, `{Kunde}`, `{Lieferort}`, `{Lieferschein}`, `{Absender}`, `{Dateiname}`. Außerdem lassen sich dort CC, BCC, Signatur (Ja/Nein) und ein abweichendes Absenderkonto einstellen.
 
-Voraussetzung ist das klassische Outlook für Windows. Das „neue Outlook“ bietet keine Schnittstelle für VBA.
+**Absender:** Im Blatt „Mailvorlage“ legt das Feld **Absenderkonto** fest, von welcher Adresse die Mail kommt. Leer bedeutet: das Standardkonto des angemeldeten Outlook-Benutzers.
+
+- Beim ersten „E-Mail erstellen“ (oder mit dem Makro `OutlookAbsenderLesen`) schreibt das Programm alle Konten aus Outlook in Spalte E. Das Feld bietet sie dann als Auswahl an.
+- Ein **gemeinsames Postfach** wie `rechnung@firma.de` lässt sich auch eintippen, wenn es kein eigenes Konto in Outlook ist. Die Mail geht dann im Namen dieses Postfachs. Dafür muss der IT-Dienstleister jedem Benutzer das Recht „Senden als“ (oder „Senden im Auftrag von“) auf dieses Postfach geben. Fehlt das Recht, meldet der Mailserver erst nach dem Senden einen Fehler.
+- So kommen alle Rechnungen von derselben Adresse, egal an welchem Arbeitsplatz sie erstellt werden. Das ist bei REWE wichtig: Dort werden nur angemeldete Absenderadressen angenommen (RZD-Starterkit 1.09, bis zu 5 Adressen; für die RZF beim Onboarding klären).
+- Der Entwurf zeigt im Feld „Von“, welcher Absender gilt. Bitte vor dem Senden kurz prüfen.
+
+Voraussetzung ist das klassische Outlook für Windows. Das „neue Outlook“ bietet keine Schnittstelle für VBA. Ob später ein Versand ohne Outlook (SMTP oder Microsoft Graph) nötig ist, wird mit dem IT-Dienstleister geklärt.
 
 ## Test mit den Mustern
 
@@ -96,9 +143,7 @@ Im Stub-Modus legt **E-Rechnung erzeugen** zwei Dateien an: `<RechNr>_ZUGFeRD_ST
 
 ## Noch nicht getestet
 
-- Der Smart-Tools-Adapter (1.5.0) ist noch nicht in Excel gelaufen. Zu prüfen: Kompilieren (vier abgeleitete Klassennamen), Zahlenübergabe mit deutschem Dezimalkomma, Ergebnis im Prüfbericht und in einem externen Validator.
-
-- Der VBA-Code ist noch nicht in Excel gelaufen. Gegengeprüft habe ich nur die Auswertungslogik, und zwar mit Poppler-pdftotext unter Linux.
+- Die neue Modulaufteilung (1.6.0) ist noch nicht in Excel kompiliert worden. Die Logik ist unverändert gegenüber 1.5.0, die am 04.11.2026 mit RE 2603587 eine gültige E-Rechnung erzeugt hat.
 - `VBScript.RegExp`: Microsoft kündigt die schrittweise Abschaltung von VBScript an. Ob und wann das RegExp in VBA betrifft, ist offen.
 
 ## Bekannte Grenzen
