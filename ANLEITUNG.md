@@ -12,37 +12,41 @@ PDF2E und XL2E teilen sich seit PDF2E 1.6.0 denselben Kern. Im ZIP liegen alle b
 | `modProdukt.bas` | **nur PDF2E:** Name, Version, Dateiauswahl für PDF, Aufruf der Einlese-Vorlage |
 | `modPdfText.bas` | **nur PDF2E:** ruft `pdftotext -layout` auf und liest den Text ein |
 | `modParserBSI.bas` | **nur PDF2E:** Einlese-Vorlage für BSI-PDF-Rechnungen, Variante über die Einstellung „Layout-Variante“ |
-| `modAnwendung.bas` | Kern: Splash beim Start, Info-Fenster, Schaltflächen anlegen (`PDF2E_Einrichten`) |
-| `modHilfen.bas` | Kern: Einstellungen, Feldzugriff, Zahlen, Datum, RegExp, Protokoll, Positionen anlegen |
-| `modEinlesen.bas` | Kern: Makro **RechnungEinlesen**, Empfänger anlegen |
-| `modPruefen.bas` | Kern: Pflichtangaben, Menge × Preis, Summenabgleich, GLN, Platzhalter in Stammdaten |
-| `modZugferd.bas` | Kern: Makro **ZugferdErzeugen**, ruft den Adapter auf |
-| `modAdapterStub.bas` | Kern: Testlauf ohne Smart Tools, schreibt `<Ziel>.daten.xml` |
-| `modAdapterSmartTools.bas` | Kern: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
-| `modMail.bas` | Kern: E-Mail-Entwurf in Outlook |
-| `modEntwicklung.bas` | Kern, nur Entwicklung: `PDF2E_Exportieren` schreibt die Module nach `src/` |
-| `frmInfo_Code.txt` | Code für das Splash- und Info-Fenster (UserForm) |
-| `ThisWorkbook_Code.txt` | Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
+| `Tabelle1.doccls` … | **nur PDF2E:** Blattmodule (leer bis auf `Option Explicit`) |
+| `modAnwendung.bas` | gemeinsam: Splash beim Start, Info-Fenster, Schaltflächen anlegen (`PDF2E_Einrichten`) |
+| `modHilfen.bas` | gemeinsam: Einstellungen, Feldzugriff, Zahlen, Datum, RegExp, Protokoll, Positionen anlegen |
+| `modEinlesen.bas` | gemeinsam: Makro **RechnungEinlesen**, Empfänger und Pfandartikel anlegen |
+| `modPruefen.bas` | gemeinsam: Pflichtangaben, Menge × Preis, Summenabgleich, GLN, GTIN, Platzhalter in Stammdaten |
+| `modZugferd.bas` | gemeinsam: Makro **ZugferdErzeugen**, ruft den Adapter auf |
+| `modAdapterStub.bas` | gemeinsam: Testlauf ohne Smart Tools, schreibt `<Ziel>.daten.xml` |
+| `modAdapterSmartTools.bas` | gemeinsam: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
+| `modMail.bas` | gemeinsam: E-Mail-Entwurf in Outlook |
+| `modEntwicklung.bas` | gemeinsam, nur Entwicklung: älterer Export ohne VbaSync |
+| `frmInfo.frm` + `frmInfo.frx` | gemeinsam: Splash- und Info-Fenster (UserForm) |
+| `DieseArbeitsmappe.doccls` | gemeinsam: Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
+
+„Gemeinsam“ heißt: dieselbe Datei steht auch in XL2E.
 
 ## Update von 1.5.0 auf 1.6.0
 
-Die Funktionen bleiben gleich. Geändert hat sich die Aufteilung der Module, damit PDF2E und XL2E denselben Code nutzen. Die Stammdaten in der vorhandenen Mappe bleiben erhalten.
+Die Module sind neu aufgeteilt, damit PDF2E und XL2E denselben Code nutzen. Die Stammdaten in der Mappe bleiben erhalten.
 
 1. Vorhandene `PDF2E.xlsm` sichern (Kopie anlegen).
-2. VBA-Editor (Alt+F11): alle Module **entfernen** (Rechtsklick > *Entfernen*, Frage nach Export mit *Nein*). Auch `modPDF2E` muss weg, es heißt jetzt `modAnwendung`.
-3. Alle `.bas`-Dateien aus `vba/` importieren.
-4. Code in `frmInfo` und in *DieseArbeitsmappe* vollständig durch `frmInfo_Code.txt` bzw. `ThisWorkbook_Code.txt` ersetzen. *DieseArbeitsmappe* ruft jetzt `AnwendungStart` auf.
-5. *Debuggen > Kompilieren VBAProject*.
-6. Alt+F8 > `PDF2E_Einrichten` einmal ausführen. Die Schaltflächen werden neu angelegt.
-7. Optional im Blatt „Einstellungen“ eine Zeile **Sammelkundennummern** ergänzen (siehe unten).
+2. VBA-Editor (Alt+F11): das Modul **`modPDF2E` entfernen** (Rechtsklick > *Entfernen*, Export mit *Nein*). Es heißt jetzt `modAnwendung`; bleibt es stehen, meldet der Editor doppelte Namen.
+3. Mit VbaSync „Alle importieren“ aus dem Ordner `vba` (oder `src\pdf2e`). Vorhandene Module werden ersetzt, neue (`modAnwendung`, `modProdukt`) hinzugefügt, *DieseArbeitsmappe* bekommt den neuen Code (`AnwendungStart`).
+4. *Debuggen > Kompilieren VBAProject*.
+5. Alt+F8 > `PDF2E_Einrichten` einmal ausführen. Die Schaltflächen werden neu angelegt.
+6. Optional im Blatt „Einstellungen“ eine Zeile **Sammelkundennummern** ergänzen (siehe unten). Das Blatt „Pfandartikel“ entsteht beim nächsten Einlesen von selbst.
 
 ## Einrichtung (ca. 15 Minuten)
 
 1. **pdftotext:** Lade auf https://www.xpdfreader.com/download.html die *Xpdf command line tools* für Windows und lege `pdftotext.exe` (64-Bit) z. B. unter `C:\Tools\xpdf\` ab.
 2. **Mappe vorbereiten:** `PDF2E.xlsx` öffnen und als **Excel-Arbeitsmappe mit Makros (.xlsm)** speichern.
 3. **Module importieren:** VBA-Editor mit Alt+F11 öffnen. Über *Datei > Datei importieren* alle `.bas`-Dateien aus `vba/` einlesen.
-4. **Info-Fenster anlegen:** *Einfügen > UserForm*. Im Eigenschaftenfenster bei (Name) `frmInfo` eintragen. Dann mit Rechtsklick auf `frmInfo` *Code anzeigen* wählen und den gesamten Inhalt von `frmInfo_Code.txt` einfügen. Auf der Form selbst nichts platzieren, die Elemente entstehen zur Laufzeit.
-5. **Start-Code:** Doppelklick auf *DieseArbeitsmappe* und den Inhalt von `ThisWorkbook_Code.txt` einfügen.
+4. **Info-Fenster importieren:** Ebenso `frmInfo.frm` importieren (`frmInfo.frx` muss im selben Ordner liegen).
+5. **Start-Code:** Doppelklick auf *DieseArbeitsmappe* und den Inhalt von `DieseArbeitsmappe.doccls` einfügen.
+
+   Mit [VbaSync](https://github.com/FrankHentzschel/VbaSync) erledigt „Alle importieren“ die Schritte 3 bis 5 in einem Durchgang.
 6. **Kompilieren:** *Debuggen > Kompilieren VBAProject*. Es dürfen keine Fehler erscheinen.
 7. **Einstellungen** im gleichnamigen Blatt ausfüllen:
    - Pfad zu pdftotext, Eingangs- und Ausgabeordner
@@ -70,6 +74,20 @@ REWE (REWE-Zentralfinanz, Startpaket E-Rechnung 1.7 vom 14.07.2026) verlangt unt
 - Der Hinweistext steht in der Einstellung „REWE Hinweis AAK“.
 - Der Mailtext an REWE darf keine buchungsrelevanten Inhalte enthalten (Startpaket: „keine buchungsrelevanten Inhalte im E-Mail-Text“, ohne nähere Festlegung). Seit 1.6.0 bekommt REWE deshalb einen neutralen Text ohne Rechnungsdaten: Anrede, „anbei erhalten Sie unsere E-Rechnung im ZUGFeRD-Format“, Gruß. Der Text steht im Blatt „Mailvorlage“ in der Zeile **Text REWE**. Fehlt die Zeile (Mappen vor 1.6.0), gilt dieser Standard. Betrag, Fälligkeit und Zahlungsbedingung werden auch dort immer entfernt. Der Betreff bleibt wie in der Vorlage, z. B. „Rechnung 2603587 vom 27.09.2026“.
 - Noch nicht umgesetzt: Bestellnummer (BT-13), Kostenstelle (BT-19), Konditionsschlüssel (OSI) und Profil EXTENDED. Die BSI-Rechnungen enthalten diese Angaben nicht.
+
+## EDEKA-Empfänger und GTIN für Pfand
+
+EDEKA verlangt laut Auskunft gegenüber der Brauerei (November 2026):
+
+- Bei negativen Positionen sind Menge und Positionsbetrag negativ, der Preis positiv. So erzeugt PDF2E Pfand-Rücknahmen seit 1.5.0.
+- Lieferung und Rückgabe stehen auch dann als zwei Positionen in der E-Rechnung, wenn sie gleich groß sind (Differenz 0). Im PDF darf die Zeile ohne Betrag bleiben.
+- Pfandpositionen tragen eine **eigene GTIN** des Pfandartikels, nicht die des Warenartikels.
+
+Umsetzung:
+
+- Beim Einlesen wird ein Empfänger, dessen Name „EDEKA“ enthält, im Blatt „Empfaenger“ in der Spalte **Vorgaben** mit `EDEKA` markiert. Andere Händler, die über EDEKA abrechnen, dort von Hand markieren.
+- Das Blatt **Pfandartikel** sammelt alle Leergut-Nummern aus den Rechnungen automatisch. Die GTIN trägt der Anwender einmal ein; sie steht nicht auf der BSI-Rechnung. Fehlt sie bei einem EDEKA-Empfänger, meldet die Prüfung einen Fehler.
+- Weitere Vorgaben, etwa die EDEKA-Bestellnummer (BT-13), sind nicht umgesetzt: Sie stehen nicht auf der BSI-Rechnung.
 
 ## Versionsnummern
 

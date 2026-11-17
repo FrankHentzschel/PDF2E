@@ -14,7 +14,7 @@ Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
 Public Const TOOL_VERSION As String = "1.0.0"
-Public Const TOOL_STAND As String = "04.11.2026"
+Public Const TOOL_STAND As String = "17.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
 

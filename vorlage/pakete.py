@@ -4,7 +4,7 @@ Aufruf:  python vorlage/pakete.py <Zielordner> [<Logo-Ordner>]
 
 Je Produkt entsteht <NAME>_<VERSION>.zip mit
   <NAME>.xlsx          Arbeitsmappe (vorlage/build_xlsx.py)
-  vba/                 Module aus src/kern und src/<produkt>
+  vba/                 alle Module aus src/<produkt> (VbaSync-Format, "Alle importieren")
   logo/                Logos aus dem Logo-Ordner (optional, siehe LOGOS)
   ANLEITUNG.md         PDF2E: ANLEITUNG.md, XL2E: ANLEITUNG_XL2E.md
 Die VBA-Dateien werden in Windows-1252 mit CRLF gepackt (wie der VBA-Editor sie braucht).
@@ -50,9 +50,12 @@ def paket(prod, ziel, logo_ordner):
         subprocess.run([sys.executable, os.path.join(ROOT, "vorlage", "build_xlsx.py"), mappe, prod], check=True)
         with zipfile.ZipFile(zip_pfad, "w", zipfile.ZIP_DEFLATED) as z:
             z.write(mappe, f"{name}.xlsx")
-            for ordner in ("kern", prod):
-                for f in sorted(os.listdir(os.path.join(ROOT, "src", ordner))):
-                    z.writestr(f"vba/{f}", vba_bytes(os.path.join(ROOT, "src", ordner, f)))
+            ordner = os.path.join(ROOT, "src", prod)
+            for f in sorted(os.listdir(ordner)):
+                if f.endswith(".frx"):
+                    z.write(os.path.join(ordner, f), f"vba/{f}")          # binär
+                else:
+                    z.writestr(f"vba/{f}", vba_bytes(os.path.join(ordner, f)))
             if logo_ordner:
                 for rel in LOGOS[prod]:
                     p = os.path.join(logo_ordner, rel)

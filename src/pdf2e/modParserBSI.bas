@@ -195,13 +195,44 @@ End Sub
 
 ' Eine offene Teilzeile ohne Artikelnummer, die keinem Artikel zugeordnet werden
 ' konnte, wäre ein fehlender Pfandbetrag - deshalb als Warnung protokollieren.
+' Eine vollständige Artikelzeile ohne Pfandbetrag (Differenz 0) wird hier
+' ausgewertet: Lieferung und Rückgabe gleich groß, z. B. 5 geliefert, 5 zurück.
 Private Sub LeergutAbschliessen(ByRef lgOffen As String, ByVal reArtNr As Object)
+    Dim m As Object
     If Len(lgOffen) > 0 Then
         If Treffer(reArtNr, Trim$(lgOffen)) Is Nothing Then
             Protokoll "Warnung", "Leergutzeile keinem Artikel zugeordnet: " & Trim$(lgOffen)
+        Else
+            Set m = Treffer(NeuesRegex("^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(.*\S)\s+(\d+,\d{2})\s*$"), lgOffen)
+            If Not m Is Nothing Then PfandOhneDifferenz m
         End If
     End If
     lgOffen = ""
+End Sub
+
+' Leergutzeile ohne Pfandbetrag: Gruppen 0 ArtNr, 1 Bezeichnung, 2 Mengen
+' (ALTER SALDO, LIEFERUNG, ZURÜCK, NEUER SALDO; leere fehlen), 3 Pfandsatz.
+' Sind Lieferung und Rückgabe gleich (Differenz 0), entstehen trotzdem zwei
+' Positionen: +Menge und -Menge zum Pfandsatz. Saldiert wäre das 0,00 EUR, was
+' z. B. EDEKA und REWE nicht annehmen. Zeilen ohne Bewegung (nur Saldo) entfallen.
+Private Sub PfandOhneDifferenz(ByVal m As Object)
+    Dim artNr As String, bez As String, einheit As String
+    Dim satz As Currency, lief As Double, zur As Double
+
+    If UCase$(EinstellungOderLeer("Pfand aufteilen")) = "NEIN" Then Exit Sub
+    If Not LeergutAufteilen(CStr(m.SubMatches(2)), 0, lief, zur) Then
+        Protokoll "Warnung", "Leergutzeile ohne Pfandbetrag nicht auswertbar: " & Trim$(m.Value)
+        Exit Sub
+    End If
+    If lief = 0 And zur = 0 Then Exit Sub         ' keine Bewegung, nur Kontostand
+
+    artNr = m.SubMatches(0)
+    bez = "Pfand " & Trim$(m.SubMatches(1))
+    einheit = Einstellung("Einheit Pfand")
+    satz = ZahlDE(m.SubMatches(3))
+    If lief <> 0 Then PositionAnhaengen "Pfand", artNr, bez & " Lieferung", lief, einheit, satz, RundenKfm(CCur(lief) * satz), ""
+    If zur <> 0 Then PositionAnhaengen "Pfand", artNr, bez & " Rücknahme", -zur, einheit, satz, RundenKfm(CCur(-zur) * satz), ""
+    Protokoll "Info", "Leergut mit Differenz 0 als Lieferung und Rücknahme übernommen: " & bez & " " & lief & " / " & zur
 End Sub
 
 ' Legt zwei Textzeilen spaltengenau übereinander. Leer, wenn sich Zeichen überschneiden.

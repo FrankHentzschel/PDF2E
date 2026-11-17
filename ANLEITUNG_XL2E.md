@@ -1,6 +1,6 @@
 # XL2E 1.0.0 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
 
-Stand 04.11.2026. XL2E ist das Gegenstück zu PDF2E für Brauereien, deren BSI-Software die Rechnung als Excel-Datei ausgibt (Blatt `PA400_00`). Erster Kunde ist die Privatbrauerei Fiedler. Der Ablauf ist derselbe wie bei PDF2E: Rechnung einlesen, prüfen, E-Rechnung erzeugen, E-Mail-Entwurf.
+Stand 17.11.2026. XL2E ist das Gegenstück zu PDF2E für Brauereien, deren BSI-Software die Rechnung als Excel-Datei ausgibt (Blatt `PA400_00`). Erster Kunde ist die Privatbrauerei Fiedler. Der Ablauf ist derselbe wie bei PDF2E: Rechnung einlesen, prüfen, E-Rechnung erzeugen, E-Mail-Entwurf.
 
 Die Excel-Rechnung hat keinen Briefkopf, weil sie für vorgedrucktes Papier gedacht ist. XL2E erzeugt deshalb selbst ein PDF aus einer Kopie des Rechnungsblatts. Absender, Logo, Registerangaben, Steuernummer und Bankverbindung kommen aus den Stammdaten in Kopf- und Fußzeile. In dieses PDF bettet Smart Tools die E-Rechnung ein. Die Excel-Originaldatei bleibt unverändert.
 
@@ -11,16 +11,16 @@ Die Excel-Rechnung hat keinen Briefkopf, weil sie für vorgedrucktes Papier geda
 | `XL2E.xlsx` | Arbeitsmappe ohne Makros, mit Platzhaltern in den Stammdaten |
 | `vba/modProdukt.bas` | **nur XL2E:** Name, Version, Dateiauswahl, PDF mit Briefkopf erzeugen |
 | `vba/modParserXL.bas` | **nur XL2E:** Einlese-Vorlage für das Blatt `PA400_00` |
-| übrige Dateien in `vba/` | gemeinsamer Kern mit PDF2E (Einlesen, Prüfen, Smart Tools, E-Mail, Info-Fenster) |
+| übrige Dateien in `vba/` | gemeinsame Module, identisch mit PDF2E (Einlesen, Prüfen, Smart Tools, E-Mail, Info-Fenster `frmInfo.frm`/`.frx`, `DieseArbeitsmappe.doccls`) |
 | `logo/` | Logo der Brauerei für den Briefkopf, Entwicklerlogo für das Info-Fenster |
 
 ## Einrichtung (ca. 15 Minuten)
 
 1. **Mappe vorbereiten:** `XL2E.xlsx` öffnen und als **Excel-Arbeitsmappe mit Makros (.xlsm)** speichern.
 2. **Smart-Tools-Verweis:** VBA-Editor (Alt+F11) > *Extras > Verweise* > **SmartTools E-Rechnung-Bibliothek** anhaken. Ohne diesen Verweis lässt sich das Projekt nicht kompilieren.
-3. **Module importieren:** *Datei > Datei importieren*, alle `.bas`-Dateien aus `vba/`.
-4. **Info-Fenster:** *Einfügen > UserForm*, (Name) = `frmInfo`. Rechtsklick > *Code anzeigen*, Inhalt von `frmInfo_Code.txt` einfügen.
-5. **Start-Code:** Doppelklick auf *DieseArbeitsmappe*, Inhalt von `ThisWorkbook_Code.txt` einfügen.
+3. **Module importieren:** Mit VbaSync „Alle importieren“ aus dem Ordner `vba`. Das übernimmt alle `.bas`-Module, das Info-Fenster `frmInfo.frm` (mit `.frx`) und den Code für *DieseArbeitsmappe*.
+4. Ohne VbaSync: *Datei > Datei importieren* für alle `.bas` und `frmInfo.frm`; den Inhalt von `DieseArbeitsmappe.doccls` per Doppelklick auf *DieseArbeitsmappe* einfügen.
+5. Blatt **Pfandartikel**: entsteht beim ersten Einlesen. Dort die GTIN der Leergutartikel eintragen, wenn ein Empfänger sie verlangt (z. B. EDEKA).
 6. *Debuggen > Kompilieren VBAProject*. Es dürfen keine Fehler erscheinen.
 7. **Stammdaten** pflegen. Alle mit PLATZHALTER markierten Werte durch die echten ersetzen:
    - Blatt „Brauerei“: USt-IdNr., Steuernummer, Registernummer, GLN falls vorhanden

@@ -8,6 +8,7 @@ Option Explicit
 
 ' Spalte "Vorgaben" im Blatt "Empfaenger" (z. B. REWE)
 Public Const SP_E_VORGABEN As Long = 8
+Public Const BLATT_PFANDARTIKEL As String = "Pfandartikel"
 
 ' Eingabefelder, die vor jedem Einlesen geleert werden (Formelfelder fehlen bewusst)
 Private Const FELDER_LEEREN As String = _
@@ -89,6 +90,8 @@ Private Sub VorgabenSetzen()
 
     If TabellenZeile("Empfaenger", EmpfaengerSchluessel()) = 0 Then EmpfaengerAnlegen
     ReweErkennen
+    EdekaErkennen
+    PfandartikelAnlegen
 End Sub
 
 ' Neuen Rechnungsempfänger mit den aktuellen Vorgaben ins Blatt "Empfaenger"
@@ -127,6 +130,84 @@ Private Sub ReweErkennen()
     End If
 End Sub
 
+' EDEKA erkennen (Name des Rechnungsempfängers enthält "EDEKA") und in der
+' Spalte "Vorgaben" vermerken, sofern dort nichts steht. Händler, die nicht
+' "EDEKA" im Namen tragen, dort von Hand mit EDEKA markieren.
+Private Sub EdekaErkennen()
+    Dim wsE As Worksheet, z As Long
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
+    If z = 0 Then Exit Sub
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    If Len(Trim$(CStr(wsE.Cells(z, SP_E_VORGABEN).Value))) > 0 Then Exit Sub
+    If InStr(1, CStr(Feld("f_KName").Value), "EDEKA", vbTextCompare) > 0 Then
+        wsE.Cells(z, SP_E_VORGABEN).Value = "EDEKA"
+        Protokoll "Info", "Empfänger " & EmpfaengerSchluessel() & " als EDEKA erkannt (Blatt 'Empfaenger', Spalte 'Vorgaben')."
+    End If
+End Sub
+
+' Pfandartikel der Rechnung, die noch nicht im Blatt "Pfandartikel" stehen,
+' dort anlegen. Der Anwender trägt nur noch die GTIN des Pfandartikels ein
+' (eigene GTIN des Leerguts, nicht die des Warenartikels).
+Private Sub PfandartikelAnlegen()
+    Dim ws As Worksheet, wsP As Worksheet, z As Long, n As Long, nr As String, bez As String
+    PfandartikelSicherstellen
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    Set wsP = ThisWorkbook.Worksheets(BLATT_PFANDARTIKEL)
+    For z = 2 To ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+        nr = Trim$(CStr(ws.Cells(z, SP_ARTNR).Value))
+        If ws.Cells(z, SP_TYP).Value = "Pfand" And Len(nr) > 0 Then
+            If TabellenZeile(BLATT_PFANDARTIKEL, nr) = 0 Then
+                bez = CStr(ws.Cells(z, SP_BEZ).Value)
+                If Left$(bez, 6) = "Pfand " Then bez = Mid$(bez, 7)
+                bez = Replace(Replace(bez, " Lieferung", ""), " Rücknahme", "")
+                n = wsP.Cells(wsP.Rows.Count, 1).End(xlUp).Row + 1
+                wsP.Cells(n, 1).NumberFormat = "@"
+                wsP.Cells(n, 1).Value = nr
+                wsP.Cells(n, 2).Value = bez
+                wsP.Cells(n, 3).NumberFormat = "@"
+                wsP.Cells(n, 4).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & " aus RE " & Feld("f_RechNr").Value
+                wsP.Range(wsP.Cells(n, 1), wsP.Cells(n, 4)).Interior.Color = RGB(255, 248, 225)
+                Protokoll "Info", "Pfandartikel " & nr & " (" & bez & ") im Blatt '" & BLATT_PFANDARTIKEL & "' angelegt. GTIN dort eintragen."
+            End If
+        End If
+    Next z
+End Sub
+
+' Legt das Blatt "Pfandartikel" an, falls es fehlt (ältere Arbeitsmappen).
+Public Sub PfandartikelSicherstellen()
+    Dim ws As Worksheet, vorher As Object
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(BLATT_PFANDARTIKEL)
+    On Error GoTo 0
+    If Not ws Is Nothing Then Exit Sub
+    Set vorher = ActiveSheet
+    Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets("Empfaenger"))
+    ws.Name = BLATT_PFANDARTIKEL
+    ws.Range("A1:D1").Value = Array("Leergut-Nr.", "Bezeichnung", "GTIN", "Bemerkung")
+    With ws.Range("A1:D1")
+        .Font.Bold = True
+        .Font.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Font.Color
+        .Interior.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Interior.Color
+    End With
+    ws.Range("C1").AddComment "GTIN des Pfandartikels (Leergut), 8, 12, 13 oder 14 Ziffern. " & _
+                               "Nicht die GTIN des Warenartikels. Von EDEKA verlangt."
+    ws.Columns(1).ColumnWidth = 12
+    ws.Columns(2).ColumnWidth = 34
+    ws.Columns(3).ColumnWidth = 18
+    ws.Columns(3).NumberFormat = "@"
+    ws.Columns(4).ColumnWidth = 50
+    If Not vorher Is Nothing Then vorher.Activate
+    Protokoll "Info", "Blatt '" & BLATT_PFANDARTIKEL & "' angelegt."
+End Sub
+
+' GTIN eines Pfandartikels aus dem Blatt "Pfandartikel", leer wenn unbekannt
+Public Function PfandGtin(ByVal artNr As String) As String
+    Dim z As Long
+    On Error Resume Next
+    z = TabellenZeile(BLATT_PFANDARTIKEL, artNr)
+    If z > 0 Then PfandGtin = Replace(Trim$(CStr(ThisWorkbook.Worksheets(BLATT_PFANDARTIKEL).Cells(z, 3).Value)), " ", "")
+End Function
+
 ' Sondervorgaben des aktuellen Rechnungsempfängers (Blatt "Empfaenger", Spalte
 ' "Vorgaben"), z. B. REWE. Leer = keine.
 Public Function EmpfaengerVorgabe() As String
@@ -144,7 +225,8 @@ Private Sub VorgabenSpalteSicherstellen()
             .Interior.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Interior.Color
             .Font.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Font.Color
             .AddComment "Sondervorgaben des Empfängers: REWE = Vorgaben der REWE-Zentralregulierung " & _
-                        "(Hinweis Entgeltminderungen, Pflicht: RE-GLN, Lieferort-GLN, USt-IdNr.)"
+                        "(Hinweis Entgeltminderungen, Pflicht: RE-GLN, Lieferort-GLN, USt-IdNr.); " & _
+                        "EDEKA = Pfand getrennt, GTIN je Pfandartikel Pflicht"
             .ColumnWidth = 14
         End If
     End With

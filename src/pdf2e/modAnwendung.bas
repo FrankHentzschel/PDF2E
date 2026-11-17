@@ -18,6 +18,7 @@ Private Const SPLASH_SEKUNDEN As Long = 3
 Public Sub AnwendungStart()
     On Error Resume Next            ' Ein fehlender Splash darf den Start nie verhindern
     StartblattAktualisieren
+    ThisWorkbook.Worksheets("Start").Activate   ' immer auf "Start" beginnen, nicht auf dem zuletzt gespeicherten Blatt
     frmInfo.Anzeigen True
     Application.OnTime Now + TimeSerial(0, 0, SPLASH_SEKUNDEN), "SplashSchliessen"
 End Sub

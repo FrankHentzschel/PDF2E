@@ -42,6 +42,13 @@ Public Function RechnungPruefen() As Boolean
         End If
     End If
 
+    If EmpfaengerVorgabe() = "EDEKA" Then
+        If UCase$(EinstellungOderLeer("Pfand aufteilen")) = "NEIN" Then
+            Fehler "EDEKA: Pfand muss in Lieferung und Rückgabe aufgeteilt sein (Einstellung 'Pfand aufteilen' = Ja)."
+        End If
+    End If
+    PfandGtinPruefen EmpfaengerVorgabe() = "EDEKA"
+
     ' Pflichtangaben Brauerei
     Dim k As Variant
     For Each k In Array("Name", "Straße", "PLZ", "Ort", "Land", "USt-IdNr")
@@ -115,6 +122,37 @@ Private Sub GlnPruefen(ByVal feldName As String, ByVal bezeichnung As String)
     Next i
     If (10 - summe Mod 10) Mod 10 <> CLng(Right$(s, 1)) Then Fehler bezeichnung & " '" & s & "': Prüfziffer stimmt nicht."
 End Sub
+
+' GTIN der Pfandartikel: Prüfziffer, sofern eingetragen; bei Pflicht (EDEKA)
+' fehlende GTIN als Fehler. Jeder Pfandartikel wird nur einmal gemeldet.
+Private Sub PfandGtinPruefen(ByVal pflicht As Boolean)
+    Dim ws As Worksheet, z As Long, nr As String, gtin As String, gemeldet As String
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    For z = 2 To ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+        nr = Trim$(CStr(ws.Cells(z, SP_ARTNR).Value))
+        If ws.Cells(z, SP_TYP).Value = "Pfand" And InStr(gemeldet, "|" & nr & "|") = 0 Then
+            gemeldet = gemeldet & "|" & nr & "|"
+            gtin = PfandGtin(nr)
+            If Len(gtin) = 0 Then
+                If pflicht Then Fehler "EDEKA: GTIN für Pfandartikel " & nr & " fehlt (Blatt '" & BLATT_PFANDARTIKEL & "')."
+            ElseIf Not GtinGueltig(gtin) Then
+                Fehler "GTIN '" & gtin & "' für Pfandartikel " & nr & " ist ungültig (Länge oder Prüfziffer)."
+            End If
+        End If
+    Next z
+End Sub
+
+' GS1-Prüfziffer für GTIN-8, -12, -13 und -14
+Private Function GtinGueltig(ByVal s As String) As Boolean
+    Dim i As Long, summe As Long, n As Long
+    n = Len(s)
+    If n <> 8 And n <> 12 And n <> 13 And n <> 14 Then Exit Function
+    If Not s Like String$(n, "#") Then Exit Function
+    For i = 1 To n - 1                            ' von rechts: Gewicht 3, 1, 3, ...
+        summe = summe + CLng(Mid$(s, n - i, 1)) * IIf(i Mod 2 = 1, 3, 1)
+    Next i
+    GtinGueltig = ((10 - summe Mod 10) Mod 10 = CLng(Right$(s, 1)))
+End Function
 
 Private Sub Abgleich(ByVal was As String, ByVal berechnet As Variant, ByVal laut As Variant)
     If Len(CStr(laut)) = 0 Then

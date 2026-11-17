@@ -105,7 +105,7 @@ Public Sub MailvorlageSicherstellen()
 
     Set vorher = ActiveSheet
     Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
-    ws.Name = BLATT_MAILVORLAGE
+    ws.name = BLATT_MAILVORLAGE
     zeilen = Array( _
         Array("Feld", "Inhalt", "Hinweis"), _
         Array("Betreff", "Rechnung {Rechnungsnummer} vom {Rechnungsdatum}", "Platzhalter siehe unten"), _

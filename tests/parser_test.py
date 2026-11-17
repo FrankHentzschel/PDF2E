@@ -1,6 +1,6 @@
 """Regressionstest für die Einleselogik von modParserBSI.
 
-Python-Nachbau der Suchmuster und Abläufe aus src/modParserBSI.bas. Er liest
+Python-Nachbau der Suchmuster und Abläufe aus src/pdf2e/modParserBSI.bas. Er liest
 die pdftotext-Ausgaben in tests/pdftotext/ und prüft, ob Warenwert, Pfand,
 Nettosumme, MwSt und Rechnungsbetrag mit den Werten im PDF übereinstimmen.
 
@@ -23,6 +23,7 @@ RE_ST = re.compile(r"([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?
 RE_RB = re.compile(r"RECHNUNGSBETRAG\s+EUR\s+([\d.,]+-?)")
 RE_ARTNR = re.compile(r"^\d{5}\s")
 RE_LGREST = re.compile(r"\d+,\d{2}\s+[\d.]*\d,\d{2}-?\s*$")
+RE_LG0 = re.compile(r"^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(.*\S)\s+(\d+,\d{2})\s*$")   # ohne Pfandbetrag
 
 
 def ueberlagern(a, b):
@@ -75,7 +76,24 @@ def parse(text):
         nonlocal lg_offen
         if lg_offen and not RE_ARTNR.match(lg_offen.strip()):
             r["warnungen"].append("Leergutzeile nicht zugeordnet: " + lg_offen.strip())
+        elif lg_offen:
+            m = RE_LG0.match(lg_offen)
+            if m:
+                pfand_ohne_differenz(m)
         lg_offen = ""
+
+    def pfand_ohne_differenz(m):
+        """Zeile ohne Pfandbetrag: Lieferung = Rückgabe ergibt trotzdem zwei Positionen."""
+        teile = leergut_aufteilen(m[3], 0.0)
+        if teile is None:
+            r["warnungen"].append("Leergut ohne Pfandbetrag nicht auswertbar: " + m[0].strip())
+            return
+        lief, zur = teile
+        satz = zahl(m[4])
+        for mg in (lief, -zur):
+            if mg:
+                r["pfand"] += round(mg * satz, 2)
+                r["pfandzeilen"].append((m[1], mg, satz))
 
     def pfand(m):
         menge, satz, betrag = zahl(m[4]), zahl(m[5]), zahl(m[6])
@@ -188,7 +206,27 @@ def pruefe(pfad):
     return not fehler
 
 
+def test_differenz_null():
+    """Lieferung = Rückgabe (Differenz 0, kein Pfandbetrag im PDF) muss zwei Positionen ergeben.
+
+    Grundlage ist das echte Muster 2603587 (Windows). Die Zeile "Kasten leer" ohne
+    Bewegung wird spaltengenau zu 5 geliefert / 5 zurück umgeschrieben.
+    """
+    pfad = os.path.join(os.path.dirname(__file__), "pdftotext", "Rechnung_2603587_windows.txt")
+    text = open(pfad, encoding="utf-8").read()
+    alt = next(z for z in text.split("\n") if z.startswith("99009 Kasten leer"))
+    neu = alt[:38] + "5".ljust(10) + "5" + alt[49:]
+    assert alt[38:49].strip() == "", "Spalten LIEFERUNG/ZURÜCK in der Musterzeile nicht leer"
+    r = parse(text.replace(alt, neu))
+    zeilen = [z for z in r["pfandzeilen"] if z[0] == "99009"]
+    ok = zeilen == [("99009", 5.0, 1.5), ("99009", -5.0, 1.5)] and not r["warnungen"]
+    print(("OK    " if ok else "FEHLER") + "  Differenz 0 (synthetisch aus 2603587): " + repr(zeilen))
+    return ok
+
+
 if __name__ == "__main__":
     dateien = sys.argv[1:] or sorted(glob.glob(os.path.join(os.path.dirname(__file__), "pdftotext", "*.txt")))
     ergebnisse = [pruefe(d) for d in dateien]
+    if not sys.argv[1:]:
+        ergebnisse.append(test_differenz_null())
     sys.exit(0 if all(ergebnisse) else 1)

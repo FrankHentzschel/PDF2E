@@ -17,21 +17,22 @@ Aktueller Stand: **PDF2E 1.6.0** und **XL2E 1.0.0**, beide mit Smart-Tools-Anbin
 
 | Pfad | Inhalt |
 | --- | --- |
-| `src/kern/` | Gemeinsamer VBA-Code (Einlesen, Prüfen, Smart Tools, E-Mail, Info-Fenster), **maßgebliche Quelle** |
-| `src/pdf2e/` | Nur PDF2E: `modProdukt` (Name, Version, Datenquelle), pdftotext, Einlese-Vorlage BSI-PDF |
-| `src/xl2e/` | Nur XL2E: `modProdukt` (Name, Version, PDF mit Briefkopf), Einlese-Vorlage BSI-Excel |
+| `src/pdf2e/` | Alle VBA-Module der Mappe PDF2E (VbaSync-Format: `.bas`, `frmInfo.frm` + `.frx`, `.doccls`), **maßgebliche Quelle** |
+| `src/xl2e/` | Alle VBA-Module der Mappe XL2E, gleiches Format |
+| `src/gemeinsam.txt` | Liste der Module, die in allen Produktordnern identisch sein müssen |
+| `tools/abgleich.py` | Prüft die gemeinsamen Module; `--von pdf2e` kopiert sie in die anderen Ordner |
 | `vorlage/build_xlsx.py` | Erzeugt `PDF2E.xlsx` oder `XL2E.xlsx` (Blätter, Feldnamen, Formeln, Auswahllisten) |
 | `vorlage/pakete.py` | Erzeugt die Auslieferungs-ZIPs beider Produkte |
 | `tests/pdftotext/`, `tests/parser_test.py` | Muster und Regressionstest der PDF-Einleselogik |
 | `tests/xl_parser_test.py` | Regressionstest der Excel-Einleselogik; die Muster in `tests/xlsx/` liegen nicht im Repository |
 | `ANLEITUNG.md`, `ANLEITUNG_XL2E.md` | Einrichtung, Test und bekannte Grenzen |
 
-Der Kern ruft nur, was `modProdukt` festlegt: die Konstanten `TOOL_NAME`, `TOOL_VERSION`, `TOOL_STAND`, `TOOL_UNTERTITEL`, `QUELLE_SCHALTFLAECHE` und die Prozeduren `QuelleAuswaehlen`, `QuelleEinlesen`, `QuellPdfErstellen`. Ein weiteres Quellformat braucht nur ein neues Produktverzeichnis.
+**Gemeinsamer Code als Kopien:** Jede Mappe hat ihren vollständigen Satz Module, damit sie für sich allein läuft und VbaSync wie gewohnt einen Ordner exportiert. Die Module aus `src/gemeinsam.txt` sind in allen Produktordnern identisch. Sie rufen nur, was `modProdukt` festlegt: die Konstanten `TOOL_NAME`, `TOOL_VERSION`, `TOOL_STAND`, `TOOL_UNTERTITEL`, `QUELLE_SCHALTFLAECHE` und die Prozeduren `QuelleAuswaehlen`, `QuelleEinlesen`, `QuellPdfErstellen`. Nach jeder Änderung an einem gemeinsamen Modul `python tools/abgleich.py --von <produkt>` ausführen und die geänderten Module in die anderen Mappen importieren.
 
 ## Arbeitsweise mit Git
 
 - **Quelle:** Die Dateien in `src/` sind maßgeblich. Arbeitsmappen (`.xlsx/.xlsm`) stehen nicht im Repository. Für Kunden werden sie als Anhang eines GitHub-Releases verteilt.
-- **Änderungen in Excel:** Makro `PDF2E_Exportieren` bzw. `XL2E_Exportieren` ausführen. Es schreibt alle Module in einen Ordner; danach nach `src/kern` bzw. Produktordner einsortieren. Danach committen. Einmalig dafür im Trust Center den „Zugriff auf das VBA-Projektobjektmodell“ erlauben.
+- **Änderungen in Excel:** Mit [VbaSync](https://github.com/FrankHentzschel/VbaSync) „Alle exportieren“ nach `src\pdf2e` bzw. `src\xl2e`. Danach `python tools/abgleich.py --von <produkt>` und committen. Einmalig dafür im Trust Center den „Zugriff auf das VBA-Projektobjektmodell“ erlauben.
 - **Kodierung:** Im Arbeitsverzeichnis Windows-1252 mit CRLF, wie es der VBA-Editor braucht. Im Repository liegt UTF-8. Das regelt `.gitattributes` automatisch.
 - **Versionen:** `TOOL_VERSION` in `src/<produkt>/modProdukt.bas`, Eintrag in `CHANGELOG.md` und im Blatt „Versionshistorie“ (`vorlage/build_xlsx.py`), dazu ein Git-Tag `vX.Y.Z`.
 - **Vor jedem Release:** `python tests/parser_test.py` und `python tests/xl_parser_test.py` müssen für alle Muster `OK` melden. Pakete: `python vorlage/pakete.py <Zielordner> [<Logo-Ordner>]`.
