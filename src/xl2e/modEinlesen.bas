@@ -21,6 +21,7 @@ Public Sub RechnungEinlesen()
     pfad = QuelleAuswaehlen()
     If Len(pfad) = 0 Then Exit Sub
 
+    Dim info As String
     On Error GoTo Fehler
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
@@ -29,9 +30,26 @@ Public Sub RechnungEinlesen()
     Feld("f_Quelldatei").Value = pfad
     Protokoll "Info", "Einlesen: " & pfad
 
+    StammdatenLaden                     ' Mehrplatz: aktueller Stand aus dem Backend (modDaten)
     QuelleEinlesen pfad
 
+    ' Wurde die Rechnung schon erzeugt (an diesem oder einem anderen Platz)?
+    info = VerarbeitungInfo(CStr(Feld("f_RechNr").Value))
+    If Len(info) > 0 Then
+        Application.ScreenUpdating = True
+        If MsgBox(info & vbLf & vbLf & "Trotzdem fortfahren?", vbYesNo + vbQuestion + vbDefaultButton2, TOOL_NAME) <> vbYes Then
+            ArbeitsblaetterLeeren
+            Protokoll "Info", "Abgebrochen: " & info
+            Application.Calculation = xlCalculationAutomatic
+            Exit Sub
+        End If
+        Protokoll "Warnung", info & " Erneut eingelesen."
+        Application.ScreenUpdating = False
+    End If
+
+    Application.EnableEvents = False    ' Stammdaten schreibt VorgabenSetzen selbst ins Backend
     VorgabenSetzen
+    Application.EnableEvents = True
 
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
@@ -40,6 +58,7 @@ Public Sub RechnungEinlesen()
     Exit Sub
 
 Fehler:
+    Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
     Protokoll "Fehler", Err.Description
@@ -111,6 +130,7 @@ Private Sub EmpfaengerAnlegen()
     wsE.Cells(z, 7).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & _
                             " aus RE " & Feld("f_RechNr").Value & " - Konto/Kondition leer = Standard"
     wsE.Range(wsE.Cells(z, 1), wsE.Cells(z, SP_E_VORGABEN)).Interior.Color = RGB(255, 248, 225)
+    ZeileSpeichern "Empfaenger", z
     Protokoll "Info", "Neuer Empfänger " & EmpfaengerSchluessel() & " (" & Feld("f_KName").Value & _
                       ") im Blatt 'Empfaenger' angelegt. Abweichendes Konto oder Kondition dort eintragen."
 End Sub
@@ -126,6 +146,7 @@ Private Sub ReweErkennen()
     If Len(Trim$(CStr(wsE.Cells(z, SP_E_VORGABEN).Value))) > 0 Then Exit Sub
     If UCase$(Left$(Trim$(CStr(Feld("f_KName").Value)), 4)) = "REWE" And Len(Feld("f_KGLN").Value) > 0 Then
         wsE.Cells(z, SP_E_VORGABEN).Value = "REWE"
+        ZeileSpeichern "Empfaenger", z
         Protokoll "Info", "Empfänger " & Feld("f_KundenNr").Value & " als REWE erkannt (Blatt 'Empfaenger', Spalte 'Vorgaben')."
     End If
 End Sub
@@ -141,6 +162,7 @@ Private Sub EdekaErkennen()
     If Len(Trim$(CStr(wsE.Cells(z, SP_E_VORGABEN).Value))) > 0 Then Exit Sub
     If InStr(1, CStr(Feld("f_KName").Value), "EDEKA", vbTextCompare) > 0 Then
         wsE.Cells(z, SP_E_VORGABEN).Value = "EDEKA"
+        ZeileSpeichern "Empfaenger", z
         Protokoll "Info", "Empfänger " & EmpfaengerSchluessel() & " als EDEKA erkannt (Blatt 'Empfaenger', Spalte 'Vorgaben')."
     End If
 End Sub
@@ -167,6 +189,7 @@ Private Sub PfandartikelAnlegen()
                 wsP.Cells(n, 3).NumberFormat = "@"
                 wsP.Cells(n, 4).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & " aus RE " & Feld("f_RechNr").Value
                 wsP.Range(wsP.Cells(n, 1), wsP.Cells(n, 4)).Interior.Color = RGB(255, 248, 225)
+                ZeileSpeichern BLATT_PFANDARTIKEL, n
                 Protokoll "Info", "Pfandartikel " & nr & " (" & bez & ") im Blatt '" & BLATT_PFANDARTIKEL & "' angelegt. GTIN dort eintragen."
             End If
         End If

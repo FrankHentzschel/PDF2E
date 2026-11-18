@@ -3,6 +3,17 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.7.0 und XL2E 1.1.0 – 19.11.2026
+
+Mehrplatzbetrieb (gemeinsame Module, in XL2E noch nicht getestet). Anleitung: Abschnitt „Mehrplatz- und Einzelplatzbetrieb“.
+
+- **Neue Funktion:** Backend `.accdb` (DAO, späte Bindung) für Einstellungen, Mailvorlage, Brauerei, Bankkonten, Zahlungskonditionen, Empfänger, Pfandartikel und das Verarbeitungsprotokoll. Wird beim ersten Start angelegt und aus den Blättern vorbelegt; Tabelle Systeminfo mit Schema-Version, Migration mit vorheriger Sicherung.
+- **Neue Funktion:** Stammdatenblätter laden beim Aktivieren und vor jedem Einlesen frisch; Änderungen werden sofort pro Zeile gespeichert, Konfliktprüfung über Änderungszähler; Datensatz löschen über das Kontextmenü.
+- **Neue Funktion:** Rückfrage beim Einlesen einer bereits erzeugten Rechnung und vor dem Überschreiben, jeweils mit wer und wann.
+- **Neue Funktion:** Tägliche Sicherung des Backends (Einstellungen „Backup-Ordner“, „Backup behalten“); Makro `StammdatenAusMappeUebernehmen`.
+- **Neue Funktion:** Starter-Mappe (`src/starter`): Versionsprüfung aus der geschlossenen Mappe (Start!Z1), Kopie neuer Versionen, platzbezogene Werte ins neue Blatt „Arbeitsplatz“.
+- Ohne Eintrag „Backend-Pfad“ verhält sich das Programm wie 1.6.0.
+
 ## XL2E 1.0.0 – 17.11.2026
 
 Erstversion für Brauereien, deren BSI-Software Rechnungen als Excel-Datei ausgibt. Anleitung: [ANLEITUNG_XL2E.md](ANLEITUNG_XL2E.md).

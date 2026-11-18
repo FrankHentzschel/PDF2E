@@ -7,6 +7,7 @@ Option Explicit
 Public Const BLATT_RECHNUNG As String = "Rechnung"
 Public Const BLATT_POSITIONEN As String = "Positionen"
 Public Const BLATT_PROTOKOLL As String = "Protokoll"
+Public Const BLATT_ARBEITSPLATZ As String = "Arbeitsplatz"
 
 ' Spalten im Blatt "Positionen"
 Public Const SP_TYP As Long = 1
@@ -20,9 +21,29 @@ Public Const SP_USTSATZ As Long = 8
 Public Const SP_USTKAT As Long = 9
 Public Const SP_INFO As Long = 10
 
-' Liest einen Wert aus dem Blatt "Einstellungen" (Spalte A = Schlüssel, B = Wert)
+' Liest eine Einstellung (Spalte A = Schlüssel, B = Wert). Zuerst gilt das Blatt
+' "Arbeitsplatz" (platzbezogene Werte, von der Starter-Mappe gesetzt, z. B.
+' Backend-Pfad), sonst das Blatt "Einstellungen" (gemeinsam, im Backend gespeichert).
 Public Function Einstellung(ByVal schluessel As String) As String
-    Einstellung = SchluesselWert("Einstellungen", schluessel)
+    Dim v As String
+    v = PlatzWert(schluessel)
+    If v <> vbNullChar And Len(v) > 0 Then
+        Einstellung = v
+    Else
+        Einstellung = SchluesselWert("Einstellungen", schluessel)
+    End If
+End Function
+
+' Wert aus dem Blatt "Arbeitsplatz"; vbNullChar, wenn Blatt oder Eintrag fehlt
+Public Function PlatzWert(ByVal schluessel As String) As String
+    Dim ws As Worksheet, c As Range
+    PlatzWert = vbNullChar
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(BLATT_ARBEITSPLATZ)
+    On Error GoTo 0
+    If ws Is Nothing Then Exit Function
+    Set c = ws.Columns(1).Find(What:=schluessel, LookIn:=xlValues, LookAt:=xlWhole)
+    If Not c Is Nothing Then PlatzWert = Trim$(CStr(c.Offset(0, 1).Value))
 End Function
 
 ' Liest einen Wert aus dem Blatt "Brauerei" (Spalte A = Schlüssel, B = Wert)

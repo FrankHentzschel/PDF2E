@@ -1,0 +1,8 @@
+'==============================================================================
+' Code für "DieseArbeitsmappe" (ThisWorkbook) der Starter-Mappe
+'==============================================================================
+Option Explicit
+
+Private Sub Workbook_Open()
+    StarterOeffnen
+End Sub

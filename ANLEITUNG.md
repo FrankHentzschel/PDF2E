@@ -1,4 +1,4 @@
-# PDF2E 1.6.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.7.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -21,11 +21,63 @@ PDF2E und XL2E teilen sich seit PDF2E 1.6.0 denselben Kern. Im ZIP liegen alle b
 | `modAdapterStub.bas` | gemeinsam: Testlauf ohne Smart Tools, schreibt `<Ziel>.daten.xml` |
 | `modAdapterSmartTools.bas` | gemeinsam: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
 | `modMail.bas` | gemeinsam: E-Mail-Entwurf in Outlook |
+| `modDaten.bas` | gemeinsam: Backend (Access-Datei) für Einstellungen, Mailvorlage, Stammdaten und Verarbeitungsprotokoll |
 | `modEntwicklung.bas` | gemeinsam, nur Entwicklung: älterer Export ohne VbaSync |
 | `frmInfo.frm` + `frmInfo.frx` | gemeinsam: Splash- und Info-Fenster (UserForm) |
-| `DieseArbeitsmappe.doccls` | gemeinsam: Code für „DieseArbeitsmappe“ (Splash beim Öffnen) |
+| `DieseArbeitsmappe.doccls` | gemeinsam: Code für „DieseArbeitsmappe“ (Start, Laden/Speichern der Stammdatenblätter, Versionszelle) |
+| `starter/Start_PDF2E.xlsx` + `starter/vba/` | Starter-Mappe: holt neue Versionen, setzt platzbezogene Werte, startet PDF2E |
 
 „Gemeinsam“ heißt: dieselbe Datei steht auch in XL2E.
+
+## Mehrplatz- und Einzelplatzbetrieb (ab 1.7.0)
+
+Ab 1.7.0 liegen alle Daten außerhalb der Programmmappe. Die Programmmappe enthält nur noch Code und Vorgabewerte und kann bei einem Update einfach ersetzt werden.
+
+| Wo | Was |
+| --- | --- |
+| Backend `PDF2E_Daten.accdb` (zentral) | Einstellungen, Mailvorlage, Brauerei, Bankkonten, Zahlungskonditionen, Empfänger, Pfandartikel, Verarbeitungsprotokoll |
+| Blatt „Arbeitsplatz“ der Programmmappe | platzbezogene Werte (Backend-Pfad, ggf. pdftotext-Pfad); setzt die Starter-Mappe bei jedem Start |
+| Starter-Mappe `Start_PDF2E.xlsm` (lokal) | Produkt, Update-Ordner, lokaler Programmordner und die Werte für das Blatt „Arbeitsplatz“ |
+| Update-Ordner | aktuelle `PDF2E.xlsm` (Mastermappe) |
+
+Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz liegen Update-Ordner und Backend z. B. unter `C:\PDF2E\Update` und `C:\PDF2E\Daten`.
+
+**So arbeitet es**
+- Beim ersten Start legt PDF2E das Backend an und füllt es mit den Blättern der Mappe (Einstellungen, Stammdaten). Danach gilt das Backend.
+- Wechselst du in ein Blatt wie „Empfaenger“, lädt PDF2E es frisch aus dem Backend. Vor jedem Einlesen ebenso.
+- Eine Änderung in einer Zeile wird sofort gespeichert. Hat ein anderer Platz die Zeile inzwischen geändert, wird die Änderung abgelehnt und das Blatt neu geladen (Meldung mit Name und Zeit).
+- Neue Zeilen unten anfügen. **Löschen nur über Rechtsklick > „Datensatz löschen (Datenbank)“.** Zeilen mit Excel zu löschen oder einzufügen lädt das Blatt neu.
+- Hinweis: Nach einer Änderung in diesen Blättern gibt es kein Rückgängig (Strg+Z), weil das Programm in das Blatt schreibt.
+- Wurde eine Rechnung schon erzeugt (an irgendeinem Platz), fragt PDF2E beim Einlesen nach und nennt wer und wann. Ebenso vor dem Überschreiben einer vorhandenen E-Rechnung.
+- Nach einem Update übernimmt PDF2E neue Einstellungen und Mailvorlage-Zeilen der neuen Mappe ins Backend. Vorhandene Werte bleiben.
+- Ist „Backend-Pfad“ leer, arbeitet PDF2E wie bis 1.6.0 nur mit den Blättern.
+
+**Sicherung:** Einstellung „Backup-Ordner“ (darf auf einem anderen Rechner liegen) und „Backup behalten“ (Anzahl). Beim ersten Start des Tages kopiert PDF2E das Backend als `PDF2E_Daten_JJJJ-MM-TT_hhmmss.accdb` dorthin. Vor einer Änderung des Datenmodells sichert PDF2E immer (ohne Backup-Ordner in den Unterordner `Sicherung` neben dem Backend).
+
+**Voraussetzungen**
+- Access-Datenbank-Engine (ACE) auf jedem Platz, passend zur Office-Bitness. Test: Makro `DAO_Test` aus dem Konzept. Access selbst muss nicht installiert sein.
+- Im Backend-Ordner brauchen alle Benutzer das Recht Ändern (Access legt dort die Sperrdatei `.laccdb` an).
+- Backend nur im LAN betreiben, nicht über WLAN oder VPN (Abbrüche können die Datei beschädigen).
+- Lokalen Programmordner (und Ordner der Starter-Mappe) im Trust Center als **vertrauenswürdigen Speicherort** eintragen.
+
+### Einrichtung Mehrplatz (z. B. Krug)
+
+1. Ordner auf dem Netzlaufwerk anlegen, z. B. `\\SERVER\PDF2E\Programm`, `\\SERVER\PDF2E\Daten`, `\\SERVER\PDF2E\E-Rechnungen`, `\\SERVER\PDF2E\Sicherung`.
+2. Mastermappe `PDF2E.xlsm` (eingerichtet wie unten, Stammdaten gepflegt) nach `…\Programm` kopieren.
+3. Starter-Mappe einmalig bauen: `starter/Start_PDF2E.xlsx` öffnen, als `Start_PDF2E.xlsm` speichern, Module aus `starter/vba` importieren (`modStarter.bas`, Code von `DieseArbeitsmappe.doccls`), kompilieren, Alt+F8 > `StarterEinrichten` (Schaltfläche „Jetzt starten“). Im Blatt „Starter“ Pfade eintragen. Diese Datei dient als Vorlage für alle Plätze.
+4. Je Platz: `Start_PDF2E.xlsm` z. B. nach `C:\PDF2E\` kopieren, Verknüpfung auf den Desktop (Symbol `pdf2e.ico`), `C:\PDF2E` als vertrauenswürdigen Speicherort eintragen.
+5. Ersten Platz starten: Der Starter kopiert die Programmmappe, setzt den Backend-Pfad, PDF2E legt das Backend an. Dann im Blatt „Einstellungen“ Ausgabeordner, Eingangsordner und Backup-Ordner prüfen (gelten ab jetzt für alle Plätze).
+6. Vorhandene Stammdaten aus einer älteren Mappe übernehmen: Alt+F8 > `StammdatenAusMappeUebernehmen` (nur fehlende Einträge werden angelegt).
+
+**Update:** neue `PDF2E.xlsm` in den Update-Ordner kopieren. Jeder Platz holt sie beim nächsten Start über den Starter (die bisherige lokale Mappe bleibt als `PDF2E_alt.xlsm`).
+
+**Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
+
+## Update von 1.6.0 auf 1.7.0
+
+1. VbaSync „Alle importieren“ aus `vba` (neu: `modDaten`; *DieseArbeitsmappe* bekommt neuen Code). Kompilieren.
+2. Im Blatt „Einstellungen“ die Zeilen **Backup-Ordner** und **Backup behalten** ergänzen (sonst ohne Tagessicherung).
+3. Weiter mit der Einrichtung Mehrplatz oben. Ohne Starter: Blatt **Arbeitsplatz** anlegen (Spalten Einstellung / Wert / Hinweis) und dort `Backend-Pfad` eintragen; der Starter legt es sonst selbst an.
 
 ## Update von 1.5.0 auf 1.6.0
 
