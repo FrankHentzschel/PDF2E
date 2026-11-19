@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.7.1 und XL2E 1.1.1 – 19.11.2026
+
+- **Fehlerbehebung:** Änderungen an vorhandenen Zeilen der Datenblätter werden über das Recordset gespeichert. Vorher lehnte Access Änderungen im Blatt Einstellungen ab („Sie müssen einen Wert in das Feld 'Einstellungen.Arbeitsplatz' eingeben“).
+- **Fehlerbehebung:** Die nicht mehr genutzten Einstellungen Entwickler, Firma und Kontakt werden beim Start aus dem Backend entfernt.
+
 ## PDF2E 1.7.0 und XL2E 1.1.0 – 19.11.2026
 
 Mehrplatzbetrieb (gemeinsame Module, in XL2E noch nicht getestet). Anleitung: Abschnitt „Mehrplatz- und Einzelplatzbetrieb“.
@@ -15,7 +20,6 @@ Mehrplatzbetrieb (gemeinsame Module, in XL2E noch nicht getestet). Anleitung: Ab
 - **Neue Funktion:** Einstellungen je Arbeitsplatz: Spalte „Arbeitsplatz“ (Computername) im Blatt Einstellungen, leer = alle Plätze. Der Computername steht im Info-Fenster.
 - **Geändert:** Entwickler, Firma und Kontakt im Info-Fenster sind fest im Programm (Einstellungen „Entwickler“, „Firma“, „Kontakt“ entfallen). „Lizenziert für“ kommt aus den Stammdaten (Brauerei, Name) im Backend, die beim Start vor dem Splash geladen werden.
 - Ohne Eintrag „Backend-Pfad“ verhält sich das Programm wie 1.6.0.
-- Korrektur (Test 19.11.): Änderungen an vorhandenen Zeilen werden über das Recordset gespeichert; vorher lehnte Access Änderungen im Blatt Einstellungen ab („Wert in das Feld Einstellungen.Arbeitsplatz eingeben“). Veraltete Einstellungen Entwickler/Firma/Kontakt werden beim Start entfernt.
 
 ## XL2E 1.0.0 – 17.11.2026
 
