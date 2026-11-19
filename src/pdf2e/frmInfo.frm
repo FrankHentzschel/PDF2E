@@ -84,14 +84,14 @@ Private Sub UserForm_Initialize()
     End If
 
     y = 134
-    Zeile "lblEntwickler", "Entwickelt von ", EinstellungOderLeer("Entwickler"), y, True, textLinks, textBreite
-    Zeile "lblFirma", "", EinstellungOderLeer("Firma"), y, False, textLinks, textBreite
-    Zeile "lblKontakt", "", EinstellungOderLeer("Kontakt"), y, False, textLinks, textBreite
+    Zeile "lblEntwickler", "Entwickelt von ", HERSTELLER_ENTWICKLER, y, True, textLinks, textBreite
+    Zeile "lblFirma", "", HERSTELLER_FIRMA, y, False, textLinks, textBreite
+    Zeile "lblKontakt", "", HERSTELLER_KONTAKT, y, False, textLinks, textBreite
     y = y + 6
-    Zeile "lblLizenz", "Lizenziert für: ", StammOderLeer("Name"), y, False, textLinks, textBreite
+    Zeile "lblLizenz", "Lizenziert für: ", LizenzText(), y, False, textLinks, textBreite
     Zeile "lblSystem", "", SystemText(), y, False, textLinks, textBreite
 
-    With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & EinstellungOderLeer("Firma") & ". Alle Rechte vorbehalten.", _
+    With NeuesLabel("lblCopyright", Chr$(169) & " " & Year(Date) & " " & HERSTELLER_FIRMA & ". Alle Rechte vorbehalten.", _
                     24, HOEHE - 52, BREITE - 150, 14)
         .Font.name = "Segoe UI": .Font.Size = 8
         .ForeColor = RGB(140, 140, 140)

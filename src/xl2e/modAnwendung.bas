@@ -13,6 +13,10 @@ Attribute VB_Name = "modAnwendung"
 Option Explicit
 
 Private Const SPLASH_SEKUNDEN As Long = 3
+' Hersteller: fest im Programm (gehört zum Produkt, nicht zu den Kundendaten)
+Public Const HERSTELLER_ENTWICKLER As String = "Frank Hentzschel"
+Public Const HERSTELLER_FIRMA As String = "office & database development"
+Public Const HERSTELLER_KONTAKT As String = "Frank.Hentzschel@gmx.de"
 Public Const VERSION_ZELLE As String = "Z1"     ' Blatt Start, von der Starter-Mappe gelesen (R1C26)
 
 ' Aufruf aus ThisWorkbook.Workbook_Open
@@ -50,6 +54,13 @@ Public Sub PruefenStarten()
         ThisWorkbook.Worksheets(BLATT_PROTOKOLL).Activate
     End If
 End Sub
+
+' Lizenznehmer = Name der Brauerei aus den Stammdaten (Backend, beim Start geladen).
+' Die Programmmappe selbst enthält keine Kundendaten.
+Public Function LizenzText() As String
+    LizenzText = StammOderLeer("Name")
+    If Len(LizenzText) = 0 Then LizenzText = "(Stammdaten nicht verfügbar)"
+End Function
 
 Public Function VersionText() As String
     VersionText = "Version " & TOOL_VERSION & "  |  Stand " & TOOL_STAND

@@ -51,6 +51,8 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 - Wurde eine Rechnung schon erzeugt (an irgendeinem Platz), fragt PDF2E beim Einlesen nach und nennt wer und wann. Ebenso vor dem Überschreiben einer vorhandenen E-Rechnung.
 - Nach einem Update übernimmt PDF2E neue Einstellungen und Mailvorlage-Zeilen der neuen Mappe ins Backend. Vorhandene Werte bleiben.
 - Ist „Backend-Pfad“ leer, arbeitet PDF2E wie bis 1.6.0 nur mit den Blättern.
+- Beim Start lädt PDF2E zuerst Einstellungen und Brauerei-Stammdaten aus dem Backend, danach erscheint der Splash. Er zeigt also den Lizenznehmer aus dem Backend, auch wenn die Programmmappe gerade neu ist. Ist das Backend nicht erreichbar, kommt eine Meldung und der Splash zeigt „(Stammdaten nicht verfügbar)“ bzw. den zuletzt geladenen Stand.
+- Kundenneutrale Mastermappe: Bleiben die Stammdatenblätter der Mastermappe leer, wird ein neues Backend leer angelegt; die Brauerei-Daten dann einmal im Blatt „Brauerei“ eintragen.
 
 **Sicherung:** Einstellung „Backup-Ordner“ (darf auf einem anderen Rechner liegen) und „Backup behalten“ (Anzahl). Beim ersten Start des Tages kopiert PDF2E das Backend als `PDF2E_Daten_JJJJ-MM-TT_hhmmss.accdb` dorthin. Vor einer Änderung des Datenmodells sichert PDF2E immer (ohne Backup-Ordner in den Unterordner `Sicherung` neben dem Backend).
 
@@ -104,7 +106,7 @@ Die Module sind neu aufgeteilt, damit PDF2E und XL2E denselben Code nutzen. Die 
 6. **Kompilieren:** *Debuggen > Kompilieren VBAProject*. Es dürfen keine Fehler erscheinen.
 7. **Einstellungen** im gleichnamigen Blatt ausfüllen:
    - Pfad zu pdftotext, Eingangs- und Ausgabeordner
-   - **Firma**, Kontakt, Anwendungslogo (oben) und Firmenlogo (unten), jeweils BMP, JPG oder GIF, kein PNG
+   - Anwendungslogo (oben) und Firmenlogo (unten), jeweils BMP, JPG oder GIF, kein PNG. Entwickler, Firma und Kontakt sind ab 1.7.0 fest im Programm; „Lizenziert für“ zeigt den Namen aus dem Blatt „Brauerei“.
    - den Adapter auf `STUB` lassen, bis Smart Tools eingerichtet ist (siehe unten)
 8. **Schaltflächen:** Mit Alt+F8 einmalig `PDF2E_Einrichten` ausführen. Das Makro legt auf „Start“ und „Rechnung“ die Schaltflächen *PDF einlesen*, *Prüfen*, *E-Rechnung erzeugen* und *Info* an.
 9. Speichern, schließen und neu öffnen. Der Splash erscheint 3 Sekunden lang, ein Klick schließt ihn sofort.

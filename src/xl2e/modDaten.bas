@@ -159,6 +159,7 @@ Public Sub DatenStart()
 
     NachUpdateErgaenzen
     BlattLaden "Einstellungen"              ' gemeinsame Einstellungen aus dem Backend
+    BlattLaden "Brauerei"                   ' Lizenznehmer im Splash
     TagessicherungPruefen
     Exit Sub
 

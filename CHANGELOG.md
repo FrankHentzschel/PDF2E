@@ -13,6 +13,7 @@ Mehrplatzbetrieb (gemeinsame Module, in XL2E noch nicht getestet). Anleitung: Ab
 - **Neue Funktion:** Tägliche Sicherung des Backends (Einstellungen „Backup-Ordner“, „Backup behalten“); Makro `StammdatenAusMappeUebernehmen`.
 - **Neue Funktion:** Starter-Mappe (`src/starter`): Versionsprüfung aus der geschlossenen Mappe (Start!Z1), Kopie neuer Versionen, platzbezogene Werte ins neue Blatt „Arbeitsplatz“.
 - **Neue Funktion:** Einstellungen je Arbeitsplatz: Spalte „Arbeitsplatz“ (Computername) im Blatt Einstellungen, leer = alle Plätze. Der Computername steht im Info-Fenster.
+- **Geändert:** Entwickler, Firma und Kontakt im Info-Fenster sind fest im Programm (Einstellungen „Entwickler“, „Firma“, „Kontakt“ entfallen). „Lizenziert für“ kommt aus den Stammdaten (Brauerei, Name) im Backend, die beim Start vor dem Splash geladen werden.
 - Ohne Eintrag „Backend-Pfad“ verhält sich das Programm wie 1.6.0.
 
 ## XL2E 1.0.0 – 17.11.2026
