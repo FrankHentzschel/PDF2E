@@ -13,9 +13,15 @@ Attribute VB_Name = "modAnwendung"
 Option Explicit
 
 Private Const SPLASH_SEKUNDEN As Long = 3
+' Hersteller: fest im Programm (gehört zum Produkt, nicht zu den Kundendaten)
+Public Const HERSTELLER_ENTWICKLER As String = "Frank Hentzschel"
+Public Const HERSTELLER_FIRMA As String = "office & database development"
+Public Const HERSTELLER_KONTAKT As String = "Frank.Hentzschel@gmx.de"
+Public Const VERSION_ZELLE As String = "Z1"     ' Blatt Start, von der Starter-Mappe gelesen (R1C26)
 
 ' Aufruf aus ThisWorkbook.Workbook_Open
 Public Sub AnwendungStart()
+    DatenStart                      ' Backend prüfen, anlegen, migrieren, sichern (modDaten, meldet selbst)
     On Error Resume Next            ' Ein fehlender Splash darf den Start nie verhindern
     StartblattAktualisieren
     ThisWorkbook.Worksheets("Start").Activate   ' immer auf "Start" beginnen, nicht auf dem zuletzt gespeicherten Blatt
@@ -49,6 +55,13 @@ Public Sub PruefenStarten()
     End If
 End Sub
 
+' Lizenznehmer = Name der Brauerei aus den Stammdaten (Backend, beim Start geladen).
+' Die Programmmappe selbst enthält keine Kundendaten.
+Public Function LizenzText() As String
+    LizenzText = StammOderLeer("Name")
+    If Len(LizenzText) = 0 Then LizenzText = "(Stammdaten nicht verfügbar)"
+End Function
+
 Public Function VersionText() As String
     VersionText = "Version " & TOOL_VERSION & "  |  Stand " & TOOL_STAND
 End Function
@@ -61,7 +74,8 @@ Public Function SystemText() As String
     #Else
         bit = "32-Bit"
     #End If
-    SystemText = "Excel " & Application.Version & " (" & bit & ")  |  Adapter: " & EinstellungOderLeer("E-Rechnung-Adapter")
+    SystemText = "Excel " & Application.Version & " (" & bit & ")  |  Adapter: " & EinstellungOderLeer("E-Rechnung-Adapter") & _
+                 "  |  Arbeitsplatz: " & Environ$("COMPUTERNAME")
 End Function
 
 ' Versionszeile im Blatt "Start" aus TOOL_VERSION nachführen (nur bei Abweichung,
@@ -73,6 +87,20 @@ Private Sub StartblattAktualisieren()
     If Not c Is Nothing Then
         If CStr(c.Value) <> soll Then c.Value = soll
     End If
+    VersionszelleSchreiben
+End Sub
+
+' Version für die Starter-Mappe in die feste Zelle Start!Z1 (VERSION_ZELLE).
+' Die Starter-Mappe liest sie aus der geschlossenen Datei. Aufruf auch aus
+' Workbook_BeforeSave, damit Code und Zelle nie auseinanderlaufen.
+Public Sub VersionszelleSchreiben()
+    With ThisWorkbook.Worksheets("Start").Range(VERSION_ZELLE)
+        If CStr(.Value) <> TOOL_VERSION Then
+            .NumberFormat = "@"
+            .Value = TOOL_VERSION
+            .Font.Color = RGB(255, 255, 255)        ' unauffällig
+        End If
+    End With
 End Sub
 
 Public Function EinstellungOderLeer(ByVal schluessel As String) As String

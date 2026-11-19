@@ -7,6 +7,7 @@ frmInfo.frx
 modAdapterSmartTools.bas
 modAdapterStub.bas
 modAnwendung.bas
+modDaten.bas
 modEinlesen.bas
 modEntwicklung.bas
 modHilfen.bas

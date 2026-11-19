@@ -8,8 +8,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.6.0"
-Public Const TOOL_STAND As String = "17.11.2026"
+Public Const TOOL_VERSION As String = "1.7.0"
+Public Const TOOL_STAND As String = "19.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
 

@@ -7,6 +7,7 @@ Option Explicit
 Public Const BLATT_RECHNUNG As String = "Rechnung"
 Public Const BLATT_POSITIONEN As String = "Positionen"
 Public Const BLATT_PROTOKOLL As String = "Protokoll"
+Public Const BLATT_ARBEITSPLATZ As String = "Arbeitsplatz"
 
 ' Spalten im Blatt "Positionen"
 Public Const SP_TYP As Long = 1
@@ -20,9 +21,43 @@ Public Const SP_USTSATZ As Long = 8
 Public Const SP_USTKAT As Long = 9
 Public Const SP_INFO As Long = 10
 
-' Liest einen Wert aus dem Blatt "Einstellungen" (Spalte A = Schlüssel, B = Wert)
+' Liest eine Einstellung. Reihenfolge:
+'   1. Blatt "Arbeitsplatz" (von der Starter-Mappe gesetzt, z. B. Backend-Pfad)
+'   2. Blatt "Einstellungen", Zeile mit Spalte D (Arbeitsplatz) = Computername
+'   3. Blatt "Einstellungen", Zeile mit leerer Spalte D (gilt für alle Plätze)
 Public Function Einstellung(ByVal schluessel As String) As String
-    Einstellung = SchluesselWert("Einstellungen", schluessel)
+    Dim v As String, ws As Worksheet, z As Long, platz As String, zAlle As Long, zPlatz As Long
+    v = PlatzWert(schluessel)
+    If v <> vbNullChar And Len(v) > 0 Then Einstellung = v: Exit Function
+
+    Set ws = ThisWorkbook.Worksheets("Einstellungen")
+    platz = UCase$(Environ$("COMPUTERNAME"))
+    For z = 2 To ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        If Trim$(CStr(ws.Cells(z, 1).Value)) = schluessel Then
+            v = UCase$(Trim$(CStr(ws.Cells(z, 4).Value)))
+            If Len(v) = 0 Then
+                If zAlle = 0 Then zAlle = z
+            ElseIf v = platz Then
+                zPlatz = z
+                Exit For
+            End If
+        End If
+    Next z
+    If zPlatz > 0 Then z = zPlatz Else z = zAlle
+    If z = 0 Then Err.Raise vbObjectError + 1, , "Eintrag '" & schluessel & "' fehlt im Blatt 'Einstellungen'."
+    Einstellung = Trim$(CStr(ws.Cells(z, 2).Value))
+End Function
+
+' Wert aus dem Blatt "Arbeitsplatz"; vbNullChar, wenn Blatt oder Eintrag fehlt
+Public Function PlatzWert(ByVal schluessel As String) As String
+    Dim ws As Worksheet, c As Range
+    PlatzWert = vbNullChar
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(BLATT_ARBEITSPLATZ)
+    On Error GoTo 0
+    If ws Is Nothing Then Exit Function
+    Set c = ws.Columns(1).Find(What:=schluessel, LookIn:=xlValues, LookAt:=xlWhole)
+    If Not c Is Nothing Then PlatzWert = Trim$(CStr(c.Offset(0, 1).Value))
 End Function
 
 ' Liest einen Wert aus dem Blatt "Brauerei" (Spalte A = Schlüssel, B = Wert)
