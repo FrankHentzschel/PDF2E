@@ -35,7 +35,7 @@ Ab 1.7.0 liegen alle Daten außerhalb der Programmmappe. Die Programmmappe enth�
 
 | Wo | Was |
 | --- | --- |
-| Backend `PDF2E_Daten.accdb` (zentral) | Einstellungen, Mailvorlage, Brauerei, Bankkonten, Zahlungskonditionen, Empfänger, Pfandartikel, Verarbeitungsprotokoll |
+| Backend `PDF2E_Daten.accdb` (zentral) | Einstellungen (auch abweichende Werte je Arbeitsplatz), Mailvorlage, Brauerei, Bankkonten, Zahlungskonditionen, Empfänger, Pfandartikel, Verarbeitungsprotokoll |
 | Blatt „Arbeitsplatz“ der Programmmappe | platzbezogene Werte (Backend-Pfad, ggf. pdftotext-Pfad); setzt die Starter-Mappe bei jedem Start |
 | Starter-Mappe `Start_PDF2E.xlsm` (lokal) | Produkt, Update-Ordner, lokaler Programmordner und die Werte für das Blatt „Arbeitsplatz“ |
 | Update-Ordner | aktuelle `PDF2E.xlsm` (Mastermappe) |
@@ -73,12 +73,12 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
 
-**Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Starter dieses Platzes unter „Einstellung für die Programmmappe“ eine Zeile mit genau dem Namen aus dem Blatt „Einstellungen“ und dem abweichenden Wert ergänzen. Der Starter schreibt sie ins Blatt „Arbeitsplatz“, dort hat sie Vorrang vor dem gemeinsamen Wert und wird nicht ins Backend übernommen.
+**Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
 
 ## Update von 1.6.0 auf 1.7.0
 
 1. VbaSync „Alle importieren“ aus `vba` (neu: `modDaten`; *DieseArbeitsmappe* bekommt neuen Code). Kompilieren.
-2. Im Blatt „Einstellungen“ die Zeilen **Backup-Ordner** und **Backup behalten** ergänzen (sonst ohne Tagessicherung).
+2. Im Blatt „Einstellungen“ die Zeilen **Backup-Ordner** und **Backup behalten** ergänzen (sonst ohne Tagessicherung). Die Überschrift **Arbeitsplatz** in Spalte D ergänzt das Programm selbst.
 3. Weiter mit der Einrichtung Mehrplatz oben. Ohne Starter: Blatt **Arbeitsplatz** anlegen (Spalten Einstellung / Wert / Hinweis) und dort `Backend-Pfad` eintragen; der Starter legt es sonst selbst an.
 
 ## Update von 1.5.0 auf 1.6.0

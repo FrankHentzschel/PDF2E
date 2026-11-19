@@ -40,7 +40,8 @@ Private mIntern As Boolean              ' True = Blatt wird vom Programm geschri
 
 '------------------------------------------------------------------------------
 ' Tabellenbeschreibung: Blatt, Tabelle, Felder (Name:Typ, erste = Schlüssel)
-' Typen: T = Text (255), M = Langtext, N = Zahl
+' Typen: T = Text (255), M = Langtext, N = Zahl,
+'        A = Arbeitsplatz (Computername; leer im Blatt = "*" im Backend = alle Plätze)
 '------------------------------------------------------------------------------
 Private Function Tabellen() As Variant
     Tabellen = Array("Einstellungen", "Mailvorlage", "Brauerei", "Bankkonten", "Zahlungskonditionen", "Empfaenger", "Pfandartikel")
@@ -48,7 +49,7 @@ End Function
 
 Private Function Felder(ByVal tabelle As String) As Variant
     Select Case tabelle
-        Case "Einstellungen":       Felder = Array("Einstellung:T", "Wert:T", "Hinweis:M")
+        Case "Einstellungen":       Felder = Array("Einstellung:T", "Wert:T", "Hinweis:M", "Arbeitsplatz:A")
         Case "Mailvorlage":         Felder = Array("Feld:T", "Inhalt:M", "Hinweis:M")
         Case "Brauerei":            Felder = Array("Angabe:T", "Wert:T", "Hinweis:M")
         Case "Bankkonten":          Felder = Array("Bezeichnung:T", "Kontoinhaber:T", "IBAN:T", "BIC:T", "Standard:T")
@@ -64,6 +65,12 @@ End Function
 ' Absender-Auswahlliste aus Outlook, daher dort erst ab Spalte H.
 Private Function MetaSpalte(ByVal tabelle As String) As Long
     If tabelle = "Mailvorlage" Then MetaSpalte = 8 Else MetaSpalte = UBound(Felder(tabelle)) + 2
+End Function
+
+' Felder des eindeutigen Index: Schlüssel, bei Einstellungen zusätzlich der Arbeitsplatz
+Private Function IndexFelder(ByVal tabelle As String) As String
+    IndexFelder = "[" & FeldName(Felder(tabelle)(0)) & "]"
+    If tabelle = "Einstellungen" Then IndexFelder = IndexFelder & ", [Arbeitsplatz]"
 End Function
 
 Private Function FeldName(ByVal f As Variant) As String
@@ -231,7 +238,7 @@ Private Sub SchemaSchritt(ByVal db As Object, ByVal v As Long)
         Case 1
             For Each t In Tabellen()
                 db.Execute TabelleDDL(CStr(t)), DB_FAIL_ON_ERROR
-                db.Execute "CREATE UNIQUE INDEX ux_" & t & " ON [" & t & "] ([" & FeldName(Felder(CStr(t))(0)) & "])", DB_FAIL_ON_ERROR
+                db.Execute "CREATE UNIQUE INDEX ux_" & t & " ON [" & t & "] (" & IndexFelder(CStr(t)) & ")", DB_FAIL_ON_ERROR
             Next t
             db.Execute "CREATE TABLE Verarbeitung (ID COUNTER CONSTRAINT pk_Verarbeitung PRIMARY KEY, " & _
                        "RechNr TEXT(50) NOT NULL, Quelldatei TEXT(255), Ausgabedatei TEXT(255), Empfaenger TEXT(255), " & _
@@ -249,6 +256,7 @@ Private Function TabelleDDL(ByVal tabelle As String) As String
         s = s & ", [" & FeldName(f) & "]"
         Select Case FeldTyp(f)
             Case "T": s = s & " TEXT(255)"
+            Case "A": s = s & " TEXT(100) NOT NULL"
             Case "M": s = s & " LONGTEXT"
             Case "N": s = s & " DOUBLE"
         End Select
@@ -390,6 +398,15 @@ Public Sub BlattLaden(ByVal blatt As String)
     mIntern = True
     On Error GoTo Ende
     VerwaltungsspaltenSicherstellen ws, m
+    For s = 2 To n                              ' ältere Mappen: fehlende Spaltenüberschrift ergänzen
+        If Len(CStr(ws.Cells(1, s).Value)) = 0 Then
+            ws.Cells(1, s).Value = FeldName(f(s - 1))
+            ws.Cells(1, s).Font.Bold = True
+            ws.Cells(1, s).Font.Color = ws.Cells(1, 1).Font.Color
+            ws.Cells(1, s).Interior.Color = ws.Cells(1, 1).Interior.Color
+            ws.Columns(s).ColumnWidth = 16
+        End If
+    Next s
     alt = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
     letzte = ws.Cells(ws.Rows.Count, m + 3).End(xlUp).Row
     If letzte > alt Then alt = letzte
@@ -573,7 +590,11 @@ Fehler:
     On Error Resume Next
     If Not db Is Nothing Then db.Close
     If nr = 3022 Then
-        txt = "'" & schluessel & "' gibt es schon (erste Spalte muss eindeutig sein)."
+        If blatt = "Einstellungen" Then
+            txt = "Die Einstellung '" & schluessel & "' gibt es für diesen Arbeitsplatz (Spalte Arbeitsplatz, leer = alle) schon."
+        Else
+            txt = "'" & schluessel & "' gibt es schon (erste Spalte muss eindeutig sein)."
+        End If
     End If
     Protokoll "Fehler", "Speichern " & blatt & " Zeile " & z & ": " & txt
     NeuLadenMitHinweis blatt, "Die Änderung wurde NICHT gespeichert:" & vbLf & txt
@@ -785,7 +806,7 @@ End Sub
 ' erstbefuellung = True: aus dieser Mappe beim Anlegen des Backends.
 Private Sub ImportAusMappe(ByVal wb As Workbook, ByVal erstbefuellung As Boolean, ByVal liste As Variant)
     Dim t As Variant, ws As Worksheet, f As Variant, n As Long, z As Long, s As Long
-    Dim db As Object, rs As Object, schluessel As String, neu As Long, da As Long
+    Dim db As Object, rs As Object, schluessel As String, neu As Long, da As Long, krit As String
     Set db = DbOeffnen()
     For Each t In liste
         Set ws = Nothing
@@ -801,7 +822,10 @@ Private Sub ImportAusMappe(ByVal wb As Workbook, ByVal erstbefuellung As Boolean
                 schluessel = Trim$(CStr(ws.Cells(z, 1).Value))
                 If IstPlatzEinstellung(CStr(t), schluessel) Then schluessel = ""     ' gehört nicht ins Backend
                 If Len(schluessel) > 0 Then
-                    rs.FindFirst "[" & FeldName(f(0)) & "] = '" & Replace(schluessel, "'", "''") & "'"
+                    krit = "[" & FeldName(f(0)) & "] = '" & Replace(schluessel, "'", "''") & "'"
+                    If CStr(t) = "Einstellungen" Then krit = krit & " AND [Arbeitsplatz] = '" & _
+                        Replace(CStr(DbWert(ws.Cells(z, 4).Value, "A")), "'", "''") & "'"
+                    rs.FindFirst krit
                     If rs.NoMatch Then
                         rs.AddNew
                         For s = 1 To n
@@ -855,10 +879,14 @@ Private Function DbWert(ByVal v As Variant, ByVal typ As String) As Variant
     Dim s As String
     If IsError(v) Then DbWert = Null: Exit Function
     s = Trim$(CStr(v))
-    If Len(s) = 0 Then DbWert = Null: Exit Function
+    If Len(s) = 0 Then
+        If typ = "A" Then DbWert = "*" Else DbWert = Null
+        Exit Function
+    End If
     Select Case typ
         Case "N": If IsNumeric(v) Then DbWert = CDbl(v) Else DbWert = Null
         Case "T": DbWert = Left$(s, 255)
+        Case "A": DbWert = Left$(s, 100)
         Case Else: DbWert = CStr(v)
     End Select
 End Function
@@ -866,6 +894,7 @@ End Function
 ' Wert aus der Datenbank für die Zelle
 Private Function ZellWert(ByVal v As Variant, ByVal typ As String) As Variant
     If IsNull(v) Then ZellWert = Empty: Exit Function
+    If typ = "A" And v = "*" Then ZellWert = Empty: Exit Function
     ZellWert = v
 End Function
 

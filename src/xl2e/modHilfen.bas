@@ -21,17 +21,31 @@ Public Const SP_USTSATZ As Long = 8
 Public Const SP_USTKAT As Long = 9
 Public Const SP_INFO As Long = 10
 
-' Liest eine Einstellung (Spalte A = Schlüssel, B = Wert). Zuerst gilt das Blatt
-' "Arbeitsplatz" (platzbezogene Werte, von der Starter-Mappe gesetzt, z. B.
-' Backend-Pfad), sonst das Blatt "Einstellungen" (gemeinsam, im Backend gespeichert).
+' Liest eine Einstellung. Reihenfolge:
+'   1. Blatt "Arbeitsplatz" (von der Starter-Mappe gesetzt, z. B. Backend-Pfad)
+'   2. Blatt "Einstellungen", Zeile mit Spalte D (Arbeitsplatz) = Computername
+'   3. Blatt "Einstellungen", Zeile mit leerer Spalte D (gilt für alle Plätze)
 Public Function Einstellung(ByVal schluessel As String) As String
-    Dim v As String
+    Dim v As String, ws As Worksheet, z As Long, platz As String, zAlle As Long, zPlatz As Long
     v = PlatzWert(schluessel)
-    If v <> vbNullChar And Len(v) > 0 Then
-        Einstellung = v
-    Else
-        Einstellung = SchluesselWert("Einstellungen", schluessel)
-    End If
+    If v <> vbNullChar And Len(v) > 0 Then Einstellung = v: Exit Function
+
+    Set ws = ThisWorkbook.Worksheets("Einstellungen")
+    platz = UCase$(Environ$("COMPUTERNAME"))
+    For z = 2 To ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        If Trim$(CStr(ws.Cells(z, 1).Value)) = schluessel Then
+            v = UCase$(Trim$(CStr(ws.Cells(z, 4).Value)))
+            If Len(v) = 0 Then
+                If zAlle = 0 Then zAlle = z
+            ElseIf v = platz Then
+                zPlatz = z
+                Exit For
+            End If
+        End If
+    Next z
+    If zPlatz > 0 Then z = zPlatz Else z = zAlle
+    If z = 0 Then Err.Raise vbObjectError + 1, , "Eintrag '" & schluessel & "' fehlt im Blatt 'Einstellungen'."
+    Einstellung = Trim$(CStr(ws.Cells(z, 2).Value))
 End Function
 
 ' Wert aus dem Blatt "Arbeitsplatz"; vbNullChar, wenn Blatt oder Eintrag fehlt

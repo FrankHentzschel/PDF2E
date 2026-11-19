@@ -54,8 +54,7 @@ zeilen(10, [
 ] + ([("pdftotext-Pfad", r"C:\Tools\xpdf\pdftotext.exe", "Pfad zu pdftotext.exe auf diesem Platz (leer = Wert aus den Einstellungen)")] if PROD == "PDF2E" else []))
 ws["A13"] = ("Diese Werte schreibt der Starter bei jedem Start in das Blatt 'Arbeitsplatz' der Programmmappe. "
              "Alle anderen Einstellungen (Ordner, Sicherung, Mailvorlage ...) pflegst du in der Programmmappe; sie liegen im Backend "
-             "und gelten für alle Plätze. Weicht an diesem Platz eine Einstellung ab, hier eine Zeile mit genau dem Namen aus "
-             "dem Blatt 'Einstellungen' ergänzen (vor der Leerzeile).")
+             "und gelten für alle Plätze; abweichende Werte für einzelne Plätze dort über die Spalte 'Arbeitsplatz'.")
 ws["A13"].font = HINW
 ws.freeze_panes = "A4"
 wb.save(out)

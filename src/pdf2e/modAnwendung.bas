@@ -63,7 +63,8 @@ Public Function SystemText() As String
     #Else
         bit = "32-Bit"
     #End If
-    SystemText = "Excel " & Application.Version & " (" & bit & ")  |  Adapter: " & EinstellungOderLeer("E-Rechnung-Adapter")
+    SystemText = "Excel " & Application.Version & " (" & bit & ")  |  Adapter: " & EinstellungOderLeer("E-Rechnung-Adapter") & _
+                 "  |  Arbeitsplatz: " & Environ$("COMPUTERNAME")
 End Function
 
 ' Versionszeile im Blatt "Start" aus TOOL_VERSION nachführen (nur bei Abweichung,

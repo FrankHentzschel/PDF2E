@@ -169,7 +169,9 @@ dv=DataValidation(type="list",formula1="=Zahlungskonditionen!$A$2:$A$50",allow_b
 
 # Einstellungen
 ws=wb.create_sheet("Einstellungen")
-header(ws,["Einstellung","Wert","Hinweis"],[22,50,60])
+header(ws,["Einstellung","Wert","Hinweis","Arbeitsplatz"],[22,50,60,16])
+from openpyxl.comments import Comment
+ws["D1"].comment=Comment("Leer = gilt für alle Plätze. Computername eintragen (siehe Info-Fenster), wenn ein Platz einen abweichenden Wert braucht: dann dieselbe Einstellung in einer weiteren Zeile mit dem Computernamen.","PDF2E")
 EINST=[("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools, 64-Bit-Version"),
 ("Eingangsordner",r"C:\Rechnungen\BSI","Ordner mit den BSI-PDFs"),
 ("Ausgabeordner",r"C:\Rechnungen\ZUGFeRD","Hier werden die ZUGFeRD-PDFs abgelegt"),
