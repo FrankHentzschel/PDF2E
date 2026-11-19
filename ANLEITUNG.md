@@ -1,4 +1,4 @@
-# PDF2E 1.7.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.7.2 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 

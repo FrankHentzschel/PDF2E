@@ -213,17 +213,11 @@ ws.cell(5,1,"Diese Werte setzt die Starter-Mappe bei jedem Start (Bereich 'Einst
 
 ws=wb.create_sheet("Versionshistorie")
 header(ws,["Version","Datum","Art","Änderung"],[10,12,16,100])
-HIST=[("1.1.1","19.11.2026","Fehlerbehebung","Speichern geänderter Zeilen (wie PDF2E 1.7.1)"),("1.1.0","19.11.2026","Neue Funktion","Mehrplatzbetrieb wie PDF2E 1.7.0 (gemeinsame Module, in XL2E noch nicht getestet)"),("1.0.0","17.11.2026","Erstversion","BSI-Excel-Rechnung (Blatt PA400_00) einlesen, PDF mit Briefkopf aus den Stammdaten, ZUGFeRD EN16931 mit Smart Tools, Fassbier je hl, Pfand getrennt, Sammelkundennummern; gemeinsamer Kern mit PDF2E 1.6.0")] if XL else [("1.7.1","19.11.2026","Fehlerbehebung","Änderungen im Blatt Einstellungen wurden von Access abgelehnt (Pflichtfeld Arbeitsplatz); Speichern geänderter Zeilen jetzt über das Recordset. Veraltete Einstellungen Entwickler/Firma/Kontakt werden entfernt"),("1.7.0","19.11.2026","Neue Funktion","Mehrplatzbetrieb: Einstellungen, Mailvorlage und Stammdaten im Access-Backend (wird automatisch angelegt und migriert), Laden beim Aktivieren eines Blatts, Speichern pro Zeile mit Konfliktprüfung, Datensatz löschen über das Kontextmenü; Verarbeitungsprotokoll mit Rückfrage bei bereits erzeugten Rechnungen; tägliche Sicherung des Backends; Übernahme von Stammdaten aus einer älteren Mappe; Blatt Arbeitsplatz für platzbezogene Werte; Version in Start!Z1 für die Starter-Mappe"),("1.6.0","17.11.2026","Neue Funktion","Pfand mit Differenz 0 als Lieferung und Rückgabe; Blatt Pfandartikel mit GTIN; EDEKA-Vorgaben; gemeinsame Module mit XL2E (Module neu aufgeteilt: modAnwendung, modProdukt); Sammelkundennummern; Prüfung warnt vor Platzhaltern in den Stammdaten; E-Mail an REWE mit neutralem Text ohne Rechnungsdaten; Absender der E-Mail wählbar, auch gemeinsames Postfach"),
-("1.5.0","04.11.2026","Neue Funktion","Smart-Tools-Adapter (ZUGFeRD EN16931, Prüfung vor dem Speichern); Pfand getrennt nach Lieferung und Rücknahme; REWE-Vorgaben je Empfänger (Hinweis AAK, Pflicht RE-GLN, WE-GLN, USt-IdNr.); GLN-Prüfziffer"),
-("1.4.0","26.10.2026","Neue Funktion","E-Mail-Entwurf in Outlook mit der E-Rechnung als Anhang, Text aus dem Blatt Mailvorlage (Platzhalter)"),
-("1.3.0","26.10.2026","Neue Funktion","Firmenlogo im Info-Fenster standardmäßig links, wahlweise rechts (Einstellung \"Firmenlogo-Position\")"),
-("1.2.0","26.10.2026","Neue Funktion","Neue Rechnungsempfänger werden automatisch im Blatt Empfaenger angelegt; Fehlerbehebung: umgebrochene Leergutzeilen der echten Windows-Ausgabe (Pfandteil vor der Artikelzeile) werden spaltengenau zusammengeführt"),
-("1.1.0","26.10.2026","Neue Funktion","Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen \"Anwendungslogo\" und \"Firmenlogo\")"),
-("1.0.3","26.10.2026","Fehlerbehebung","Fehler beim Laden des Logos werden im Protokoll gemeldet"),
-("1.0.2","26.10.2026","Fehlerbehebung","Schaltflächen als Formen statt Formularsteuerelemente (Anzeigefehler); Versionszeile im Blatt Start wird automatisch nachgeführt"),
-("1.0.1","26.10.2026","Fehlerbehebung","Umgebrochene Leergutzeilen (pdftotext unter Windows) werden zusammengeführt; Option \"Textdatei behalten\""),
-("1.0.0","26.10.2026","Erstversion","Einlesen BSI-PDF, Prüfung, Stub-Adapter, Splash- und Info-Fenster, Schaltflächen")]
+# Versionshistorie aus src/<produkt>/modProdukt.bas (Funktion Versionen), damit sie nur an einer Stelle steht
+HIST=[tuple(x.replace('""','"') for x in t) for t in re.findall(r'c\.Add Array\("((?:[^"]|"")*)", "((?:[^"]|"")*)", "((?:[^"]|"")*)", "((?:[^"]|"")*)"\)',_mp)]
+import datetime
 for i,row in enumerate(HIST,2):
-    for j,v in enumerate(row,1): ws.cell(i,j,v)
-ws["A2"].number_format='@'
+    ws.cell(i,1,row[0]).number_format='@'
+    d,mo,y=map(int,row[1].split(".")); c=ws.cell(i,2,datetime.date(y,mo,d)); c.number_format="DD.MM.YYYY"
+    ws.cell(i,3,row[2]); ws.cell(i,4,row[3])
 wb.save(out)

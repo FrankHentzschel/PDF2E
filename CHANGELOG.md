@@ -3,6 +3,10 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.7.2 und XL2E 1.1.2 – 19.11.2026
+
+- **Fehlerbehebung:** Das Blatt „Versionshistorie“ wird beim Start aus dem Programm nachgeführt (Funktion `Versionen` in `modProdukt`). Bisher befüllte es nur die Vorlage, deshalb fehlten in bestehenden Mappen die Versionen ab 1.5.0. Das Datum steht jetzt als echtes Datum statt als Text.
+
 ## PDF2E 1.7.1 und XL2E 1.1.1 – 19.11.2026
 
 - **Fehlerbehebung:** Änderungen an vorhandenen Zeilen der Datenblätter werden über das Recordset gespeichert. Vorher lehnte Access Änderungen im Blatt Einstellungen ab („Sie müssen einen Wert in das Feld 'Einstellungen.Arbeitsplatz' eingeben“).

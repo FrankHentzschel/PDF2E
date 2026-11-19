@@ -13,7 +13,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.1.1"
+Public Const TOOL_VERSION As String = "1.1.2"
 Public Const TOOL_STAND As String = "19.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
@@ -156,4 +156,16 @@ Private Function IbanLesbar(ByVal iban As String) As String
     For i = 1 To Len(iban) Step 4
         IbanLesbar = IbanLesbar & IIf(i > 1, " ", "") & Mid$(iban, i, 4)
     Next i
+End Function
+
+' Versionshistorie, neueste zuerst. Wird beim Start ins Blatt "Versionshistorie"
+' geschrieben (modAnwendung.VersionshistorieAktualisieren). Bei jeder neuen Version
+' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
+Public Function Versionen() As Collection
+    Dim c As New Collection
+    c.Add Array("1.1.2", "19.11.2026", "Fehlerbehebung", "Blatt Versionshistorie wird beim Start aus dem Programm nachgeführt (wie PDF2E 1.7.2)")
+    c.Add Array("1.1.1", "19.11.2026", "Fehlerbehebung", "Speichern geänderter Zeilen (wie PDF2E 1.7.1)")
+    c.Add Array("1.1.0", "19.11.2026", "Neue Funktion", "Mehrplatzbetrieb wie PDF2E 1.7.0 (gemeinsame Module, in XL2E noch nicht getestet)")
+    c.Add Array("1.0.0", "17.11.2026", "Erstversion", "BSI-Excel-Rechnung (Blatt PA400_00) einlesen, PDF mit Briefkopf aus den Stammdaten, ZUGFeRD EN16931 mit Smart Tools, Fassbier je hl, Pfand getrennt, Sammelkundennummern; gemeinsamer Kern mit PDF2E 1.6.0")
+    Set Versionen = c
 End Function
