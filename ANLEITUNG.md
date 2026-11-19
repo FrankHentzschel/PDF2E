@@ -73,6 +73,8 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
 
+**Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Starter dieses Platzes unter „Einstellung für die Programmmappe“ eine Zeile mit genau dem Namen aus dem Blatt „Einstellungen“ und dem abweichenden Wert ergänzen. Der Starter schreibt sie ins Blatt „Arbeitsplatz“, dort hat sie Vorrang vor dem gemeinsamen Wert und wird nicht ins Backend übernommen.
+
 ## Update von 1.6.0 auf 1.7.0
 
 1. VbaSync „Alle importieren“ aus `vba` (neu: `modDaten`; *DieseArbeitsmappe* bekommt neuen Code). Kompilieren.
