@@ -158,6 +158,7 @@ Public Sub DatenStart()
     End If
 
     NachUpdateErgaenzen
+    VeralteteEinstellungenEntfernen
     BlattLaden "Einstellungen"              ' gemeinsame Einstellungen aus dem Backend
     BlattLaden "Brauerei"                   ' Lizenznehmer im Splash
     TagessicherungPruefen
@@ -208,6 +209,15 @@ Private Sub NachUpdateErgaenzen()
     ImportAusMappe ThisWorkbook, False, Array("Einstellungen", "Mailvorlage")
     Set db = DbOeffnen()
     SysSetzen db, "Programmversion", TOOL_NAME & " " & TOOL_VERSION
+    db.Close
+End Sub
+
+' Einstellungen, die das Programm nicht mehr nutzt (ab 1.7.0 fest im Code)
+Private Sub VeralteteEinstellungenEntfernen()
+    Dim db As Object
+    On Error Resume Next
+    Set db = DbOeffnen()
+    db.Execute "DELETE FROM Einstellungen WHERE [Einstellung] IN ('Entwickler', 'Firma', 'Kontakt')"
     db.Close
 End Sub
 
@@ -518,7 +528,7 @@ End Sub
 '------------------------------------------------------------------------------
 Public Function ZeileSpeichern(ByVal blatt As String, ByVal z As Long) As Boolean
     Dim ws As Worksheet, f As Variant, n As Long, schluessel As String, id As Long, rev As Long
-    Dim db As Object, rs As Object, qd As Object, sql As String, s As Long, info As String, m As Long
+    Dim db As Object, rs As Object, s As Long, info As String, m As Long
     If Not DatenAktiv() Then ZeileSpeichern = True: Exit Function
     Set ws = DatenBlatt(blatt)
     f = Felder(blatt)
@@ -552,24 +562,22 @@ Public Function ZeileSpeichern(ByVal blatt As String, ByVal z As Long) As Boolea
         rs.Close
         rev = 1
     Else
-        ' Parametertypen angeben: ungetypte Parameter wären Text(255), Langtexte würden abgelehnt
-        sql = "PARAMETERS "
-        For s = 1 To n
-            sql = sql & "[p" & s & "] " & IIf(FeldTyp(f(s - 1)) = "N", "Double", "LongText") & ", "
-        Next s
-        sql = sql & "[pAm] DateTime, [pVon] Text(100); UPDATE [" & blatt & "] SET "
-        For s = 1 To n
-            sql = sql & "[" & FeldName(f(s - 1)) & "] = [p" & s & "], "
-        Next s
-        sql = sql & "[Rev] = [Rev] + 1, [GeaendertAm] = [pAm], [GeaendertVon] = [pVon] WHERE [ID] = " & id & " AND [Rev] = " & rev
-        Set qd = db.CreateQueryDef("", sql)
-        For s = 1 To n
-            qd.Parameters("p" & s).Value = DbWert(ws.Cells(z, s).Value, FeldTyp(f(s - 1)))
-        Next s
-        qd.Parameters("pAm").Value = Now
-        qd.Parameters("pVon").Value = Benutzer()
-        qd.Execute DB_FAIL_ON_ERROR
-        If qd.RecordsAffected = 0 Then
+        ' Über das Recordset statt UPDATE mit Parametern (Parameter lieferten im Test
+        ' für ein Pflichtfeld Null). Edit sperrt den Datensatz (pessimistisch);
+        ' danach wird der Änderungszähler geprüft.
+        Set rs = db.OpenRecordset("SELECT * FROM [" & blatt & "] WHERE [ID] = " & id, DB_OPEN_DYNASET)
+        If Not rs.EOF Then
+            rs.Edit
+            If CLng(Val(CStr(Nz0(rs.Fields("Rev").Value)))) <> rev Then
+                rs.CancelUpdate
+                rs.Close
+                Set rs = Nothing
+            End If
+        Else
+            rs.Close
+            Set rs = Nothing
+        End If
+        If rs Is Nothing Then
             info = AenderungsInfo(db, blatt, id)
             db.Close
             Set db = Nothing
@@ -577,6 +585,14 @@ Public Function ZeileSpeichern(ByVal blatt As String, ByVal z As Long) As Boolea
                 "Das Blatt zeigt jetzt den aktuellen Stand. Bitte die Änderung bei Bedarf erneut eingeben."
             Exit Function
         End If
+        For s = 1 To n
+            rs.Fields(FeldName(f(s - 1))).Value = DbWert(ws.Cells(z, s).Value, FeldTyp(f(s - 1)))
+        Next s
+        rs.Fields("Rev").Value = rev + 1
+        rs.Fields("GeaendertAm").Value = Now
+        rs.Fields("GeaendertVon").Value = Benutzer()
+        rs.Update
+        rs.Close
         rev = rev + 1
     End If
     db.Close
