@@ -8,3 +8,30 @@ Option Explicit
 Private Sub Workbook_Open()
     AnwendungStart
 End Sub
+
+' Mehrplatz (modDaten): Stammdatenblatt beim Aktivieren frisch aus dem Backend laden
+Private Sub Workbook_SheetActivate(ByVal Sh As Object)
+    DatenBlattAktiviert Sh
+End Sub
+
+' Mehrplatz (modDaten): geänderte Zeilen sofort ins Backend schreiben
+Private Sub Workbook_SheetChange(ByVal Sh As Object, ByVal Target As Range)
+    DatenBlattGeaendert Sh, Target
+End Sub
+
+Private Sub Workbook_Activate()
+    DatenMappeAktiviert
+End Sub
+
+Private Sub Workbook_Deactivate()
+    KontextmenueEntfernen
+End Sub
+
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    KontextmenueEntfernen
+End Sub
+
+' Version für die Starter-Mappe in Start!Z1 aktuell halten
+Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
+    VersionszelleSchreiben
+End Sub

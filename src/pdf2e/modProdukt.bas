@@ -8,8 +8,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.6.0"
-Public Const TOOL_STAND As String = "17.11.2026"
+Public Const TOOL_VERSION As String = "1.7.2"
+Public Const TOOL_STAND As String = "19.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
 
@@ -50,3 +50,24 @@ End Sub
 Public Sub QuellPdfErstellen(ByVal quelle As String, ByVal ziel As String)
     FileCopy quelle, ziel          ' Original-PDF bleibt unverändert
 End Sub
+
+' Versionshistorie, neueste zuerst. Wird beim Start ins Blatt "Versionshistorie"
+' geschrieben (modAnwendung.VersionshistorieAktualisieren). Bei jeder neuen Version
+' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
+Public Function Versionen() As Collection
+    Dim c As New Collection
+    c.Add Array("1.7.2", "19.11.2026", "Fehlerbehebung", "Blatt Versionshistorie wird beim Start aus dem Programm nachgeführt (fehlte ab 1.5.0, weil nur die Vorlage es befüllte); Datum als echtes Datum statt Text")
+    c.Add Array("1.7.1", "19.11.2026", "Fehlerbehebung", "Änderungen im Blatt Einstellungen wurden von Access abgelehnt (Pflichtfeld Arbeitsplatz); Speichern geänderter Zeilen jetzt über das Recordset. Veraltete Einstellungen Entwickler/Firma/Kontakt werden entfernt")
+    c.Add Array("1.7.0", "19.11.2026", "Neue Funktion", "Mehrplatzbetrieb: Einstellungen, Mailvorlage und Stammdaten im Access-Backend (wird automatisch angelegt und migriert), Laden beim Aktivieren eines Blatts, Speichern pro Zeile mit Konfliktprüfung, Datensatz löschen über das Kontextmenü; Verarbeitungsprotokoll mit Rückfrage bei bereits erzeugten Rechnungen; tägliche Sicherung des Backends; Übernahme von Stammdaten aus einer älteren Mappe; Blatt Arbeitsplatz für platzbezogene Werte; Version in Start!Z1 für die Starter-Mappe")
+    c.Add Array("1.6.0", "17.11.2026", "Neue Funktion", "Pfand mit Differenz 0 als Lieferung und Rückgabe; Blatt Pfandartikel mit GTIN; EDEKA-Vorgaben; gemeinsame Module mit XL2E (Module neu aufgeteilt: modAnwendung, modProdukt); Sammelkundennummern; Prüfung warnt vor Platzhaltern in den Stammdaten; E-Mail an REWE mit neutralem Text ohne Rechnungsdaten; Absender der E-Mail wählbar, auch gemeinsames Postfach")
+    c.Add Array("1.5.0", "04.11.2026", "Neue Funktion", "Smart-Tools-Adapter (ZUGFeRD EN16931, Prüfung vor dem Speichern); Pfand getrennt nach Lieferung und Rücknahme; REWE-Vorgaben je Empfänger (Hinweis AAK, Pflicht RE-GLN, WE-GLN, USt-IdNr.); GLN-Prüfziffer")
+    c.Add Array("1.4.0", "26.10.2026", "Neue Funktion", "E-Mail-Entwurf in Outlook mit der E-Rechnung als Anhang, Text aus dem Blatt Mailvorlage (Platzhalter)")
+    c.Add Array("1.3.0", "26.10.2026", "Neue Funktion", "Firmenlogo im Info-Fenster standardmäßig links, wahlweise rechts (Einstellung ""Firmenlogo-Position"")")
+    c.Add Array("1.2.0", "26.10.2026", "Neue Funktion", "Neue Rechnungsempfänger werden automatisch im Blatt Empfaenger angelegt; Fehlerbehebung: umgebrochene Leergutzeilen der echten Windows-Ausgabe (Pfandteil vor der Artikelzeile) werden spaltengenau zusammengeführt")
+    c.Add Array("1.1.0", "26.10.2026", "Neue Funktion", "Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen ""Anwendungslogo"" und ""Firmenlogo"")")
+    c.Add Array("1.0.3", "26.10.2026", "Fehlerbehebung", "Fehler beim Laden des Logos werden im Protokoll gemeldet")
+    c.Add Array("1.0.2", "26.10.2026", "Fehlerbehebung", "Schaltflächen als Formen statt Formularsteuerelemente (Anzeigefehler); Versionszeile im Blatt Start wird automatisch nachgeführt")
+    c.Add Array("1.0.1", "26.10.2026", "Fehlerbehebung", "Umgebrochene Leergutzeilen (pdftotext unter Windows) werden zusammengeführt; Option ""Textdatei behalten""")
+    c.Add Array("1.0.0", "26.10.2026", "Erstversion", "Einlesen BSI-PDF, Prüfung, Stub-Adapter, Splash- und Info-Fenster, Schaltflächen")
+    Set Versionen = c
+End Function

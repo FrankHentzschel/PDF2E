@@ -6,6 +6,7 @@ Je Produkt entsteht <NAME>_<VERSION>.zip mit
   <NAME>.xlsx          Arbeitsmappe (vorlage/build_xlsx.py)
   vba/                 alle Module aus src/<produkt> (VbaSync-Format, "Alle importieren")
   logo/                Logos aus dem Logo-Ordner (optional, siehe LOGOS)
+  starter/             Starter-Mappe Start_<NAME>.xlsx und ihre Module (src/starter)
   ANLEITUNG.md         PDF2E: ANLEITUNG.md, XL2E: ANLEITUNG_XL2E.md
 Die VBA-Dateien werden in Windows-1252 mit CRLF gepackt (wie der VBA-Editor sie braucht).
 """
@@ -48,8 +49,13 @@ def paket(prod, ziel, logo_ordner):
     with tempfile.TemporaryDirectory() as tmp:
         mappe = os.path.join(tmp, f"{name}.xlsx")
         subprocess.run([sys.executable, os.path.join(ROOT, "vorlage", "build_xlsx.py"), mappe, prod], check=True)
+        starter = os.path.join(tmp, f"Start_{name}.xlsx")
+        subprocess.run([sys.executable, os.path.join(ROOT, "vorlage", "build_starter.py"), starter, prod], check=True)
         with zipfile.ZipFile(zip_pfad, "w", zipfile.ZIP_DEFLATED) as z:
             z.write(mappe, f"{name}.xlsx")
+            z.write(starter, f"starter/Start_{name}.xlsx")
+            for f in sorted(os.listdir(os.path.join(ROOT, "src", "starter"))):
+                z.writestr(f"starter/vba/{f}", vba_bytes(os.path.join(ROOT, "src", "starter", f)))
             ordner = os.path.join(ROOT, "src", prod)
             for f in sorted(os.listdir(ordner)):
                 if f.endswith(".frx"):

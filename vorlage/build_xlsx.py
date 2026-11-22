@@ -169,7 +169,9 @@ dv=DataValidation(type="list",formula1="=Zahlungskonditionen!$A$2:$A$50",allow_b
 
 # Einstellungen
 ws=wb.create_sheet("Einstellungen")
-header(ws,["Einstellung","Wert","Hinweis"],[22,50,60])
+header(ws,["Einstellung","Wert","Hinweis","Arbeitsplatz"],[22,50,60,16])
+from openpyxl.comments import Comment
+ws["D1"].comment=Comment("Leer = gilt für alle Plätze. Computername eintragen (siehe Info-Fenster), wenn ein Platz einen abweichenden Wert braucht: dann dieselbe Einstellung in einer weiteren Zeile mit dem Computernamen.","PDF2E")
 EINST=[("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools, 64-Bit-Version"),
 ("Eingangsordner",r"C:\Rechnungen\BSI","Ordner mit den BSI-PDFs"),
 ("Ausgabeordner",r"C:\Rechnungen\ZUGFeRD","Hier werden die ZUGFeRD-PDFs abgelegt"),
@@ -185,14 +187,13 @@ EINST=[("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools
 ("REWE Hinweis AAK","Bezüglich der Entgeltminderungen verweisen wir auf die aktuellen Zahlungs- und Konditionsvereinbarungen","Pflichttext für Empfänger mit Vorgaben = REWE (BT-22, Code AAK)"),
 ("Quellcode-Ordner","","Nur Entwicklung: Zielordner für PDF2E_Exportieren (leer = Unterordner src neben der Mappe)"),
 ("Textdatei behalten","Nein","Ja = pdftotext-Ausgabe im TEMP-Ordner behalten (Fehlersuche), Pfad steht im Protokoll"),
-("Entwickler","Frank Hentzschel","Wird im Info-Fenster angezeigt"),
-("Firma","office & database development","Firmenbezeichnung für Info-Fenster und Copyright"),
-("Kontakt","Frank.Hentzschel@gmx.de","z. B. E-Mail oder Webseite für Support"),
 ("Anwendungslogo","","Logo von PDF2E oben im Info-Fenster (BMP, JPG oder GIF, kein PNG), z. B. C:\\PDF2E\\pdf2e_logo.jpg"),
 ("Firmenlogo","","Logo des Entwicklers unten im Info-Fenster (BMP, JPG oder GIF, kein PNG)"),
 ("Firmenlogo-Position","LINKS","LINKS (Standard) oder RECHTS neben den Entwicklerangaben"),
 ("E-Rechnung-Adapter","STUB","STUB = Testlauf ohne Smart Tools (keine gültige E-Rechnung), SMARTTOOLS = echte Erzeugung"),
-("Sammelkundennummern","12100" if XL else "","Kundennummern, unter denen viele Kunden abgerechnet werden (z. B. Festlichkeiten), durch Komma getrennt. Empfänger = Kundennr. / Name / PLZ")]
+("Sammelkundennummern","12100" if XL else "","Kundennummern, unter denen viele Kunden abgerechnet werden (z. B. Festlichkeiten), durch Komma getrennt. Empfänger = Kundennr. / Name / PLZ"),
+("Backup-Ordner","","Tägliche Kopie des Backends (beim ersten Start des Tages) mit Datum und Uhrzeit, darf auf einem anderen Rechner liegen. Leer = keine Tagessicherung"),
+("Backup behalten","30","Anzahl Tagessicherungen, ältere werden gelöscht")]
 if XL:
     EINST=[e for e in EINST if e[0] not in ("pdftotext-Pfad","Layout","Layout-Variante","Textdatei behalten")]
     EINST=[(a,{"Eingangsordner":r"C:\Rechnungen\BSI-Excel"}.get(a,b),{"Eingangsordner":"Ordner mit den BSI-Excel-Rechnungen"}.get(a,c)) for a,b,c in EINST]
@@ -201,19 +202,22 @@ if XL:
             ("Briefkopf-Logo","","Logo für die Kopfzeile, z. B. C:\\XL2E\\fiedler_logo_hoch.png (PNG oder JPG)")]
 for i,(a,b,c) in enumerate(EINST,2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
+# Arbeitsplatz: platzbezogene Werte, setzt die Starter-Mappe bei jedem Start
+ws=wb.create_sheet("Arbeitsplatz")
+header(ws,["Einstellung","Wert","Hinweis"],[22,60,70])
+for i,(a,b,c) in enumerate([("Backend-Pfad","","Access-Datei mit Einstellungen, Stammdaten und Verarbeitungsprotokoll (wird beim ersten Start angelegt). Leer = ohne Backend, alles nur in dieser Mappe"),
+                            ("pdftotext-Pfad" if not XL else "","","Nur wenn auf diesem Platz abweichend; leer = Wert aus 'Einstellungen'" if not XL else "")],2):
+    if not a: continue
+    ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; x.number_format='@'; ws.cell(i,3,c).font=Font(italic=True,color="777777")
+ws.cell(5,1,"Diese Werte setzt die Starter-Mappe bei jedem Start (Bereich 'Einstellung für die Programmmappe'). Sie haben Vorrang vor dem Blatt 'Einstellungen'.").font=Font(italic=True,color="777777")
+
 ws=wb.create_sheet("Versionshistorie")
 header(ws,["Version","Datum","Art","Änderung"],[10,12,16,100])
-HIST=[("1.0.0","17.11.2026","Erstversion","BSI-Excel-Rechnung (Blatt PA400_00) einlesen, PDF mit Briefkopf aus den Stammdaten, ZUGFeRD EN16931 mit Smart Tools, Fassbier je hl, Pfand getrennt, Sammelkundennummern; gemeinsamer Kern mit PDF2E 1.6.0")] if XL else [("1.6.0","17.11.2026","Neue Funktion","Pfand mit Differenz 0 als Lieferung und Rückgabe; Blatt Pfandartikel mit GTIN; EDEKA-Vorgaben; gemeinsame Module mit XL2E (Module neu aufgeteilt: modAnwendung, modProdukt); Sammelkundennummern; Prüfung warnt vor Platzhaltern in den Stammdaten; E-Mail an REWE mit neutralem Text ohne Rechnungsdaten; Absender der E-Mail wählbar, auch gemeinsames Postfach"),
-("1.5.0","04.11.2026","Neue Funktion","Smart-Tools-Adapter (ZUGFeRD EN16931, Prüfung vor dem Speichern); Pfand getrennt nach Lieferung und Rücknahme; REWE-Vorgaben je Empfänger (Hinweis AAK, Pflicht RE-GLN, WE-GLN, USt-IdNr.); GLN-Prüfziffer"),
-("1.4.0","26.10.2026","Neue Funktion","E-Mail-Entwurf in Outlook mit der E-Rechnung als Anhang, Text aus dem Blatt Mailvorlage (Platzhalter)"),
-("1.3.0","26.10.2026","Neue Funktion","Firmenlogo im Info-Fenster standardmäßig links, wahlweise rechts (Einstellung \"Firmenlogo-Position\")"),
-("1.2.0","26.10.2026","Neue Funktion","Neue Rechnungsempfänger werden automatisch im Blatt Empfaenger angelegt; Fehlerbehebung: umgebrochene Leergutzeilen der echten Windows-Ausgabe (Pfandteil vor der Artikelzeile) werden spaltengenau zusammengeführt"),
-("1.1.0","26.10.2026","Neue Funktion","Info-Fenster: Anwendungslogo oben, Firmenlogo des Entwicklers unten (Einstellungen \"Anwendungslogo\" und \"Firmenlogo\")"),
-("1.0.3","26.10.2026","Fehlerbehebung","Fehler beim Laden des Logos werden im Protokoll gemeldet"),
-("1.0.2","26.10.2026","Fehlerbehebung","Schaltflächen als Formen statt Formularsteuerelemente (Anzeigefehler); Versionszeile im Blatt Start wird automatisch nachgeführt"),
-("1.0.1","26.10.2026","Fehlerbehebung","Umgebrochene Leergutzeilen (pdftotext unter Windows) werden zusammengeführt; Option \"Textdatei behalten\""),
-("1.0.0","26.10.2026","Erstversion","Einlesen BSI-PDF, Prüfung, Stub-Adapter, Splash- und Info-Fenster, Schaltflächen")]
+# Versionshistorie aus src/<produkt>/modProdukt.bas (Funktion Versionen), damit sie nur an einer Stelle steht
+HIST=[tuple(x.replace('""','"') for x in t) for t in re.findall(r'c\.Add Array\("((?:[^"]|"")*)", "((?:[^"]|"")*)", "((?:[^"]|"")*)", "((?:[^"]|"")*)"\)',_mp)]
+import datetime
 for i,row in enumerate(HIST,2):
-    for j,v in enumerate(row,1): ws.cell(i,j,v)
-ws["A2"].number_format='@'
+    ws.cell(i,1,row[0]).number_format='@'
+    d,mo,y=map(int,row[1].split(".")); c=ws.cell(i,2,datetime.date(y,mo,d)); c.number_format="DD.MM.YYYY"
+    ws.cell(i,3,row[2]); ws.cell(i,4,row[3])
 wb.save(out)

@@ -3,6 +3,28 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.7.2 und XL2E 1.1.2 – 19.11.2026
+
+- **Fehlerbehebung:** Das Blatt „Versionshistorie“ wird beim Start aus dem Programm nachgeführt (Funktion `Versionen` in `modProdukt`). Bisher befüllte es nur die Vorlage, deshalb fehlten in bestehenden Mappen die Versionen ab 1.5.0. Das Datum steht jetzt als echtes Datum statt als Text.
+
+## PDF2E 1.7.1 und XL2E 1.1.1 – 19.11.2026
+
+- **Fehlerbehebung:** Änderungen an vorhandenen Zeilen der Datenblätter werden über das Recordset gespeichert. Vorher lehnte Access Änderungen im Blatt Einstellungen ab („Sie müssen einen Wert in das Feld 'Einstellungen.Arbeitsplatz' eingeben“).
+- **Fehlerbehebung:** Die nicht mehr genutzten Einstellungen Entwickler, Firma und Kontakt werden beim Start aus dem Backend entfernt.
+
+## PDF2E 1.7.0 und XL2E 1.1.0 – 19.11.2026
+
+Mehrplatzbetrieb (gemeinsame Module, in XL2E noch nicht getestet). Anleitung: Abschnitt „Mehrplatz- und Einzelplatzbetrieb“.
+
+- **Neue Funktion:** Backend `.accdb` (DAO, späte Bindung) für Einstellungen, Mailvorlage, Brauerei, Bankkonten, Zahlungskonditionen, Empfänger, Pfandartikel und das Verarbeitungsprotokoll. Wird beim ersten Start angelegt und aus den Blättern vorbelegt; Tabelle Systeminfo mit Schema-Version, Migration mit vorheriger Sicherung.
+- **Neue Funktion:** Stammdatenblätter laden beim Aktivieren und vor jedem Einlesen frisch; Änderungen werden sofort pro Zeile gespeichert, Konfliktprüfung über Änderungszähler; Datensatz löschen über das Kontextmenü.
+- **Neue Funktion:** Rückfrage beim Einlesen einer bereits erzeugten Rechnung und vor dem Überschreiben, jeweils mit wer und wann.
+- **Neue Funktion:** Tägliche Sicherung des Backends (Einstellungen „Backup-Ordner“, „Backup behalten“); Makro `StammdatenAusMappeUebernehmen`.
+- **Neue Funktion:** Starter-Mappe (`src/starter`): Versionsprüfung aus der geschlossenen Mappe (Start!Z1), Kopie neuer Versionen, platzbezogene Werte ins neue Blatt „Arbeitsplatz“.
+- **Neue Funktion:** Einstellungen je Arbeitsplatz: Spalte „Arbeitsplatz“ (Computername) im Blatt Einstellungen, leer = alle Plätze. Der Computername steht im Info-Fenster.
+- **Geändert:** Entwickler, Firma und Kontakt im Info-Fenster sind fest im Programm (Einstellungen „Entwickler“, „Firma“, „Kontakt“ entfallen). „Lizenziert für“ kommt aus den Stammdaten (Brauerei, Name) im Backend, die beim Start vor dem Splash geladen werden.
+- Ohne Eintrag „Backend-Pfad“ verhält sich das Programm wie 1.6.0.
+
 ## XL2E 1.0.0 – 17.11.2026
 
 Erstversion für Brauereien, deren BSI-Software Rechnungen als Excel-Datei ausgibt. Anleitung: [ANLEITUNG_XL2E.md](ANLEITUNG_XL2E.md).

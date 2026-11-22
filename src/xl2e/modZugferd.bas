@@ -12,7 +12,7 @@ Attribute VB_Name = "modZugferd"
 Option Explicit
 
 Public Sub ZugferdErzeugen()
-    Dim quelle As String, ziel As String, adapter As String
+    Dim quelle As String, ziel As String, adapter As String, info As String
 
     If Not RechnungPruefen() Then
         MsgBox "Die Prüfung meldet Fehler. Bitte das Blatt 'Protokoll' ansehen.", vbExclamation
@@ -26,7 +26,10 @@ Public Sub ZugferdErzeugen()
     If adapter = "STUB" Then ziel = ziel & "_STUB"
     ziel = ziel & ".pdf"
     If Len(Dir$(ziel)) > 0 Then
-        If MsgBox("Die Datei existiert bereits:" & vbLf & ziel & vbLf & "Überschreiben?", vbYesNo + vbQuestion) <> vbYes Then Exit Sub
+        info = VerarbeitungInfo(CStr(Feld("f_RechNr").Value))      ' Mehrplatz: wer hat sie erzeugt?
+        If Len(info) = 0 And DatenAktiv() Then info = "Herkunft der Datei unbekannt."
+        If MsgBox("Die Datei existiert bereits:" & vbLf & ziel & vbLf & vbLf & IIf(Len(info) > 0, info & vbLf & vbLf, "") & _
+                  "Überschreiben?", vbYesNo + vbQuestion + vbDefaultButton2, TOOL_NAME) <> vbYes Then Exit Sub
         Kill ziel
     End If
 
@@ -39,6 +42,8 @@ Public Sub ZugferdErzeugen()
     End Select
     Feld("f_Ausgabedatei").Value = ziel
     Protokoll "Info", "ZUGFeRD erzeugt: " & ziel
+    VerarbeitungErzeugt CStr(Feld("f_RechNr").Value), quelle, ziel, CStr(Feld("f_KName").Value), _
+                        CCur(Val(Feld("f_Brutto").Value)), IIf(adapter = "STUB", "Test (STUB)", "erzeugt")
     MsgBox IIf(adapter = "STUB", "TESTLAUF (Stub) - keine gültige E-Rechnung:", "ZUGFeRD-Rechnung erzeugt:") & vbLf & ziel, vbInformation
     Exit Sub
 

@@ -82,6 +82,7 @@ Public Sub EMailErstellen()
     End With
 
     Protokoll "Info", "E-Mail-Entwurf erstellt" & IIf(Len(an) > 0, " an " & an, "") & ": " & betreff
+    VerarbeitungMail CStr(Feld("f_RechNr").Value)
     If Len(an) = 0 Then
         Protokoll "Warnung", "Keine E-Mail-Adresse für Kunde " & Feld("f_KundenNr").Value & _
                              ". Bitte im Entwurf ergänzen und im Blatt 'Empfaenger' eintragen."
