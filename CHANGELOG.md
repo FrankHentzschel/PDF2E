@@ -3,13 +3,30 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
-## Nicht veröffentlicht (Stand der Mappe, Export 05.11.2026)
+## XL2E 1.0.0 – 17.11.2026
 
-- REWE-Mail: Statt nur zu warnen, verwendet der E-Mail-Entwurf für REWE-Empfänger einen neutralen Text (Zeile „Text REWE“ im Blatt „Mailvorlage“, sonst eingebauter Standard). Betrag, Fälligkeit und Zahlungsbedingung werden aus Betreff und Text entfernt.
+Erstversion für Brauereien, deren BSI-Software Rechnungen als Excel-Datei ausgibt. Anleitung: [ANLEITUNG_XL2E.md](ANLEITUNG_XL2E.md).
+
+- Liest das Blatt `PA400_00`: Kopf, Anschrift, Lieferschein, Lieferort, Positionen, Leergutkonto und Summen zum Abgleich.
+- Fassbier wird je Hektoliter übergeben (Einheit HLT). Pfand getrennt nach Lieferung und Rücknahme.
+- Erzeugt das PDF selbst aus einer Kopie des Rechnungsblatts, mit Briefkopf aus den Stammdaten (Kopfzeile: Absender und Logo; Fußzeile: Register, Steuer, Bank).
+- ZUGFeRD EN16931 mit Smart Tools, E-Mail-Entwurf, Prüfung und Info-Fenster aus dem gemeinsamen Kern mit PDF2E.
+
+## PDF2E 1.6.0 – 17.11.2026
+
+- **Umbau:** PDF2E und XL2E nutzen dieselben gemeinsamen Module. Im Repository hat jede Mappe ihren vollständigen Ordner (`src/pdf2e`, `src/xl2e`), die gemeinsamen Module sind identische Kopien (Liste `src/gemeinsam.txt`, Abgleich mit `tools/abgleich.py`). Produktspezifisch ist nur `modProdukt` mit Name, Version und Datenquelle. `modPDF2E` heißt jetzt `modAnwendung`, `PDF2E_Start` ruft `AnwendungStart` auf. Update-Schritte in der Anleitung.
+- **Neue Funktion:** Einstellung „Sammelkundennummern“. Bei diesen Kundennummern legt das Programm je Kunde einen eigenen Empfänger an (Schlüssel Kundennr. / Name / PLZ).
+- **Neue Funktion:** Die Prüfung erkennt Platzhalter in den Stammdaten (z. B. `DE123456789`, BIC `TESTDEFFXXX`). Mit Smart Tools ist das ein Fehler, im Testmodus eine Warnung.
+- **Geändert:** E-Mail an REWE mit neutralem Text ohne Rechnungsdaten (neue Zeile „Text REWE“ im Blatt Mailvorlage, sonst eingebauter Standard). Kein Hinweisfenster mehr.
+- **Neue Funktion:** Absender der E-Mail wählbar (Feld „Absenderkonto“ im Blatt Mailvorlage, Auswahl aus den Outlook-Konten). Ein gemeinsames Postfach wie rechnung@firma.de geht auch ohne eigenes Konto (Versand im Namen des Postfachs, Recht „Senden als“ nötig).
+- **Pfand mit Differenz 0:** Sind Lieferung und Rückgabe eines Leerguts gleich (z. B. 5 geliefert, 5 zurück), steht im PDF kein Pfandbetrag. Bisher fiel die Zeile weg. Jetzt entstehen zwei Positionen, +5 und −5 zum Pfandsatz, wie EDEKA und REWE es verlangen.
+- **Neues Blatt „Pfandartikel“** (Leergut-Nr., Bezeichnung, GTIN): Pfandartikel werden beim Einlesen automatisch angelegt, der Anwender trägt nur die GTIN ein. Sie geht als BT-157 (Schema 0160) in die E-Rechnung; die Prüfung kontrolliert die Prüfziffer.
+- **EDEKA-Vorgaben:** Spalte „Vorgaben“ = `EDEKA` (automatisch, wenn der Empfängername „EDEKA“ enthält). Dann sind getrenntes Pfand und eine GTIN für jeden Pfandartikel Pflicht.
 - Beim Öffnen ist immer das Blatt „Start“ aktiv, nicht das zuletzt bearbeitete.
-- Quellen im VbaSync-Format: UserForm als `frmInfo.frm` + `.frx`, Dokumentmodule als `.doccls` (statt `_Code.txt`).
+- Quellen im VbaSync-Format: UserForm als `frmInfo.frm` + `.frx`, Dokumentmodule als `.doccls`.
+- Beschriftungen „laut PDF“ heißen in der Prüfung jetzt „laut Rechnung“.
 
-## 1.5.0 – 04.11.2026
+## PDF2E 1.5.0 – 04.11.2026
 
 - **Neue Funktion: echte E-Rechnung mit Smart Tools.** Mit der Einstellung „E-Rechnung-Adapter“ = `SMARTTOOLS` erzeugt PDF2E eine ZUGFeRD-Rechnung im Profil EN16931. Die Bibliothek bettet `factur-x.xml` in eine Kopie der BSI-PDF ein und wandelt sie in PDF/A-3. Vor dem Speichern prüft die Bibliothek die Rechnung (`Validate`). Bei Regelverletzungen entsteht keine Datei, die Meldungen stehen im Protokoll und im Prüfbericht.
 - Übergeben werden unter anderem: GLN von Rechnungsempfänger und Lieferort mit Schema 0088, USt-IdNr. des Empfängers, Lieferschein, Lieferdatum, Bankverbindung, Zahlungsbedingung und Fälligkeit. Aktionen gehen als Abschlag auf Belegebene in die Rechnung. Pfandpositionen sind als Pfand gekennzeichnet (DEPOSIT_SYSTEM / RETURNABLE).

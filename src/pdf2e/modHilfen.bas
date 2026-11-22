@@ -110,3 +110,65 @@ Public Function StandardZeile(ByVal blatt As String, ByVal standardSpalte As Lon
         If LCase$(Trim$(CStr(ws.Cells(z, standardSpalte).Value))) = "x" Then StandardZeile = z: Exit Function
     Next z
 End Function
+
+' Optionaler Eintrag im Blatt "Brauerei": leer, wenn er fehlt
+Public Function StammOderLeer(ByVal schluessel As String) As String
+    On Error Resume Next
+    StammOderLeer = Stamm(schluessel)
+End Function
+
+'------------------------------------------------------------------------------
+' Positionen (von den Einlese-Vorlagen beider Produkte genutzt)
+'------------------------------------------------------------------------------
+Public Sub PositionAnhaengen(ByVal typ As String, ByVal artNr As String, ByVal bez As String, _
+                              ByVal menge As Double, ByVal einheit As String, ByVal preis As Currency, _
+                              ByVal betrag As Currency, ByVal info As String)
+    Dim ws As Worksheet, z As Long
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    z = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row + 1
+    ws.Cells(z, SP_TYP).Value = typ
+    ws.Cells(z, SP_ARTNR).Value = "'" & artNr
+    ws.Cells(z, SP_BEZ).Value = bez
+    ws.Cells(z, SP_MENGE).Value = menge
+    ws.Cells(z, SP_EINHEIT).Value = einheit
+    ws.Cells(z, SP_PREIS).Value = preis
+    ws.Cells(z, SP_BETRAG).Value = betrag
+    ws.Cells(z, SP_INFO).Value = "'" & info
+End Sub
+
+' Bei genau einem MwSt-Satz gilt er für alle Zeilen. Bei mehreren muss der Anwender zuordnen.
+Public Sub SteuersatzSetzen(saetze As Collection)
+    Dim ws As Worksheet, z As Long, letzte As Long
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    letzte = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+    If saetze.Count = 1 Then
+        For z = 2 To letzte
+            ws.Cells(z, SP_USTSATZ).Value = saetze(1)
+            ws.Cells(z, SP_USTKAT).Value = "S"
+        Next z
+    Else
+        Protokoll "Warnung", saetze.Count & " MwSt-Sätze auf der Rechnung. Bitte Spalte 'USt-Satz' je Position ausfüllen."
+    End If
+End Sub
+
+'------------------------------------------------------------------------------
+' Rechnungsempfänger
+'------------------------------------------------------------------------------
+' Schlüssel im Blatt "Empfaenger" (Spalte A). Normal die Kundennummer. Bei einer
+' Sammelkundennummer (Einstellung "Sammelkundennummern", z. B. "12100" für
+' Festlichkeiten) teilen sich viele Kunden eine Nummer; dann gilt
+' Kundennummer / Name / PLZ, damit E-Mail und Vorgaben nicht beim falschen
+' Kunden landen.
+Public Function EmpfaengerSchluessel() As String
+    Dim nr As String, liste As Variant, x As Variant
+    nr = Trim$(CStr(Feld("f_KundenNr").Value))
+    EmpfaengerSchluessel = nr
+    If Len(nr) = 0 Then Exit Function
+    liste = Split(Replace(EinstellungOderLeer("Sammelkundennummern"), ";", ","), ",")
+    For Each x In liste
+        If Trim$(CStr(x)) = nr Then
+            EmpfaengerSchluessel = nr & " / " & Trim$(CStr(Feld("f_KName").Value)) & " / " & Trim$(CStr(Feld("f_KPLZ").Value))
+            Exit Function
+        End If
+    Next x
+End Function

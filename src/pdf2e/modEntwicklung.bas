@@ -7,11 +7,12 @@ Attribute VB_Name = "modEntwicklung"
 ' VBA-Projektobjektmodell vertrauen" aktivieren.
 '
 ' Zielordner: Einstellung "Quellcode-Ordner" (z. B. C:\Work\PDF2E\src),
-' sonst Unterordner "src" neben der Arbeitsmappe.
+' sonst Unterordner "src" neben der Arbeitsmappe. Die Dateien landen flach in
+' einem Ordner; im Repo gehören sie nach src/kern, src/pdf2e bzw. src/xl2e.
 '==============================================================================
 Option Explicit
 
-Public Sub PDF2E_Exportieren()
+Public Sub Quellcode_Exportieren()
     Dim ziel As String, comp As Object, anzahl As Long
 
     ziel = EinstellungOderLeer("Quellcode-Ordner")

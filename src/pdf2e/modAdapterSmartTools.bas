@@ -22,6 +22,7 @@ Private Const LIZENZ_ORDNER As String = "SmartTools\Excel E-Rechnung VBA"
 
 ' Codelisten.xlsx: IdentifierCode, TextSubjectQualifierCode
 Private Const ID_GLN As Long = 86             ' 0088 EAN Location Code (GLN)
+Private Const ID_GTIN As Long = 156           ' 0160 Global Trade Item Number (GTIN)
 Private Const TEXT_AAK As Long = 9            ' AAK Preiskonditionen
 Private Const WAEHRUNG_EUR As Long = 48
 
@@ -222,7 +223,7 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
     Dim pos As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_InvoiceLine
     Dim ust As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_InvoiceApplicableTax
     Dim positionen As Currency, nachlaesse As Currency, ustSumme As Currency, ustBetrag As Currency
-    Dim basis As Object, kat As Object, k As Variant
+    Dim basis As Object, kat As Object, k As Variant, gtin As String
 
     Set basis = CreateObject("Scripting.Dictionary")     ' Schlüssel "Kategorie|Satz" -> Bemessungsgrundlage
     Set kat = CreateObject("Scripting.Dictionary")
@@ -253,6 +254,11 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
                 .NetAmount = ws.Cells(z, SP_BETRAG).Value                           ' BT-131
                 If typ = "Pfand" Then                                               ' BT-160/161
                     .Item.AddAttribute NeuesMerkmal("DEPOSIT_SYSTEM", PfandArt())
+                    gtin = PfandGtin(CStr(ws.Cells(z, SP_ARTNR).Value))
+                    If Len(gtin) > 0 Then                                           ' BT-157, Schema 0160
+                        .Item.StandardId.Value = gtin
+                        .Item.StandardId.SchemeCode = ID_GTIN
+                    End If
                 End If
             End With
             inv.AddLine pos
@@ -382,9 +388,4 @@ Private Function GlnBereinigt(ByVal gln As Variant) As String
     For i = 1 To Len(s)
         If Mid$(s, i, 1) Like "#" Then GlnBereinigt = GlnBereinigt & Mid$(s, i, 1)
     Next i
-End Function
-
-Private Function StammOderLeer(ByVal schluessel As String) As String
-    On Error Resume Next
-    StammOderLeer = Stamm(schluessel)
 End Function

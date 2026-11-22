@@ -93,6 +93,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
             pos.setAttribute "typ", ws.Cells(z, SP_TYP).Value
             Wert pos, "BT-126", "Nr", CStr(nr)
             Wert pos, "BT-155", "ArtikelNr", ws.Cells(z, SP_ARTNR).Value
+            If ws.Cells(z, SP_TYP).Value = "Pfand" Then Wert pos, "BT-157", "GTIN", PfandGtin(CStr(ws.Cells(z, SP_ARTNR).Value))
             Wert pos, "BT-153", "Bezeichnung", ws.Cells(z, SP_BEZ).Value
             Wert pos, "BT-129", "Menge", ZahlXml(ws.Cells(z, SP_MENGE).Value, 4)
             Wert pos, "BT-130", "Einheit", ws.Cells(z, SP_EINHEIT).Value
