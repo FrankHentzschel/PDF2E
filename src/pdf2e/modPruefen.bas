@@ -52,12 +52,15 @@ Public Function RechnungPruefen() As Boolean
         End If
     End If
     PfandGtinPruefen EmpfaengerVorgabe() = "EDEKA"
+    UStIdPruefen Feld("f_KUstId").Value, "USt-IdNr. des Rechnungsempfängers: im Blatt 'Empfaenger' beim Kunden " & _
+                 EmpfaengerSchluessel() & " (Spalte USt-IdNr.) korrigieren oder leeren und neu einlesen."
 
     ' Pflichtangaben Brauerei
     Dim k As Variant
     For Each k In Array("Name", "Straße", "PLZ", "Ort", "Land", "USt-IdNr")
         If Len(Stamm(CStr(k))) = 0 Then Fehler "Brauerei-Stammdaten: '" & k & "' fehlt."
     Next k
+    UStIdPruefen Stamm("USt-IdNr"), "USt-IdNr. der Brauerei: im Blatt 'Brauerei' korrigieren."
 
     PlatzhalterPruefen
 
@@ -89,6 +92,13 @@ Public Function RechnungPruefen() As Boolean
     Feld("f_Status").Value = IIf(mFehler = 0, "OK - bereit zum Erzeugen", mFehler & " Fehler - siehe Protokoll")
     Protokoll "Prüfung", "---- Ergebnis: " & Feld("f_Status").Value & " ----"
 End Function
+
+' USt-IdNr. mit Länderkennzeichen (EN 16931, BR-CO-09), sonst Fehler mit Hinweis, wo korrigieren
+Private Sub UStIdPruefen(ByVal ustId As Variant, ByVal wo As String)
+    Dim meldung As String
+    meldung = UStIdFehler(UStIdBereinigt(ustId))
+    If Len(meldung) > 0 Then Fehler meldung & " " & wo
+End Sub
 
 Private Sub Pflicht(ByVal feldName As String, ByVal bezeichnung As String)
     If Len(Trim$(CStr(Feld(feldName).Value))) = 0 Then Fehler bezeichnung & " fehlt."

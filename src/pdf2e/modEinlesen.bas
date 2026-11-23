@@ -123,7 +123,7 @@ Private Sub VorgabenSetzen()
 
     If z > 0 Then
         If Len(wsE.Cells(z, 3).Value) > 0 Then Feld("f_KEmail").Value = wsE.Cells(z, 3).Value
-        If Len(wsE.Cells(z, 4).Value) > 0 Then Feld("f_KUstId").Value = wsE.Cells(z, 4).Value
+        If Len(wsE.Cells(z, 4).Value) > 0 Then Feld("f_KUstId").Value = "'" & UStIdBereinigt(wsE.Cells(z, 4).Value)
         Feld("f_Konto").Value = wsE.Cells(z, 5).Value
         Feld("f_Kondition").Value = wsE.Cells(z, 6).Value
     End If

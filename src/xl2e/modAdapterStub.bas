@@ -38,7 +38,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-38", "PLZ", Stamm("PLZ")
     Wert grp, "BT-37", "Ort", Stamm("Ort")
     Wert grp, "BT-40", "Land", Stamm("Land")
-    Wert grp, "BT-31", "UStIdNr", Stamm("USt-IdNr")
+    Wert grp, "BT-31", "UStIdNr", UStIdBereinigt(Stamm("USt-IdNr"))
     Wert grp, "BT-32", "Steuernummer", Stamm("Steuernummer")
     Wert grp, "BT-30", "Registernummer", Stamm("Registernummer")
     Wert grp, "BT-41", "Kontakt", Stamm("Kontakt Name")
@@ -49,7 +49,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-44", "Name", Feld("f_KName").Value
     Wert grp, "BT-46", "Kundennummer", Feld("f_KundenNr").Value
     Wert grp, "BT-46", "GLN", Feld("f_KGLN").Value
-    Wert grp, "BT-48", "UStIdNr", Feld("f_KUstId").Value
+    Wert grp, "BT-48", "UStIdNr", UStIdBereinigt(Feld("f_KUstId").Value)
     Wert grp, "BT-49", "EMail", Feld("f_KEmail").Value
     Wert grp, "BT-50", "Strasse", Feld("f_KStrasse").Value
     Wert grp, "BT-53", "PLZ", Feld("f_KPLZ").Value

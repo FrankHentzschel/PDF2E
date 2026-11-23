@@ -1,4 +1,4 @@
-# PDF2E 1.8.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.8.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -77,7 +77,7 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
 
-## Update von 1.7.x auf 1.8.0
+## Update von 1.7.x auf 1.8.x
 
 1. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
 2. Sonst nichts. Die neuen Felder **Mandatsreferenz**, **Gläubiger-ID** und **Einzugsdatum** hängt das Programm beim ersten Einlesen unten im Blatt „Rechnung“ an (Abschnitt „SEPA-Lastschrift“).
@@ -202,6 +202,10 @@ Seit 1.5.0 steht Pfand getrennt nach Lieferung und Rücknahme in der Rechnung. D
 Im Ordner `tests/pdftotext` liegen die pdftotext-Ausgaben dieser Muster. Dateien mit `_windows` stammen aus pdftotext unter Windows (Xpdf), die übrigen aus Linux (Poppler). Die Windows-Version verteilt manche Leergutzeilen auf zwei Zeilen; der Parser fügt sie spaltengenau zusammen.
 
 Im Stub-Modus legt **E-Rechnung erzeugen** zwei Dateien an: `<RechNr>_ZUGFeRD_STUB.pdf`, eine unveränderte Kopie, und daneben `.daten.xml` mit allen Übergabewerten.
+
+## USt-IdNr. (ab 1.8.1)
+
+Die E-Rechnung verlangt bei jeder USt-IdNr. das Länderkennzeichen (EN 16931, Regel BR-CO-09), z. B. `DE812706034`. PDF2E entfernt Leerzeichen, Punkte, Bindestriche und Schrägstriche und schreibt Großbuchstaben. Fehlt das Länderkennzeichen oder passt die Form nicht (deutsch: DE + 9 Ziffern), meldet die Prüfung einen Fehler mit dem Hinweis, wo zu korrigieren ist (Blatt „Empfaenger“ mit Kundennummer bzw. Blatt „Brauerei“). Schon bei der Eingabe im Blatt „Empfaenger“ (Spalte USt-IdNr.) wird der Wert bereinigt und bei falscher Form ein Hinweis angezeigt. Eine Steuernummer gehört nicht in dieses Feld; ist keine USt-IdNr. bekannt, bleibt es leer (außer bei REWE, dort ist sie Pflicht).
 
 ## Skonto und SEPA-Lastschrift (ab 1.8.0)
 

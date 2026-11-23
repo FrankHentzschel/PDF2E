@@ -140,7 +140,7 @@ Private Sub VerkaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_Z
         .PostalAddress.PostCode = Stamm("PLZ")                  ' BT-38
         .PostalAddress.City = Stamm("Ort")                      ' BT-37
         .PostalAddress.CountryCode = LandCode(Stamm("Land"))    ' BT-40
-        .VatId = Stamm("USt-IdNr")                              ' BT-31
+        .VatId = UStIdBereinigt(Stamm("USt-IdNr"))              ' BT-31
         If Len(Stamm("Steuernummer")) > 0 Then .TaxRegistrationId = Stamm("Steuernummer")   ' BT-32
         If Len(Stamm("Registernummer")) > 0 Then .LegalId.Value = Stamm("Registernummer")   ' BT-30
         If Len(Stamm("E-Mail")) > 0 Then
@@ -168,7 +168,7 @@ Private Sub KaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGF
         ElseIf Len(Feld("f_KundenNr").Value) > 0 Then           ' sonst Kundennummer ohne Schema
             .ID.Value = CStr(Feld("f_KundenNr").Value)
         End If
-        If Len(Feld("f_KUstId").Value) > 0 Then .VatId = CStr(Feld("f_KUstId").Value)        ' BT-48
+        If Len(Feld("f_KUstId").Value) > 0 Then .VatId = UStIdBereinigt(Feld("f_KUstId").Value)   ' BT-48
         If Len(Feld("f_KEmail").Value) > 0 Then
             .ElectronicAddress.Value = CStr(Feld("f_KEmail").Value)   ' BT-49
             .ElectronicAddress.SchemeCode = ElectronicAddressCode_EM

@@ -86,6 +86,63 @@ Public Function NameVorhanden(ByVal name As String) As Boolean
     On Error GoTo 0
 End Function
 
+'------------------------------------------------------------------------------
+' USt-IdNr. (BT-31, BT-48): EN 16931 verlangt ein Länderkennzeichen (BR-CO-09)
+'------------------------------------------------------------------------------
+Private Const UST_PRAEFIXE As String = " AT BE BG CY CZ DE DK EE EL ES FI FR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK XI CH GB NO LI "
+
+' Leerzeichen, Punkte, Bindestriche und Schrägstriche entfernen, Großbuchstaben
+Public Function UStIdBereinigt(ByVal ustId As Variant) As String
+    Dim s As String, z As Variant
+    If IsError(ustId) Or IsNull(ustId) Then Exit Function
+    s = UCase$(CStr(ustId))
+    For Each z In Array(" ", ".", "-", "/", Chr$(160), vbTab)
+        s = Replace(s, CStr(z), "")
+    Next z
+    UStIdBereinigt = s
+End Function
+
+' Leer = in Ordnung (oder keine USt-IdNr.), sonst verständliche Fehlermeldung.
+' Erwartet die bereinigte Form (UStIdBereinigt).
+Public Function UStIdFehler(ByVal ustId As String) As String
+    If Len(ustId) = 0 Then Exit Function
+    If Not ustId Like "[A-Z][A-Z]*" Then
+        UStIdFehler = "'" & ustId & "' hat kein Länderkennzeichen. Eine USt-IdNr. beginnt mit dem Land, z. B. DE123456789. " & _
+                      "Eine Steuernummer gehört nicht in dieses Feld. Ist keine USt-IdNr. bekannt, das Feld leer lassen."
+    ElseIf InStr(UST_PRAEFIXE, " " & Left$(ustId, 2) & " ") = 0 Then
+        UStIdFehler = "'" & ustId & "': Länderkennzeichen '" & Left$(ustId, 2) & "' ist unbekannt (Griechenland: EL statt GR)."
+    ElseIf Left$(ustId, 2) = "DE" And Not ustId Like "DE#########" Then
+        UStIdFehler = "'" & ustId & "': Eine deutsche USt-IdNr. besteht aus DE und 9 Ziffern."
+    ElseIf Len(ustId) < 4 Or Len(ustId) > 14 Then
+        UStIdFehler = "'" & ustId & "' hat nicht die Länge einer USt-IdNr."
+    End If
+End Function
+
+' Eingabe im Blatt "Empfaenger", Spalte D (USt-IdNr.): sofort bereinigen und prüfen
+Public Sub UStIdEingabePruefen(ByVal sh As Object, ByVal target As Range)
+    Dim bereich As Range, c As Range, neu As String, meldung As String
+    If sh.Name <> "Empfaenger" Then Exit Sub
+    Set bereich = Intersect(target, sh.Range(sh.Cells(2, 4), sh.Cells(sh.Rows.Count, 4)))
+    If bereich Is Nothing Then Exit Sub
+    If bereich.Cells.Count > 50 Then Exit Sub            ' großes Einfügen: Prüfung beim Einlesen
+    For Each c In bereich.Cells
+        If Not IsError(c.Value) Then
+            neu = UStIdBereinigt(c.Value)
+            If neu <> CStr(c.Value) Then
+                Application.EnableEvents = False
+                c.NumberFormat = "@"
+                c.Value = neu
+                Application.EnableEvents = True
+            End If
+            meldung = UStIdFehler(neu)
+            If Len(meldung) > 0 Then
+                MsgBox "Empfänger " & sh.Cells(c.Row, 1).Value & " (Zeile " & c.Row & "), USt-IdNr.:" & vbLf & meldung, _
+                       vbExclamation, TOOL_NAME
+            End If
+        End If
+    Next c
+End Sub
+
 ' SEPA-Lastschrift laut Quellrechnung (Felder f_Mandat, f_GlaeubigerId, f_Einzug)
 Public Function IstLastschrift() As Boolean
     If NameVorhanden("f_Mandat") Then IstLastschrift = Len(Trim$(CStr(Feld("f_Mandat").Value))) > 0

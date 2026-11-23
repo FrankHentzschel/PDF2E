@@ -3,6 +3,10 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.8.1 und XL2E 1.1.4 – 23.11.2026
+
+- **Fehlerbehebung:** USt-IdNr. ohne Länderkennzeichen fiel erst im Smart-Tools-Validierungsbericht auf (BR-CO-09, RE 2604306). Jetzt wird die USt-IdNr. von Brauerei und Rechnungsempfänger bereinigt (Leerzeichen, Punkte, Bindestriche, Schrägstriche, Großbuchstaben) und beim Prüfen auf Länderkennzeichen und Form geprüft, mit Hinweis auf Blatt und Kundennummer. Bei der Eingabe im Blatt „Empfaenger“ wird sie sofort bereinigt und geprüft.
+
 ## PDF2E 1.8.0 und XL2E 1.1.3 – 23.11.2026
 
 - **Neue Funktion:** Skonto- bzw. Nachlasszeile zwischen WARENWERT und NETTOWERT (z. B. `Skonto  Gesamtes Vergütung  299,75 EU  3,00  8,99-`) wird als Nachlass übernommen und in der E-Rechnung als Abschlag auf Belegebene (BG-20) übergeben. Der Warenwert-Abgleich nutzt den NETTOWERT. Auslöser: RE 2604304 (Prüffehler Netto 333,95 statt 324,96).
