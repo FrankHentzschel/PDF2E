@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.9.1 – 23.11.2026
+
+- **Fehlerbehebung:** Positionen ohne Angabe in der Spalte Hl./Fl. und mit `*` am Zeilenende (RE 2604307: `136 EURO-Palette  29  12,000  348,00 *`) wurden nicht übernommen; Netto fehlte um 348,00. Der Ort „Hamburg (Deutschland)“ wird ohne Zusatz übernommen.
+- Testfall `tests/pdftotext/Rechnung_2604307.txt`. XL2E unverändert (nur `modParserBSI` und `modProdukt` von PDF2E geändert).
+
 ## PDF2E 1.9.0 und XL2E 1.1.7 – 23.11.2026
 
 - **Neue Funktion:** Steuerfreie innergemeinschaftliche Lieferung (RE 2604264, Empfänger in Italien): Hinweistext erkannt, USt-Kategorie K mit 0 %, Befreiungsgrund VATEX-EU-IC (BT-120/121), USt-IdNr. des Empfängers aus der Zeile „USt-ID:“, Lieferort/Lieferland aus der Empfängeranschrift, wenn kein Lieferort angegeben ist. Prüfung: USt-IdNr. Pflicht, Land ungleich DE, Lieferland vorhanden.

@@ -33,7 +33,9 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean
     Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
-    Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+-?)\s*$")
+    ' Position: ArtNr, Bezeichnung, Ka/Fa, Hl./Fl. (fehlt z. B. bei Paletten), Preis, Betrag,
+    ' am Ende optional ein "*" (z. B. "136 EURO-Palette  29  12,000  348,00 *")
+    Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+)\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+-?)(?:\s+\*)?\s*$")
     Set reAkt = NeuesRegex("^\s*Aktion\s+(.+?)\s+(\d+)\s+Ka/F\s+([\d.,]+)\s+([\d.,]+)-\s*$")
     Set reLG = NeuesRegex("^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:(.*\S)\s+)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
     Set reWW = NeuesRegex("WARENWERT:\s+([\d.,]+-?)")
@@ -199,7 +201,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                     Set m = Treffer(rePos, l)
                     If Not m Is Nothing Then
                         PositionAnhaengen "Ware", m.SubMatches(0), Trim$(m.SubMatches(1)), CDbl(m.SubMatches(2)), _
-                            Einstellung("Einheit Ware"), ZahlDE(m.SubMatches(4)), ZahlDE(m.SubMatches(5)), m.SubMatches(3)
+                            Einstellung("Einheit Ware"), ZahlDE(m.SubMatches(4)), ZahlDE(m.SubMatches(5)), m.SubMatches(3) & ""
                         GoTo weiter
                     End If
                 ElseIf modus = abLeergut Then
@@ -469,7 +471,7 @@ Private Sub EmpfaengerSetzen(links As Collection, rePLZ As Object)
     Feld("f_KName").Value = name
     Feld("f_KStrasse").Value = links(k - 1)
     Feld("f_KPLZ").Value = "'" & m.SubMatches(1) & m.SubMatches(2)
-    Feld("f_KOrt").Value = Trim$(m.SubMatches(3))
+    Feld("f_KOrt").Value = Trim$(Replace(m.SubMatches(3), "(Deutschland)", ""))   ' "22305 Hamburg (Deutschland)"
     If Len(m.SubMatches(0) & "") > 0 Then Feld("f_KLand").Value = LandAusKennzeichen(m.SubMatches(0))
 End Sub
 
