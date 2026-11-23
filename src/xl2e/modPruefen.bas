@@ -52,6 +52,18 @@ Public Function RechnungPruefen() As Boolean
         End If
     End If
     PfandGtinPruefen EmpfaengerVorgabe() = "EDEKA"
+
+    ' Innergemeinschaftliche Lieferung (USt-Kategorie K, EN 16931 BR-IC)
+    If KategorieVorhanden("K") Then
+        If Len(UStIdBereinigt(Feld("f_KUstId").Value)) = 0 Then
+            Fehler "Innergemeinschaftliche Lieferung: USt-IdNr. des Empfängers fehlt (Pflicht). Bitte im Blatt 'Empfaenger' beim Kunden " & _
+                   EmpfaengerSchluessel() & " eintragen."
+        End If
+        If UCase$(Trim$(CStr(Feld("f_KLand").Value))) = "DE" Then
+            Fehler "Innergemeinschaftliche Lieferung, aber Land des Empfängers ist DE. Bitte Feld 'Land' im Blatt 'Rechnung' prüfen."
+        End If
+        If Len(Trim$(CStr(Feld("f_LLand").Value))) = 0 Then Fehler "Innergemeinschaftliche Lieferung: Lieferland fehlt."
+    End If
     UStIdPruefen Feld("f_KUstId").Value, "USt-IdNr. des Rechnungsempfängers: im Blatt 'Empfaenger' beim Kunden " & _
                  EmpfaengerSchluessel() & " (Spalte USt-IdNr.) korrigieren oder leeren und neu einlesen."
 

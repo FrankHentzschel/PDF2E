@@ -3,6 +3,13 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.9.0 und XL2E 1.1.7 – 23.11.2026
+
+- **Neue Funktion:** Steuerfreie innergemeinschaftliche Lieferung (RE 2604264, Empfänger in Italien): Hinweistext erkannt, USt-Kategorie K mit 0 %, Befreiungsgrund VATEX-EU-IC (BT-120/121), USt-IdNr. des Empfängers aus der Zeile „USt-ID:“, Lieferort/Lieferland aus der Empfängeranschrift, wenn kein Lieferort angegeben ist. Prüfung: USt-IdNr. Pflicht, Land ungleich DE, Lieferland vorhanden.
+- **Neue Funktion:** Anschriften mit Länderkennzeichen vor der PLZ (`I- 39012 Meran`), weitere Ländercodes im Smart-Tools-Adapter.
+- **Fehlerbehebung:** WARENWERT ohne Betrag (reine Leergutrückgabe) wird als 0 gelesen. Ohne MwSt-Zeile und ohne Steuerbefreiung gibt es eine klare Meldung statt „USt-Satz fehlt“ je Zeile.
+- Testfall `tests/pdftotext/Rechnung_2604264.txt`.
+
 ## PDF2E 1.8.3 und XL2E 1.1.6 – 23.11.2026
 
 - **Fehlerbehebung:** Kompilierfehler in `modHilfen`: Die Konstante `UST_PRAEFIXE` stand zwischen den Prozeduren statt im Deklarationsteil (von Frank gemeldet und lokal korrigiert).

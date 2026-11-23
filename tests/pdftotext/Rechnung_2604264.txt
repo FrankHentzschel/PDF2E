@@ -1,0 +1,41 @@
+    Groh & Holzner s.a.s.
+    KG di Holzner Engelbert
+    Tobias-Brenner-Str. 2
+
+                                            LIEFERSCHEIN/RECHNUNG
+    I- 39012 Meran
+
+                                                     10867    2604264      20.11.2026
+
+
+
+   ARTNR BEZEICHNUNG                    Ka/Fa     Hl./Fl.        PREIS   BETRAG EUR
+  ──────────────────────────────────────────────────────────────────────────────────
+  150419 Lieferschein:    5388 vom 20.11.2026    100
+         Leergutrückgabe:
+   99010 Gourmet 0,33                     104      2.080
+   99001 Euro 0,5                          12        240
+   99009 Kasten leer                        3
+   99006 Partyfass                         44
+   99030 Palette                            6
+  ──────────────────────────────────────────────────────────────────────────────────
+         WARENWERT:
+
+
+   ** Steuerfreie innergemeinschaftliche Lieferung **
+   USt-ID:         IT02736920212
+   Rechnung per Mail *
+   ──────────────────────────────────────────────────────────────────────────────────
+   LEERGUT-KONTO:                ALTER     MENGE  MENGE NEUER    MENGE  PFAND        PFAND
+                                 SALDO LIEFERUNG ZURÜCK SALDO     DIFF.  SATZ       BETRAG
+99001 Euro 0,5                     556               12   544       12-  3,10        37,20-
+99006 Partyfass                    159               44   115       44- 25,00     1.100,00-
+99009 Kasten leer                 1508-               3  1511-       3-  1,50         4,50-
+99010 Gourmet 0,33                4248              104  4144      104-  6,00       624,00-
+99030 Palette                        5-               6    11-       6-  7,50        45,00-
+   ──────────────────────────────────────────────────────────────────────────────────
+                                    Zwischensumme (incl.       1.810,70- Pfand)   1.810,70-
+                                    ──────────────────────────────────────────────────────
+                                    MINUS-RECHNUNGSBETRAG                     EUR 1.810,70-
+                                    ══════════════════════════════════════════════════════
+

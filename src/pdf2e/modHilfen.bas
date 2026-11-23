@@ -267,6 +267,25 @@ Public Sub PositionAnhaengen(ByVal typ As String, ByVal artNr As String, ByVal b
     ws.Cells(z, SP_INFO).Value = "'" & info
 End Sub
 
+' Steuerbefreite Rechnung (z. B. K = innergemeinschaftliche Lieferung): 0 % für alle Zeilen
+Public Sub SteuerfreiSetzen(ByVal kategorie As String)
+    Dim ws As Worksheet, z As Long
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    For z = 2 To ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+        ws.Cells(z, SP_USTSATZ).Value = 0
+        ws.Cells(z, SP_USTKAT).Value = kategorie
+    Next z
+End Sub
+
+' Kommt in den Positionen die USt-Kategorie vor (z. B. "K")?
+Public Function KategorieVorhanden(ByVal kategorie As String) As Boolean
+    Dim ws As Worksheet, z As Long
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    For z = 2 To ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+        If UCase$(Trim$(CStr(ws.Cells(z, SP_USTKAT).Value))) = UCase$(kategorie) Then KategorieVorhanden = True: Exit Function
+    Next z
+End Function
+
 ' Bei genau einem MwSt-Satz gilt er für alle Zeilen. Bei mehreren muss der Anwender zuordnen.
 Public Sub SteuersatzSetzen(saetze As Collection)
     Dim ws As Worksheet, z As Long, letzte As Long

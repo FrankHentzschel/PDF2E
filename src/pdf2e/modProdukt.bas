@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.8.3"
+Public Const TOOL_VERSION As String = "1.9.0"
 Public Const TOOL_STAND As String = "23.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -56,6 +56,7 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.9.0", "23.11.2026", "Neue Funktion", "Steuerfreie innergemeinschaftliche Lieferung: USt-IdNr. des Empfängers aus der Rechnung, USt-Kategorie K mit 0 % und Befreiungsgrund VATEX-EU-IC, Lieferland aus der Empfängeranschrift; ausländische Anschriften mit Länderkennzeichen vor der PLZ (z. B. I- 39012 Meran); WARENWERT ohne Betrag (reine Leergutrückgabe); klare Meldung, wenn weder MwSt noch Steuerbefreiung erkannt wird")
     c.Add Array("1.8.3", "23.11.2026", "Fehlerbehebung", "Kompilierfehler: Konstante UST_PRAEFIXE stand zwischen den Prozeduren statt im Deklarationsteil von modHilfen")
     c.Add Array("1.8.2", "23.11.2026", "Fehlerbehebung", "Kundenname in der Spalte USt-IdNr. (Blatt Empfaenger): wird beim Einlesen erkannt und geleert, neue Empfänger bekommen nur eine gültige USt-IdNr.; Prüfung der Feldnamen im Blatt Rechnung (zwei Namen auf derselben Zelle) mit klarer Meldung")
     c.Add Array("1.8.1", "23.11.2026", "Fehlerbehebung", "USt-IdNr. von Brauerei und Rechnungsempfänger wird bereinigt (Leerzeichen, Punkte, Bindestriche, Großbuchstaben) und vor dem Erzeugen auf Länderkennzeichen geprüft (EN 16931 BR-CO-09) mit Hinweis, wo zu korrigieren ist; Prüfung schon bei der Eingabe im Blatt Empfaenger")

@@ -25,6 +25,7 @@ Private Const ID_GLN As Long = 86             ' 0088 EAN Location Code (GLN)
 Private Const ID_GTIN As Long = 156           ' 0160 Global Trade Item Number (GTIN)
 Private Const TEXT_AAK As Long = 9            ' AAK Preiskonditionen
 Private Const WAEHRUNG_EUR As Long = 48
+Private Const BEFREIUNG_EU_IC As Long = 57        ' VatExemptionReasonCode: Intra-community supply
 
 Private Const REWE_AAK_STANDARD As String = _
     "Bezüglich der Entgeltminderungen verweisen wir auf die aktuellen Zahlungs- und Konditionsvereinbarungen"
@@ -284,6 +285,10 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
             .Rate = CCur(Split(k, "|")(1))                              ' BT-119
             .CategoryCode = KategorieCode(CStr(Split(k, "|")(0)))       ' BT-118
             .Amount = ustBetrag                                         ' BT-117
+            If UCase$(Split(k, "|")(0)) = "K" Then                      ' innergemeinschaftliche Lieferung
+                .ExemptionReasonCode = BEFREIUNG_EU_IC                    ' BT-121
+                .ExemptionReason = "Steuerfreie innergemeinschaftliche Lieferung"   ' BT-120
+            End If
         End With
         inv.AddVat ust
         ustSumme = ustSumme + ustBetrag
@@ -382,7 +387,23 @@ End Function
 Private Function LandCode(ByVal land As String) As Long
     Select Case UCase$(Trim$(land))
         Case "DE", "": LandCode = CountryCode_DE
-        Case "AT": LandCode = 11
+        Case "AT": LandCode = 11            ' Werte aus Codelisten.xlsx, Blatt CountryCode
+        Case "IT": LandCode = 109
+        Case "CH": LandCode = 42
+        Case "FR": LandCode = 74
+        Case "BE": LandCode = 19
+        Case "NL": LandCode = 165
+        Case "LU": LandCode = 133
+        Case "DK": LandCode = 58
+        Case "SE": LandCode = 196
+        Case "CZ": LandCode = 55
+        Case "PL": LandCode = 178
+        Case "HU": LandCode = 99
+        Case "SI": LandCode = 199
+        Case "ES": LandCode = 67
+        Case "PT": LandCode = 183
+        Case "LI": LandCode = 128
+        Case "GB": LandCode = 76
         Case Else: Err.Raise vbObjectError + 110, , "Ländercode '" & land & "' ist im Adapter nicht hinterlegt (modAdapterSmartTools, LandCode)."
     End Select
 End Function

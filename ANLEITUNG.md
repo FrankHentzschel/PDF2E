@@ -1,4 +1,4 @@
-# PDF2E 1.8.3 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.9.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -77,7 +77,7 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
 
-## Update von 1.7.x auf 1.8.x
+## Update von 1.7.x auf 1.8.x und 1.9.0
 
 1. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
 2. Sonst nichts. Die neuen Felder **Mandatsreferenz**, **Gläubiger-ID** und **Einzugsdatum** hängt das Programm beim ersten Einlesen unten im Blatt „Rechnung“ an (Abschnitt „SEPA-Lastschrift“).
@@ -195,6 +195,7 @@ Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, 
 | 2603894 | Markgrafen, Lieferort Herzogenaurach | 3 | +31,00 / −49,60 = −18,60 | 141,19 |
 | 2603816 | REWE Markt GmbH (RE-GLN 4388096000002) | 3 | +124,00 / −99,20 = 24,80 | 489,74 |
 | 2603587 | REWE Markt GmbH, Lieferort Forchheim | 4 | +62,00 / −111,60 = −49,60 | 176,30 |
+| 2604264 | Groh & Holzner, Meran (IT), innergemeinschaftlich | nur Leergutrückgabe | −1.810,70 | −1.810,70, ohne MwSt |
 | 2604304 | SAGASSER Fachmarkt, Lieferort Ebermannstadt | 4 + Skonto 3 % (−8,99) | 34,20 | 386,70, SEPA-Lastschrift |
 
 Seit 1.5.0 steht Pfand getrennt nach Lieferung und Rücknahme in der Rechnung. Das Programm leitet beide Mengen aus dem Leergutkonto ab (Lieferung − Rücknahme = Differenz, alter Saldo + Differenz = neuer Saldo). Gelingt das nicht eindeutig, bleibt es bei der Differenz mit einer Warnung im Protokoll.
@@ -208,6 +209,12 @@ Im Stub-Modus legt **E-Rechnung erzeugen** zwei Dateien an: `<RechNr>_ZUGFeRD_ST
 Die E-Rechnung verlangt bei jeder USt-IdNr. das Länderkennzeichen (EN 16931, Regel BR-CO-09), z. B. `DE812706034`. PDF2E entfernt Leerzeichen, Punkte, Bindestriche und Schrägstriche und schreibt Großbuchstaben. Fehlt das Länderkennzeichen oder passt die Form nicht (deutsch: DE + 9 Ziffern), meldet die Prüfung einen Fehler mit dem Hinweis, wo zu korrigieren ist (Blatt „Empfaenger“ mit Kundennummer bzw. Blatt „Brauerei“). Schon bei der Eingabe im Blatt „Empfaenger“ (Spalte USt-IdNr.) wird der Wert bereinigt und bei falscher Form ein Hinweis angezeigt. Eine Steuernummer gehört nicht in dieses Feld; ist keine USt-IdNr. bekannt, bleibt es leer (außer bei REWE, dort ist sie Pflicht).
 
 Ab 1.8.2: Steht in der Spalte USt-IdNr. der Kundenname, leert das Programm das Feld beim nächsten Einlesen und meldet es im Protokoll. Andere ungültige Werte werden gemeldet. Neu angelegte Empfänger bekommen nur eine USt-IdNr., die wie eine aussieht. Außerdem prüft das Programm vor jedem Einlesen, ob jeder Feldname im Blatt „Rechnung“ (f_KName, f_KUstId …) auf eine eigene Zelle zeigt. Wenn nicht, bricht es mit einer Meldung ab, die die betroffenen Namen nennt.
+
+## Innergemeinschaftliche Lieferung (ab 1.9.0)
+
+Steht auf der Rechnung „Steuerfreie innergemeinschaftliche Lieferung“, setzt PDF2E alle Positionen auf USt-Kategorie **K** mit 0 %. Die E-Rechnung bekommt den Befreiungsgrund „Steuerfreie innergemeinschaftliche Lieferung“ mit Code VATEX-EU-IC (BT-120/121). Die Zeile `USt-ID: IT…` wird als USt-IdNr. des Empfängers (BT-48) übernommen. Ein Eintrag im Blatt „Empfaenger“ hat Vorrang. Ausländische Anschriften mit Länderkennzeichen vor der PLZ (z. B. `I- 39012 Meran`, `A-6020 Innsbruck`) werden erkannt, das Land kommt ins Feld „Land“. Fehlt „Wir lieferten an“, gilt die Anschrift des Empfängers als Lieferort, denn das Lieferland ist bei K Pflicht (BR-IC-12). Die Prüfung verlangt dann eine USt-IdNr. des Empfängers und ein Land ungleich DE.
+
+Findet PDF2E weder eine MwSt-Zeile noch einen Hinweis auf Steuerbefreiung, steht das im Protokoll. USt-Satz und Kategorie müssen dann im Blatt „Positionen“ von Hand eingetragen werden.
 
 ## Skonto und SEPA-Lastschrift (ab 1.8.0)
 

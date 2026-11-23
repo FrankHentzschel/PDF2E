@@ -11,7 +11,7 @@ Das Tool liest die PDF ein, zeigt die Daten zur Kontrolle an und ergänzt sie au
 
 **XL2E** liest die Excel-Rechnung der BSI-Software (Blatt `PA400_00`), erzeugt daraus ein PDF mit Briefkopf aus den Stammdaten und bettet die E-Rechnung ein.
 
-Aktueller Stand: **PDF2E 1.8.3** und **XL2E 1.1.6**, beide mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [CHANGELOG.md](CHANGELOG.md).
+Aktueller Stand: **PDF2E 1.9.0** und **XL2E 1.1.7**, beide mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Aufbau
 

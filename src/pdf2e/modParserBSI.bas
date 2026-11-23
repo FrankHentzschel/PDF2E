@@ -30,6 +30,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reWW As Object, reZS As Object, reSt As Object, reRB As Object
     Dim reMarkt As Object, reILN As Object, reMail As Object, rePLZ As Object, reREGLN As Object
     Dim reNachlass As Object, reNW As Object, reSepaBetrag As Object, reSepaMandat As Object, reSepaHinweis As Object
+    Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean
     Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+-?)\s*$")
@@ -44,6 +45,10 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     ' Gruppen: 0 Art, 1 Text, 2 Basis, 3 Prozent, 4 Betrag
     Set reNachlass = NeuesRegex("^\s*(\S+)\s+(?:(.*?)\s+)?([\d.]*\d,\d{2})\s+EUR?\s+(\d+,\d{2})\s+([\d.]*\d,\d{2})-\s*$")
     Set reNW = NeuesRegex("NETTOWERT:\s+([\d.,]+-?)")
+    Set reWWLeer = NeuesRegex("WARENWERT:\s*$")             ' z. B. reine Leergutrückgabe
+    ' Steuerfreie innergemeinschaftliche Lieferung mit USt-IdNr. des Empfängers
+    Set reIG = NeuesRegex("Steuerfreie innergemeinschaftliche Lieferung")
+    Set reUStId = NeuesRegex("^\s*USt-?ID(?:-?Nr\.?)?:?\s+([A-Za-z]{2}[\w .-]*\w)\s*$")
     ' SEPA-Lastschrift (Text unter dem Rechnungsbetrag)
     Set reSepaBetrag = NeuesRegex("Forderung von\s+([\d.,]+)\s+ziehen wir mit einer SEPA-Lastschrift")
     Set reSepaMandat = NeuesRegex("^\s*(\S+)\s+und mit der Gl(?:ae|" & ChrW(228) & ")ubiger-ID\s+(\S+)\s+am\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+ein")
@@ -52,7 +57,9 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reILN = NeuesRegex("(?:ILN|GLN):\s*(\d{13})")
     Set reREGLN = NeuesRegex("^RE-GLN:\s*([\d ]+)$")
     Set reMail = NeuesRegex("([\w.+-]+@[\w-]+(?:\.[\w-]+)+)")
-    Set rePLZ = NeuesRegex("^(\d{5})\s+(.+)$")
+    ' "96450 Coburg" oder mit Länderkennzeichen "I- 39012 Meran", "A-6020 Innsbruck"
+    ' Gruppen: 0 Kennzeichen, 1 PLZ mit Kennzeichen, 2 PLZ ohne, 3 Ort
+    Set rePLZ = NeuesRegex("^(?:([A-Z]{1,3})\s*-\s*(\d{4,5})|(\d{5}))\s+(.+)$")
     Set reArtNr = NeuesRegex("^\d{5}\s")
     Set reLGRest = NeuesRegex("\d+,\d{2}\s+[\d.]*\d,\d{2}-?\s*$")
 
@@ -132,6 +139,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
 
                 Set m = Treffer(reWW, l)
                 If Not m Is Nothing Then Feld("f_PDF_Warenwert").Value = ZahlDE(m.SubMatches(0)): modus = abSummen: GoTo weiter
+                If Not Treffer(reWWLeer, l) Is Nothing Then Feld("f_PDF_Warenwert").Value = 0: modus = abSummen: GoTo weiter
                 Set m = Treffer(reZS, l)
                 If Not m Is Nothing Then
                     Feld("f_PDF_Pfand").Value = ZahlDE(m.SubMatches(0))
@@ -174,6 +182,18 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                     GoTo weiter
                 End If
                 If Not Treffer(reSepaHinweis, l) Is Nothing Then GoTo weiter
+
+                If Not Treffer(reIG, l) Is Nothing Then
+                    igLieferung = True
+                    Protokoll "Info", "Steuerfreie innergemeinschaftliche Lieferung: USt-Kategorie K, 0 %, Befreiungsgrund VATEX-EU-IC."
+                    GoTo weiter
+                End If
+                Set m = Treffer(reUStId, l)
+                If Not m Is Nothing Then
+                    Feld("f_KUstId").Value = "'" & UStIdBereinigt(m.SubMatches(0))
+                    Protokoll "Info", "USt-IdNr. des Empfängers aus der Rechnung übernommen: " & UStIdBereinigt(m.SubMatches(0))
+                    GoTo weiter
+                End If
 
                 If modus = abPositionen Then
                     Set m = Treffer(rePos, l)
@@ -228,7 +248,27 @@ weiter:
     LeergutAbschliessen lgOffen, reArtNr
     If anzahlLS > 1 Then Protokoll "Warnung", "Mehrere Lieferscheine: " & lsListe & ". In der E-Rechnung steht nur der erste."
     Feld("f_PDF_MwSt").Value = mwstSumme
-    SteuersatzSetzen steuerSaetze
+    If igLieferung Then
+        If steuerSaetze.Count > 0 Then Protokoll "Warnung", "Innergemeinschaftliche Lieferung, aber MwSt auf der Rechnung. Bitte prüfen."
+        SteuerfreiSetzen "K"
+        LieferortVomEmpfaenger
+    ElseIf steuerSaetze.Count = 0 Then
+        Protokoll "Fehler", "Kein MwSt-Satz und kein Hinweis auf eine Steuerbefreiung gefunden. Bitte Spalten 'USt-Satz' und 'USt-Kat.' im Blatt Positionen ausfüllen."
+    Else
+        SteuersatzSetzen steuerSaetze
+    End If
+End Sub
+
+' Innergemeinschaftliche Lieferung (BR-IC-12): Lieferland ist Pflicht. Ohne
+' eigenen Lieferort ("Wir lieferten an") gilt die Anschrift des Empfängers.
+Private Sub LieferortVomEmpfaenger()
+    If Len(Feld("f_LName").Value) > 0 Or Len(Feld("f_LOrt").Value) > 0 Then Exit Sub
+    Feld("f_LName").Value = Feld("f_KName").Value
+    Feld("f_LZeile2").Value = Feld("f_KStrasse").Value
+    Feld("f_LPLZ").Value = "'" & Feld("f_KPLZ").Value
+    Feld("f_LOrt").Value = Feld("f_KOrt").Value
+    Feld("f_LLand").Value = Feld("f_KLand").Value
+    Protokoll "Info", "Kein Lieferort auf der Rechnung: Anschrift des Empfängers als Lieferort übernommen (Lieferland " & Feld("f_KLand").Value & ")."
 End Sub
 
 ' Nachlass auf den Warenwert (z. B. Skonto, bereits abgezogen) als Position vom
@@ -403,10 +443,11 @@ Private Sub LieferortLesen(zeilen() As String, ByVal i As Long)
             Feld("f_LGLN").Value = "'" & m.SubMatches(0)
             Feld("f_LZeile2").Value = Trim$(m.SubMatches(1))
         End If
-        Set m = Treffer(NeuesRegex("^(\d{5})\s+(.+)$"), z(z.Count))
+        Set m = Treffer(NeuesRegex("^(?:([A-Z]{1,3})\s*-\s*(\d{4,5})|(\d{5}))\s+(.+)$"), z(z.Count))
         If Not m Is Nothing Then
-            Feld("f_LPLZ").Value = "'" & m.SubMatches(0)
-            Feld("f_LOrt").Value = Trim$(m.SubMatches(1))
+            Feld("f_LPLZ").Value = "'" & m.SubMatches(1) & m.SubMatches(2)
+            Feld("f_LOrt").Value = Trim$(m.SubMatches(3))
+            If Len(m.SubMatches(0) & "") > 0 Then Feld("f_LLand").Value = LandAusKennzeichen(m.SubMatches(0))
         End If
     End If
 End Sub
@@ -427,6 +468,27 @@ Private Sub EmpfaengerSetzen(links As Collection, rePLZ As Object)
     Set m = Treffer(rePLZ, links(k))
     Feld("f_KName").Value = name
     Feld("f_KStrasse").Value = links(k - 1)
-    Feld("f_KPLZ").Value = "'" & m.SubMatches(0)
-    Feld("f_KOrt").Value = Trim$(m.SubMatches(1))
+    Feld("f_KPLZ").Value = "'" & m.SubMatches(1) & m.SubMatches(2)
+    Feld("f_KOrt").Value = Trim$(m.SubMatches(3))
+    If Len(m.SubMatches(0) & "") > 0 Then Feld("f_KLand").Value = LandAusKennzeichen(m.SubMatches(0))
 End Sub
+
+' Altes Länderkennzeichen vor der PLZ ("I-", "A-", "CH-") -> ISO-Code
+Private Function LandAusKennzeichen(ByVal k As String) As String
+    Select Case UCase$(Trim$(k))
+        Case "D": LandAusKennzeichen = "DE"
+        Case "A": LandAusKennzeichen = "AT"
+        Case "I": LandAusKennzeichen = "IT"
+        Case "F": LandAusKennzeichen = "FR"
+        Case "B": LandAusKennzeichen = "BE"
+        Case "L": LandAusKennzeichen = "LU"
+        Case "S": LandAusKennzeichen = "SE"
+        Case "E": LandAusKennzeichen = "ES"
+        Case "P": LandAusKennzeichen = "PT"
+        Case "H": LandAusKennzeichen = "HU"
+        Case "FL": LandAusKennzeichen = "LI"
+        Case "SLO": LandAusKennzeichen = "SI"
+        Case Else: LandAusKennzeichen = UCase$(Trim$(k))     ' CH, NL, DK, CZ, PL ...
+    End Select
+    Protokoll "Info", "Land des Empfängers aus der Anschrift: " & LandAusKennzeichen
+End Function
