@@ -21,6 +21,9 @@ Public Const SP_USTSATZ As Long = 8
 Public Const SP_USTKAT As Long = 9
 Public Const SP_INFO As Long = 10
 
+' Länderkennzeichen für USt-IdNr. (UStIdFehler)
+Private Const UST_PRAEFIXE As String = " AT BE BG CY CZ DE DK EE EL ES FI FR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK XI CH GB NO LI "
+
 ' Liest eine Einstellung. Reihenfolge:
 '   1. Blatt "Arbeitsplatz" (von der Starter-Mappe gesetzt, z. B. Backend-Pfad)
 '   2. Blatt "Einstellungen", Zeile mit Spalte D (Arbeitsplatz) = Computername
@@ -89,7 +92,6 @@ End Function
 '------------------------------------------------------------------------------
 ' USt-IdNr. (BT-31, BT-48): EN 16931 verlangt ein Länderkennzeichen (BR-CO-09)
 '------------------------------------------------------------------------------
-Private Const UST_PRAEFIXE As String = " AT BE BG CY CZ DE DK EE EL ES FI FR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK XI CH GB NO LI "
 
 ' Leerzeichen, Punkte, Bindestriche und Schrägstriche entfernen, Großbuchstaben
 Public Function UStIdBereinigt(ByVal ustId As Variant) As String

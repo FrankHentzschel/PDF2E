@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.8.3 und XL2E 1.1.6 – 23.11.2026
+
+- **Fehlerbehebung:** Kompilierfehler in `modHilfen`: Die Konstante `UST_PRAEFIXE` stand zwischen den Prozeduren statt im Deklarationsteil (von Frank gemeldet und lokal korrigiert).
+- **Neu:** `tests/vba_struktur_test.py` prüft alle VBA-Dateien darauf, dass Const/Dim/Declare/Type/Enum auf Modulebene vor der ersten Prozedur stehen.
+
 ## PDF2E 1.8.2 und XL2E 1.1.5 – 23.11.2026
 
 - **Fehlerbehebung:** Beim Kunden stand im Blatt „Empfaenger“ der Kundenname in der Spalte USt-IdNr. Beim Einlesen wird das jetzt erkannt, das Feld geleert und im Protokoll gemeldet; andere ungültige USt-IdNr. werden gemeldet. Neue Empfänger bekommen nur eine gültige USt-IdNr.

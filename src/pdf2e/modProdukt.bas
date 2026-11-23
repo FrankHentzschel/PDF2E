@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.8.2"
+Public Const TOOL_VERSION As String = "1.8.3"
 Public Const TOOL_STAND As String = "23.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -56,6 +56,7 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.8.3", "23.11.2026", "Fehlerbehebung", "Kompilierfehler: Konstante UST_PRAEFIXE stand zwischen den Prozeduren statt im Deklarationsteil von modHilfen")
     c.Add Array("1.8.2", "23.11.2026", "Fehlerbehebung", "Kundenname in der Spalte USt-IdNr. (Blatt Empfaenger): wird beim Einlesen erkannt und geleert, neue Empfänger bekommen nur eine gültige USt-IdNr.; Prüfung der Feldnamen im Blatt Rechnung (zwei Namen auf derselben Zelle) mit klarer Meldung")
     c.Add Array("1.8.1", "23.11.2026", "Fehlerbehebung", "USt-IdNr. von Brauerei und Rechnungsempfänger wird bereinigt (Leerzeichen, Punkte, Bindestriche, Großbuchstaben) und vor dem Erzeugen auf Länderkennzeichen geprüft (EN 16931 BR-CO-09) mit Hinweis, wo zu korrigieren ist; Prüfung schon bei der Eingabe im Blatt Empfaenger")
     c.Add Array("1.8.0", "23.11.2026", "Neue Funktion", "Skonto- bzw. Nachlasszeile unter dem Warenwert (z. B. Skonto 3 % auf den Warenwert) wird als Nachlass auf Belegebene übernommen, Abgleich mit NETTOWERT; SEPA-Lastschrift aus dem Rechnungstext (Mandat, Gläubiger-ID, Einzugsdatum) als Zahlungsart 59 in der E-Rechnung, Einzugsdatum als Fälligkeit, Einzugshinweis als Zahlungsbedingung (auch in der E-Mail)")
