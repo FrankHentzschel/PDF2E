@@ -1,4 +1,4 @@
-# PDF2E 1.8.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.8.2 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -206,6 +206,8 @@ Im Stub-Modus legt **E-Rechnung erzeugen** zwei Dateien an: `<RechNr>_ZUGFeRD_ST
 ## USt-IdNr. (ab 1.8.1)
 
 Die E-Rechnung verlangt bei jeder USt-IdNr. das Länderkennzeichen (EN 16931, Regel BR-CO-09), z. B. `DE812706034`. PDF2E entfernt Leerzeichen, Punkte, Bindestriche und Schrägstriche und schreibt Großbuchstaben. Fehlt das Länderkennzeichen oder passt die Form nicht (deutsch: DE + 9 Ziffern), meldet die Prüfung einen Fehler mit dem Hinweis, wo zu korrigieren ist (Blatt „Empfaenger“ mit Kundennummer bzw. Blatt „Brauerei“). Schon bei der Eingabe im Blatt „Empfaenger“ (Spalte USt-IdNr.) wird der Wert bereinigt und bei falscher Form ein Hinweis angezeigt. Eine Steuernummer gehört nicht in dieses Feld; ist keine USt-IdNr. bekannt, bleibt es leer (außer bei REWE, dort ist sie Pflicht).
+
+Ab 1.8.2: Steht in der Spalte USt-IdNr. der Kundenname, leert das Programm das Feld beim nächsten Einlesen und meldet es im Protokoll. Andere ungültige Werte werden gemeldet. Neu angelegte Empfänger bekommen nur eine USt-IdNr., die wie eine aussieht. Außerdem prüft das Programm vor jedem Einlesen, ob jeder Feldname im Blatt „Rechnung“ (f_KName, f_KUstId …) auf eine eigene Zelle zeigt. Wenn nicht, bricht es mit einer Meldung ab, die die betroffenen Namen nennt.
 
 ## Skonto und SEPA-Lastschrift (ab 1.8.0)
 

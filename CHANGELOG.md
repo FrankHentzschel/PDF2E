@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.8.2 und XL2E 1.1.5 – 23.11.2026
+
+- **Fehlerbehebung:** Beim Kunden stand im Blatt „Empfaenger“ der Kundenname in der Spalte USt-IdNr. Beim Einlesen wird das jetzt erkannt, das Feld geleert und im Protokoll gemeldet; andere ungültige USt-IdNr. werden gemeldet. Neue Empfänger bekommen nur eine gültige USt-IdNr.
+- **Neu:** Prüfung der Feldnamen im Blatt „Rechnung“ vor dem Einlesen (fehlende Namen, zwei Namen auf derselben Zelle) mit klarer Meldung. Die Ursache beim Kunden ist noch nicht bestätigt; ein falsch verknüpfter Name `f_KUstId` würde genau dieses Bild ergeben.
+
 ## PDF2E 1.8.1 und XL2E 1.1.4 – 23.11.2026
 
 - **Fehlerbehebung:** USt-IdNr. ohne Länderkennzeichen fiel erst im Smart-Tools-Validierungsbericht auf (BR-CO-09, RE 2604306). Jetzt wird die USt-IdNr. von Brauerei und Rechnungsempfänger bereinigt (Leerzeichen, Punkte, Bindestriche, Schrägstriche, Großbuchstaben) und beim Prüfen auf Länderkennzeichen und Form geprüft, mit Hinweis auf Blatt und Kundennummer. Bei der Eingabe im Blatt „Empfaenger“ wird sie sofort bereinigt und geprüft.
