@@ -22,6 +22,10 @@ Public Function RechnungPruefen() As Boolean
     Pflicht "f_KOrt", "Ort Rechnungsempfänger"
     Pflicht "f_Kondition", "Zahlungskondition"
     Pflicht "f_Konto", "Bankkonto"
+    If IstLastschrift() Then
+        If Not IsDate(Feld("f_Einzug").Value) Then Fehler "SEPA-Lastschrift: Einzugsdatum fehlt."
+        Pflicht "f_GlaeubigerId", "SEPA-Lastschrift: Gläubiger-ID"
+    End If
     If Len(Feld("f_Konto").Value) > 0 And TabellenZeile("Bankkonten", CStr(Feld("f_Konto").Value)) = 0 Then
         Fehler "Bankkonto '" & Feld("f_Konto").Value & "' gibt es im Blatt 'Bankkonten' nicht."
     End If
@@ -75,7 +79,7 @@ Public Function RechnungPruefen() As Boolean
     Next z
 
     ' Summenabgleich mit den Werten aus der Quellrechnung (Felder f_PDF_*)
-    Abgleich "Warenwert (Ware - Aktionen)", ware, Feld("f_PDF_Warenwert").Value
+    Abgleich "Warenwert (Ware - Nachlässe)", ware, Feld("f_PDF_Warenwert").Value
     Abgleich "Pfand", pfand, Feld("f_PDF_Pfand").Value
     Abgleich "Nettosumme", Feld("f_Netto").Value, Feld("f_PDF_Netto").Value
     Abgleich "MwSt", Feld("f_MwSt").Value, Feld("f_PDF_MwSt").Value

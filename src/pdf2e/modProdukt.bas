@@ -8,8 +8,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.7.2"
-Public Const TOOL_STAND As String = "19.11.2026"
+Public Const TOOL_VERSION As String = "1.8.0"
+Public Const TOOL_STAND As String = "23.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
 
@@ -56,6 +56,7 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.8.0", "23.11.2026", "Neue Funktion", "Skonto- bzw. Nachlasszeile unter dem Warenwert (z. B. Skonto 3 % auf den Warenwert) wird als Nachlass auf Belegebene übernommen, Abgleich mit NETTOWERT; SEPA-Lastschrift aus dem Rechnungstext (Mandat, Gläubiger-ID, Einzugsdatum) als Zahlungsart 59 in der E-Rechnung, Einzugsdatum als Fälligkeit, Einzugshinweis als Zahlungsbedingung (auch in der E-Mail)")
     c.Add Array("1.7.2", "19.11.2026", "Fehlerbehebung", "Blatt Versionshistorie wird beim Start aus dem Programm nachgeführt (fehlte ab 1.5.0, weil nur die Vorlage es befüllte); Datum als echtes Datum statt Text")
     c.Add Array("1.7.1", "19.11.2026", "Fehlerbehebung", "Änderungen im Blatt Einstellungen wurden von Access abgelehnt (Pflichtfeld Arbeitsplatz); Speichern geänderter Zeilen jetzt über das Recordset. Veraltete Einstellungen Entwickler/Firma/Kontakt werden entfernt")
     c.Add Array("1.7.0", "19.11.2026", "Neue Funktion", "Mehrplatzbetrieb: Einstellungen, Mailvorlage und Stammdaten im Access-Backend (wird automatisch angelegt und migriert), Laden beim Aktivieren eines Blatts, Speichern pro Zeile mit Konfliktprüfung, Datensatz löschen über das Kontextmenü; Verarbeitungsprotokoll mit Rückfrage bei bereits erzeugten Rechnungen; tägliche Sicherung des Backends; Übernahme von Stammdaten aus einer älteren Mappe; Blatt Arbeitsplatz für platzbezogene Werte; Version in Start!Z1 für die Starter-Mappe")

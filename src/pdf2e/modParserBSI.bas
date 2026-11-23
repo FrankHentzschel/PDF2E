@@ -29,6 +29,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reKopf As Object, reLS As Object, rePos As Object, reAkt As Object, reLG As Object
     Dim reWW As Object, reZS As Object, reSt As Object, reRB As Object
     Dim reMarkt As Object, reILN As Object, reMail As Object, rePLZ As Object, reREGLN As Object
+    Dim reNachlass As Object, reNW As Object, reSepaBetrag As Object, reSepaMandat As Object, reSepaHinweis As Object
     Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+-?)\s*$")
@@ -38,6 +39,15 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reZS = NeuesRegex("Zwischensumme\s+\(incl\.\s+([\d.,]+-?)\s+Pfand\)\s+([\d.,]+-?)")
     Set reSt = NeuesRegex("([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
     Set reRB = NeuesRegex("RECHNUNGSBETRAG\s+EUR\s+([\d.,]+-?)")
+    ' Nachlass auf den Warenwert, z. B.
+    ' "Skonto     Gesamtes Vergütung     299,75 EU     3,00     8,99-"
+    ' Gruppen: 0 Art, 1 Text, 2 Basis, 3 Prozent, 4 Betrag
+    Set reNachlass = NeuesRegex("^\s*(\S+)\s+(?:(.*?)\s+)?([\d.]*\d,\d{2})\s+EUR?\s+(\d+,\d{2})\s+([\d.]*\d,\d{2})-\s*$")
+    Set reNW = NeuesRegex("NETTOWERT:\s+([\d.,]+-?)")
+    ' SEPA-Lastschrift (Text unter dem Rechnungsbetrag)
+    Set reSepaBetrag = NeuesRegex("Forderung von\s+([\d.,]+)\s+ziehen wir mit einer SEPA-Lastschrift")
+    Set reSepaMandat = NeuesRegex("^\s*(\S+)\s+und mit der Gl(?:ae|" & ChrW(228) & ")ubiger-ID\s+(\S+)\s+am\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+ein")
+    Set reSepaHinweis = NeuesRegex("^\s*F(?:ae|" & ChrW(228) & ")llt der Termin auf ein Wochenende")
     Set reMarkt = NeuesRegex("Marktnummer:\s*(\d+)")
     Set reILN = NeuesRegex("(?:ILN|GLN):\s*(\d{13})")
     Set reREGLN = NeuesRegex("^RE-GLN:\s*([\d ]+)$")
@@ -137,6 +147,34 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                 Set m = Treffer(reRB, l)
                 If Not m Is Nothing Then Feld("f_PDF_Brutto").Value = ZahlDE(m.SubMatches(0)): GoTo weiter
 
+                If modus = abSummen Then
+                    Set m = Treffer(reNachlass, l)
+                    If Not m Is Nothing Then NachlassAnhaengen m: GoTo weiter
+                    ' Warenwert nach Nachlässen: ersetzt den WARENWERT für den Abgleich
+                    Set m = Treffer(reNW, l)
+                    If Not m Is Nothing Then Feld("f_PDF_Warenwert").Value = ZahlDE(m.SubMatches(0)): GoTo weiter
+                End If
+
+                Set m = Treffer(reSepaBetrag, l)
+                If Not m Is Nothing Then
+                    If Len(Feld("f_PDF_Brutto").Value) > 0 Then
+                        If ZahlDE(m.SubMatches(0)) <> CCur(Feld("f_PDF_Brutto").Value) Then
+                            Protokoll "Warnung", "SEPA-Lastschrift über " & m.SubMatches(0) & " weicht vom Rechnungsbetrag ab."
+                        End If
+                    End If
+                    GoTo weiter
+                End If
+                Set m = Treffer(reSepaMandat, l)
+                If Not m Is Nothing Then
+                    Feld("f_Mandat").Value = "'" & m.SubMatches(0)
+                    Feld("f_GlaeubigerId").Value = "'" & m.SubMatches(1)
+                    Feld("f_Einzug").Value = DatumDE(m.SubMatches(2))
+                    Protokoll "Info", "SEPA-Lastschrift erkannt: Mandat " & m.SubMatches(0) & ", Gläubiger-ID " & _
+                                      m.SubMatches(1) & ", Einzug am " & m.SubMatches(2) & ". Zahlungsart in der E-Rechnung: Lastschrift (59)."
+                    GoTo weiter
+                End If
+                If Not Treffer(reSepaHinweis, l) Is Nothing Then GoTo weiter
+
                 If modus = abPositionen Then
                     Set m = Treffer(rePos, l)
                     If Not m Is Nothing Then
@@ -191,6 +229,31 @@ weiter:
     If anzahlLS > 1 Then Protokoll "Warnung", "Mehrere Lieferscheine: " & lsListe & ". In der E-Rechnung steht nur der erste."
     Feld("f_PDF_MwSt").Value = mwstSumme
     SteuersatzSetzen steuerSaetze
+End Sub
+
+' Nachlass auf den Warenwert (z. B. Skonto, bereits abgezogen) als Position vom
+' Typ "Nachlass". Der Adapter macht daraus einen Abschlag auf Belegebene (BG-20)
+' mit USt-Satz der Rechnung; das Pfand bleibt unberührt.
+' Gruppen: 0 Art, 1 Text, 2 Basis, 3 Prozent, 4 Betrag
+Private Sub NachlassAnhaengen(ByVal m As Object)
+    Dim basis As Currency, prozent As Currency, betrag As Currency, bez As String
+
+    basis = ZahlDE(m.SubMatches(2))
+    prozent = ZahlDE(m.SubMatches(3))
+    betrag = ZahlDE(m.SubMatches(4))
+    bez = Trim$(m.SubMatches(0)) & " " & m.SubMatches(3) & " % auf " & m.SubMatches(2) & " EUR"
+
+    PositionAnhaengen "Nachlass", "", bez, 1, "", betrag, -betrag, Trim$(m.SubMatches(1) & "")
+    Protokoll "Info", bez & " als Nachlass auf Belegebene übernommen: " & m.SubMatches(4) & "-"
+    If RundenKfm(basis * prozent / 100) <> betrag Then
+        Protokoll "Warnung", bez & ": berechnet " & Format$(RundenKfm(basis * prozent / 100), "#,##0.00") & _
+                             ", laut Rechnung " & m.SubMatches(4) & "."
+    End If
+    If Len(Feld("f_PDF_Warenwert").Value) > 0 Then
+        If basis <> CCur(Feld("f_PDF_Warenwert").Value) Then
+            Protokoll "Warnung", bez & ": Basis weicht vom Warenwert " & Format$(Feld("f_PDF_Warenwert").Value, "#,##0.00") & " ab."
+        End If
+    End If
 End Sub
 
 ' Eine offene Teilzeile ohne Artikelnummer, die keinem Artikel zugeordnet werden

@@ -13,8 +13,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.1.2"
-Public Const TOOL_STAND As String = "19.11.2026"
+Public Const TOOL_VERSION As String = "1.1.3"
+Public Const TOOL_STAND As String = "23.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
 
@@ -163,6 +163,7 @@ End Function
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.1.3", "23.11.2026", "Wartung", "Gemeinsame Module aus PDF2E 1.8.0 (SEPA-Lastschrift, Nachlass auf Belegebene); für XL2E keine Änderung im Ablauf")
     c.Add Array("1.1.2", "19.11.2026", "Fehlerbehebung", "Blatt Versionshistorie wird beim Start aus dem Programm nachgeführt (wie PDF2E 1.7.2)")
     c.Add Array("1.1.1", "19.11.2026", "Fehlerbehebung", "Speichern geänderter Zeilen (wie PDF2E 1.7.1)")
     c.Add Array("1.1.0", "19.11.2026", "Neue Funktion", "Mehrplatzbetrieb wie PDF2E 1.7.0 (gemeinsame Module, in XL2E noch nicht getestet)")

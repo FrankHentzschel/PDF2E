@@ -198,11 +198,22 @@ End Sub
 
 Private Sub ZahlungSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
     Dim konto As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_CreditTransfer
-    Dim kz As Long, bz As Long
+    Dim bz As Long, text As String
 
-    kz = TabellenZeile("Zahlungskonditionen", CStr(Feld("f_Kondition").Value))
-    If kz > 0 Then inv.PaymentTerms.Description = ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(kz, 2).Value   ' BT-20
-    If IsDate(Feld("f_Faellig").Value) Then inv.PaymentTerms.DueDate = Feld("f_Faellig").Value                       ' BT-9
+    text = Zahlungsbedingung()
+    If Len(text) > 0 Then inv.PaymentTerms.Description = text           ' BT-20
+    If IsDate(FaelligAm()) Then inv.PaymentTerms.DueDate = FaelligAm()  ' BT-9 (bei Lastschrift Einzugsdatum)
+
+    ' SEPA-Lastschrift laut Rechnung: Zahlungsart 59 mit Mandat und Gläubiger-ID, keine Überweisungsdaten
+    If IstLastschrift() Then
+        If inv.Payment.DirectDebit Is Nothing Then
+            Err.Raise vbObjectError + 111, , "Smart Tools: Objekt für die SEPA-Lastschrift (Payment.DirectDebit) fehlt."
+        End If
+        inv.Payment.PaymentMeansCode = PaymentMeansCode_SEPA_direct_debit                       ' BT-81 = 59
+        inv.Payment.DirectDebit.MandateReferenceId = Trim$(CStr(Feld("f_Mandat").Value))        ' BT-89
+        inv.Payment.DirectDebit.CreditorId = Trim$(CStr(Feld("f_GlaeubigerId").Value))          ' BT-90
+        Exit Sub
+    End If
 
     bz = TabellenZeile("Bankkonten", CStr(Feld("f_Konto").Value))
     If bz = 0 Then Err.Raise vbObjectError + 106, , "Bankkonto '" & Feld("f_Konto").Value & "' fehlt im Blatt 'Bankkonten'."
@@ -234,7 +245,7 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
         satzKey = UCase$(Trim$(CStr(ws.Cells(z, SP_USTKAT).Value))) & "|" & CStr(ws.Cells(z, SP_USTSATZ).Value)
         basis(satzKey) = basis(satzKey) + CCur(ws.Cells(z, SP_BETRAG).Value)
 
-        If typ = "Nachlass" Then
+        If typ = "Nachlass" Then                ' Aktion, Skonto: Abschlag auf Belegebene (BG-20)
             nachlaesse = nachlaesse - CCur(ws.Cells(z, SP_BETRAG).Value)
             inv.AddAllowance NeuerAbschlag(Abs(CCur(ws.Cells(z, SP_BETRAG).Value)), CStr(ws.Cells(z, SP_BEZ).Value), _
                                            CStr(ws.Cells(z, SP_USTKAT).Value), ws.Cells(z, SP_USTSATZ).Value)

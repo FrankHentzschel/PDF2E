@@ -3,6 +3,13 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.8.0 und XL2E 1.1.3 – 23.11.2026
+
+- **Neue Funktion:** Skonto- bzw. Nachlasszeile zwischen WARENWERT und NETTOWERT (z. B. `Skonto  Gesamtes Vergütung  299,75 EU  3,00  8,99-`) wird als Nachlass übernommen und in der E-Rechnung als Abschlag auf Belegebene (BG-20) übergeben. Der Warenwert-Abgleich nutzt den NETTOWERT. Auslöser: RE 2604304 (Prüffehler Netto 333,95 statt 324,96).
+- **Neue Funktion:** SEPA-Lastschrift aus dem Rechnungstext: Mandatsreferenz, Gläubiger-ID und Einzugsdatum werden gelesen (neue Felder im Blatt „Rechnung“, in älteren Mappen automatisch angelegt). E-Rechnung mit Zahlungsart 59, BT-89, BT-90, Einzugsdatum als BT-9 und Einzugshinweis als BT-20; ebenso im Stub und in der E-Mail.
+- Testfall `tests/pdftotext/Rechnung_2604304.txt`.
+- XL2E 1.1.3: nur die gemeinsamen Module aktualisiert, keine Änderung im Ablauf.
+
 ## PDF2E 1.7.2 und XL2E 1.1.2 – 19.11.2026
 
 - **Fehlerbehebung:** Das Blatt „Versionshistorie“ wird beim Start aus dem Programm nachgeführt (Funktion `Versionen` in `modProdukt`). Bisher befüllte es nur die Vorlage, deshalb fehlten in bestehenden Mappen die Versionen ab 1.5.0. Das Datum steht jetzt als echtes Datum statt als Text.

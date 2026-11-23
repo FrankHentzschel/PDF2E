@@ -14,7 +14,8 @@ Public Const BLATT_PFANDARTIKEL As String = "Pfandartikel"
 Private Const FELDER_LEEREN As String = _
     "f_Quelldatei,f_RechNr,f_RechDatum,f_LSNr,f_LSDatum,f_KundenNr,f_KGLN,f_KName,f_KStrasse,f_KPLZ,f_KOrt," & _
     "f_KEmail,f_KUstId,f_LName,f_LZeile2,f_LPLZ,f_LOrt,f_LGLN,f_Marktnr,f_Kondition,f_Konto," & _
-    "f_PDF_Warenwert,f_PDF_Pfand,f_PDF_Netto,f_PDF_MwSt,f_PDF_Brutto,f_Status,f_Ausgabedatei"
+    "f_PDF_Warenwert,f_PDF_Pfand,f_PDF_Netto,f_PDF_MwSt,f_PDF_Brutto,f_Status,f_Ausgabedatei," & _
+    "f_Mandat,f_GlaeubigerId,f_Einzug"
 
 Public Sub RechnungEinlesen()
     Dim pfad As String
@@ -26,6 +27,7 @@ Public Sub RechnungEinlesen()
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
 
+    LastschriftFelderSicherstellen
     ArbeitsblaetterLeeren
     Feld("f_Quelldatei").Value = pfad
     Protokoll "Info", "Einlesen: " & pfad
@@ -82,6 +84,34 @@ Private Sub ArbeitsblaetterLeeren()
 
     Set ws = ThisWorkbook.Worksheets(BLATT_PROTOKOLL)
     If ws.Cells(ws.Rows.Count, 1).End(xlUp).Row > 1 Then ws.Range("A2:C" & ws.Rows.Count).ClearContents
+End Sub
+
+' Felder für die SEPA-Lastschrift (ab PDF2E 1.8.0). Fehlen sie in einer älteren
+' Mappe, werden sie unten im Blatt "Rechnung" angehängt.
+Private Sub LastschriftFelderSicherstellen()
+    Dim ws As Worksheet, z As Long, i As Long, namen As Variant, texte As Variant, hinweise As Variant
+
+    namen = Array("f_Mandat", "f_GlaeubigerId", "f_Einzug")
+    If NameVorhanden(namen(0)) And NameVorhanden(namen(1)) And NameVorhanden(namen(2)) Then Exit Sub
+    texte = Array("Mandatsreferenz", "Gläubiger-ID", "Einzugsdatum")
+    hinweise = Array("BT-89, aus der Rechnung", "BT-90, aus der Rechnung", "BT-9 bei Lastschrift (statt Fälligkeitsdatum)")
+
+    Set ws = ThisWorkbook.Worksheets(BLATT_RECHNUNG)
+    z = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 2
+    ws.Cells(z, 1).Value = "SEPA-Lastschrift"
+    ws.Cells(z, 1).Font.Bold = True
+    For i = 0 To 2
+        z = z + 1
+        If Not NameVorhanden(CStr(namen(i))) Then
+            ws.Cells(z, 1).Value = texte(i)
+            ws.Cells(z, 2).Interior.Color = RGB(238, 238, 238)
+            ws.Cells(z, 2).NumberFormat = IIf(i = 2, "DD.MM.YYYY", "@")
+            ws.Cells(z, 3).Value = hinweise(i)
+            ws.Cells(z, 3).Font.Italic = True
+            ws.Cells(z, 3).Font.Color = RGB(119, 119, 119)
+            ThisWorkbook.Names.Add name:=CStr(namen(i)), RefersTo:="='" & ws.name & "'!$B$" & z
+        End If
+    Next i
 End Sub
 
 ' Bankkonto, Zahlungskondition und E-Mail aus dem Blatt "Empfaenger",

@@ -77,6 +77,43 @@ Public Function Feld(ByVal name As String) As Range
     Set Feld = ThisWorkbook.Names(name).RefersToRange
 End Function
 
+' Gibt es den Namen (Feld) in der Mappe? Ältere Mappen haben neuere Felder evtl. noch nicht.
+Public Function NameVorhanden(ByVal name As String) As Boolean
+    Dim n As Object
+    On Error Resume Next
+    Set n = ThisWorkbook.Names(name)
+    NameVorhanden = (Err.Number = 0)
+    On Error GoTo 0
+End Function
+
+' SEPA-Lastschrift laut Quellrechnung (Felder f_Mandat, f_GlaeubigerId, f_Einzug)
+Public Function IstLastschrift() As Boolean
+    If NameVorhanden("f_Mandat") Then IstLastschrift = Len(Trim$(CStr(Feld("f_Mandat").Value))) > 0
+End Function
+
+' Fälligkeit (BT-9): bei Lastschrift das Einzugsdatum, sonst Rechnungsdatum + Zahlungsziel
+Public Function FaelligAm() As Variant
+    FaelligAm = Feld("f_Faellig").Value
+    If IstLastschrift() Then
+        If IsDate(Feld("f_Einzug").Value) Then FaelligAm = Feld("f_Einzug").Value
+    End If
+End Function
+
+' Zahlungsbedingung (BT-20): bei Lastschrift der Einzugshinweis, sonst der Text
+' der Zahlungskondition aus dem Blatt "Zahlungskonditionen"
+Public Function Zahlungsbedingung() As String
+    Dim kz As Long, einzug As String
+    If IstLastschrift() Then
+        If IsDate(Feld("f_Einzug").Value) Then einzug = " am " & Format$(Feld("f_Einzug").Value, "dd.mm.yyyy")
+        Zahlungsbedingung = "Der Betrag wird per SEPA-Lastschrift" & einzug & " eingezogen (Mandatsreferenz " & _
+            Trim$(CStr(Feld("f_Mandat").Value)) & ", Gläubiger-ID " & Trim$(CStr(Feld("f_GlaeubigerId").Value)) & _
+            "). Fällt der Termin auf ein Wochenende oder einen Feiertag, wird am nächstmöglichen Termin eingezogen."
+        Exit Function
+    End If
+    kz = TabellenZeile("Zahlungskonditionen", CStr(Feld("f_Kondition").Value))
+    If kz > 0 Then Zahlungsbedingung = CStr(ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(kz, 2).Value)
+End Function
+
 ' Deutsche Zahl in Currency umwandeln: "1.029,53" -> 1029,53 / "25,00-" -> -25
 Public Function ZahlDE(ByVal s As String) As Currency
     Dim neg As Boolean

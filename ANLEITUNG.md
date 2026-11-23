@@ -1,4 +1,4 @@
-# PDF2E 1.7.2 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.8.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -76,6 +76,11 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 **Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
+
+## Update von 1.7.x auf 1.8.0
+
+1. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
+2. Sonst nichts. Die neuen Felder **Mandatsreferenz**, **Gläubiger-ID** und **Einzugsdatum** hängt das Programm beim ersten Einlesen unten im Blatt „Rechnung“ an (Abschnitt „SEPA-Lastschrift“).
 
 ## Update von 1.6.0 auf 1.7.x
 
@@ -190,6 +195,7 @@ Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, 
 | 2603894 | Markgrafen, Lieferort Herzogenaurach | 3 | +31,00 / −49,60 = −18,60 | 141,19 |
 | 2603816 | REWE Markt GmbH (RE-GLN 4388096000002) | 3 | +124,00 / −99,20 = 24,80 | 489,74 |
 | 2603587 | REWE Markt GmbH, Lieferort Forchheim | 4 | +62,00 / −111,60 = −49,60 | 176,30 |
+| 2604304 | SAGASSER Fachmarkt, Lieferort Ebermannstadt | 4 + Skonto 3 % (−8,99) | 34,20 | 386,70, SEPA-Lastschrift |
 
 Seit 1.5.0 steht Pfand getrennt nach Lieferung und Rücknahme in der Rechnung. Das Programm leitet beide Mengen aus dem Leergutkonto ab (Lieferung − Rücknahme = Differenz, alter Saldo + Differenz = neuer Saldo). Gelingt das nicht eindeutig, bleibt es bei der Differenz mit einer Warnung im Protokoll.
 
@@ -197,7 +203,15 @@ Im Ordner `tests/pdftotext` liegen die pdftotext-Ausgaben dieser Muster. Dateien
 
 Im Stub-Modus legt **E-Rechnung erzeugen** zwei Dateien an: `<RechNr>_ZUGFeRD_STUB.pdf`, eine unveränderte Kopie, und daneben `.daten.xml` mit allen Übergabewerten.
 
+## Skonto und SEPA-Lastschrift (ab 1.8.0)
+
+**Skonto/Nachlass unter dem Warenwert:** Eine Zeile wie `Skonto  Gesamtes Vergütung  299,75 EU  3,00  8,99-` zwischen WARENWERT und NETTOWERT wird als Position vom Typ „Nachlass“ übernommen (Bezeichnung „Skonto 3,00 % auf 299,75 EUR“). In der E-Rechnung wird daraus ein Abschlag auf Belegebene (BG-20) mit dem USt-Satz der Rechnung, wie bei den Aktionen. Das Pfand bleibt unberührt. Der Abgleich „Warenwert“ nutzt dann den NETTOWERT aus dem PDF. Stimmen Prozent × Basis oder die Basis mit dem Warenwert nicht überein, steht eine Warnung im Protokoll.
+
+**SEPA-Lastschrift:** Steht unter dem Rechnungsbetrag „… ziehen wir mit einer SEPA-Lastschrift auf Grund des Mandates … mit der Glaeubiger-ID … am … ein.“, übernimmt das Programm Mandatsreferenz, Gläubiger-ID und Einzugsdatum in den Abschnitt „SEPA-Lastschrift“ im Blatt „Rechnung“. Die E-Rechnung bekommt dann Zahlungsart 59 (SEPA-Lastschrift) mit Mandatsreferenz (BT-89) und Gläubiger-ID (BT-90), das Einzugsdatum als Fälligkeit (BT-9) und als Zahlungsbedingung (BT-20) einen Einzugshinweis statt des Textes der Zahlungskondition. Die Bankverbindung der Brauerei entfällt in diesem Fall. Die IBAN des Kunden (BT-91) steht nicht auf der Rechnung und wird nicht übergeben. Der Platzhalter `{Faellig}` und `{Zahlungsbedingung}` in der E-Mail richten sich ebenfalls nach der Lastschrift.
+
 ## Noch nicht getestet
+
+- 1.8.0: Skonto und SEPA-Lastschrift sind nur mit der Linux-Ausgabe von pdftotext geprüft und noch nicht in Excel kompiliert. Die Namen in der Smart-Tools-Bibliothek (`PaymentMeansCode_SEPA_direct_debit`, `Payment.DirectDebit.MandateReferenceId`, `.CreditorId`) sind aus der installierten `SmartTools.Invoicing.dll` gelesen.
 
 - Die neue Modulaufteilung (1.6.0) ist noch nicht in Excel kompiliert worden. Die Logik ist unverändert gegenüber 1.5.0, die am 04.11.2026 mit RE 2603587 eine gültige E-Rechnung erzeugt hat.
 - `VBScript.RegExp`: Microsoft kündigt die schrittweise Abschaltung von VBScript an. Ob und wann das RegExp in VBA betrifft, ist offen.
