@@ -13,7 +13,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.2.0"
+Public Const TOOL_VERSION As String = "1.2.1"
 Public Const TOOL_STAND As String = "25.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
@@ -163,6 +163,7 @@ End Function
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.2.1", "25.11.2026", "Fehlerbehebung", "Gemeinsame Module aus PDF2E 1.11.0: Feld Rundungsbetrag (BT-114), Zahlbetrag in E-Mail und Verarbeitungsprotokoll (Rechnungsbetrag dort bisher ohne Cent)")
     c.Add Array("1.2.0", "25.11.2026", "Neue Funktion", "Gemeinsame Module aus PDF2E 1.10.0: G5-Zentralregulierung (SGH Service): Vorgabe G5 je Empfänger, ZR-Nummer des Händlers als Käuferreferenz (BT-10, neue Spalte ZR-Nummer im Blatt Empfaenger), G5-Lieferantennummer der Brauerei als Verkäuferkennung (BT-29, Einstellung G5 Lieferantennummer), E-Mail an die zentrale Adresse (Einstellung G5 E-Mail), Prüfung beider Nummern; Backend Schema-Version 2")
     c.Add Array("1.1.7", "23.11.2026", "Wartung", "Gemeinsame Module aus PDF2E 1.9.0 (USt-Kategorie K mit Befreiungsgrund, weitere Ländercodes, Prüfung innergemeinschaftliche Lieferung)")
     c.Add Array("1.1.6", "23.11.2026", "Fehlerbehebung", "Kompilierfehler: Konstante UST_PRAEFIXE in modHilfen in den Deklarationsteil verschoben (wie PDF2E 1.8.3)")

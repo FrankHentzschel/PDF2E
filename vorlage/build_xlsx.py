@@ -96,6 +96,7 @@ rows=[
 (f"Zwischensumme {LAUT}","f_PDF_Netto","pdf",""),
 (f"MwSt {LAUT}","f_PDF_MwSt","pdf",""),
 (f"Rechnungsbetrag {LAUT}","f_PDF_Brutto","pdf",""),
+("Rundungsbetrag","f_Rundung","pdf","BT-114, nur bei Bruttobeträgen (ENTHALTENE MWSt.)"),
 ("SEPA-Lastschrift",None),
 ("Mandatsreferenz","f_Mandat","pdf","BT-89, aus der Rechnung"),
 ("Gläubiger-ID","f_GlaeubigerId","pdf","BT-90, aus der Rechnung"),
@@ -111,7 +112,7 @@ for row in rows:
     c.fill={"inp":INP,"calc":CALC,"pdf":PDF}[kind]
     name(nm,f"Rechnung!$B${r}"); cells[nm]=f"B{r}"; r+=1
 for nm in ["f_RechDatum","f_LSDatum","f_Faellig","f_Einzug"]: ws[cells[nm]].number_format="DD.MM.YYYY"
-for nm in ["f_Netto","f_MwSt","f_Brutto","f_PDF_Warenwert","f_PDF_Pfand","f_PDF_Netto","f_PDF_MwSt","f_PDF_Brutto"]:
+for nm in ["f_Netto","f_MwSt","f_Brutto","f_PDF_Warenwert","f_PDF_Pfand","f_PDF_Netto","f_PDF_MwSt","f_PDF_Brutto","f_Rundung"]:
     ws[cells[nm]].number_format='#,##0.00'
 for nm in ["f_RechNr","f_KundenNr","f_KGLN","f_KPLZ","f_LPLZ","f_LGLN","f_Marktnr","f_LSNr","f_RechArt","f_Mandat","f_GlaeubigerId"]: ws[cells[nm]].number_format='@'
 ws[cells["f_RechArt"]]="380"; ws[cells["f_Waehrung"]]="EUR"; ws[cells["f_KLand"]]="DE"; ws[cells["f_LLand"]]="DE"

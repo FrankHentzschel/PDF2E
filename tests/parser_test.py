@@ -21,6 +21,10 @@ RE_WW = re.compile(r"WARENWERT:\s+([\d.,]+-?)")
 RE_ZS = re.compile(r"Zwischensumme\s+\(incl\.\s+([\d.,]+-?)\s+Pfand\)\s+([\d.,]+-?)")
 RE_ST = re.compile(r"([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
 RE_RB = re.compile(r"RECHNUNGSBETRAG\s+EUR\s+([\d.,]+-?)")
+# Minus-Rechnung mit Bruttobeträgen (RE 2603475)
+RE_MINUS_RB = re.compile(r"RECHNUNGSBETRAG\s+incl\.\s+([\d.,]+-?)\s+Pfand\)\s+EUR\s+([\d.,]+-?)")
+RE_ENTHALTEN = re.compile(r"ENTHALTENE\s+MWSt\.?\s+([\d,]+)\s*%\s*\(aus\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
+RE_RUECKWARE = re.compile(r"^\*+\s*Rückware\s*\*+$")
 # Nachlass auf den Warenwert, z. B. Skonto: Art, Text, Basis, Prozent, Betrag
 RE_NACHLASS = re.compile(r"^\s*(\S+)\s+(?:(.*?)\s+)?([\d.]*\d,\d{2})\s+EUR?\s+(\d+,\d{2})\s+([\d.]*\d,\d{2})-\s*$")
 RE_WW_LEER = re.compile(r"WARENWERT:\s*$")
@@ -77,9 +81,10 @@ def leergut_aufteilen(mitte, diff):
 
 def parse(text):
     r = {"ware": 0.0, "pfand": 0.0, "mwst": 0.0, "satz": None, "zeilenfehler": [], "warnungen": [], "pfandzeilen": [],
-         "nachlaesse": []}
+         "nachlaesse": [], "zeilen": [], "brutto": False}
     modus = "pos"
     lg_offen = ""   # unvollständige Leergutzeile (Rohzeile mit Einrückung)
+    lg_rueckgabe = False
 
     def lg_abschliessen():
         nonlocal lg_offen
@@ -103,6 +108,7 @@ def parse(text):
             if mg:
                 r["pfand"] += round(mg * satz, 2)
                 r["pfandzeilen"].append((m[1], mg, satz))
+                r["zeilen"].append(("Pfand", mg, satz, round(mg * satz, 2)))
 
     def pfand(m):
         menge, satz, betrag = zahl(m[4]), zahl(m[5]), zahl(m[6])
@@ -112,12 +118,14 @@ def parse(text):
         if teile is None:
             r["warnungen"].append("Pfand nicht aufteilbar: " + m[0].strip())
             r["pfand"] += betrag
+            r["zeilen"].append(("Pfand", menge, satz, betrag))
             return
         lief, zur = teile
         for mg in (lief, -zur):
             if mg:
                 r["pfand"] += round(mg * satz, 2)
                 r["pfandzeilen"].append((m[1], mg, satz))
+                r["zeilen"].append(("Pfand", mg, satz, round(mg * satz, 2)))
 
     for seite in text.split("\f"):
         zeilen = seite.split("\n")
@@ -130,6 +138,7 @@ def parse(text):
                 continue
             if s[0] in "─═":
                 lg_abschliessen()
+                lg_rueckgabe = False
                 continue
             if s.startswith("ÜBERTRAG"):
                 continue
@@ -169,6 +178,16 @@ def parse(text):
                 r["satz"] = zahl(m[1])
                 r["mwst"] += zahl(m[3])
                 continue
+            m = RE_MINUS_RB.search(l)
+            if m:
+                r["pdf_pfand"], r["pdf_brutto"] = zahl(m[1]), zahl(m[2])
+                continue
+            m = RE_ENTHALTEN.search(l)
+            if m:
+                r["satz"] = zahl(m[1])
+                r["mwst"] += zahl(m[3])
+                r["brutto"] = True
+                continue
             m = RE_RB.search(l)
             if m:
                 r["pdf_brutto"] = zahl(m[1])
@@ -196,13 +215,24 @@ def parse(text):
             if m:
                 r["sepa"] = (m[1], m[2], m[3])
                 continue
+            if RE_RUECKWARE.match(s):
+                continue
+            if modus == "pos" and s == "Leergutrückgabe:":
+                lg_rueckgabe = True
+                continue
             if modus == "pos":
                 m = RE_POS.match(l)
                 if m:
                     menge, preis, betrag = zahl(m[3]), zahl(m[5]), zahl(m[6])
+                    if betrag < 0:
+                        menge = -menge          # Rückware
                     r["ware"] += betrag
+                    r["zeilen"].append(("Ware", menge, preis, betrag))
                     if abs(round(menge * preis, 2) - betrag) > 0.005:
                         r["zeilenfehler"].append(s)
+                    continue
+                if lg_rueckgabe and RE_ARTNR.match(s):
+                    continue
             elif modus == "lg":
                 m = RE_LG.match(l)
                 if m:
@@ -227,8 +257,29 @@ def parse(text):
     return r
 
 
+def kfm(x, stellen=2):
+    """Kaufmännisch runden wie RundenKfm/Runden4 in VBA."""
+    f = 10 ** stellen
+    return (1 if x >= 0 else -1) * int(abs(x) * f + 0.5 + 1e-9) / f
+
+
+def brutto_in_netto(r):
+    """Nachbau von BruttoInNetto (modParserBSI): Nettopreis 4 Stellen, Betrag = Menge x Preis."""
+    faktor = 1 + r["satz"] / 100
+    netto = []
+    for typ, menge, preis, betrag in r["zeilen"]:
+        p = kfm(preis / faktor, 4)
+        netto.append((typ, menge, p, kfm(menge * p)))
+    summe = round(sum(z[3] for z in netto), 2)
+    mwst = kfm(summe * r["satz"] / 100)
+    rundung = round(r["pdf_brutto"] - (summe + mwst), 2)
+    return netto, summe, mwst, rundung
+
+
 def pruefe(pfad):
     r = parse(open(pfad, encoding="utf-8").read())
+    if r["brutto"]:
+        return pruefe_brutto(pfad, r)
     netto = round(r["ware"] + r["pfand"], 2)
     if r.get("ig"):
         mwst = 0.0                       # innergemeinschaftliche Lieferung, Kategorie K
@@ -261,6 +312,32 @@ def pruefe(pfad):
         print(f"        Innergemeinschaftliche Lieferung (K, 0 %), USt-IdNr. {r.get('ustid')}")
     if "sepa" in r:
         print("        SEPA-Lastschrift: Mandat %s, Gläubiger-ID %s, Einzug %s" % r["sepa"])
+    for f in fehler:
+        print("        " + f)
+    return not fehler
+
+
+def pruefe_brutto(pfad, r):
+    """Rechnung mit Bruttobeträgen: Abgleich wie modPruefen mit Toleranz 1 Cent je Position."""
+    netto, summe, mwst, rundung = brutto_in_netto(r)
+    tol = 0.01 * len(netto) + 1e-9
+    wareB = sum(kfm(z[3] * (1 + r["satz"] / 100)) for z in netto if z[0] != "Pfand")
+    pfandB = sum(kfm(z[3] * (1 + r["satz"] / 100)) for z in netto if z[0] == "Pfand")
+    checks = [
+        ("Warenwert brutto", wareB, r.get("pdf_warenwert"), tol),
+        ("Pfand brutto", pfandB, r.get("pdf_pfand"), tol),
+        ("Netto", summe, None if r.get("pdf_brutto") is None else r["pdf_brutto"] - r["mwst"], tol),
+        ("MwSt", mwst, r["mwst"], tol),
+        ("Zahlbetrag", summe + mwst + rundung, r.get("pdf_brutto"), 0.005),
+        ("Rundung", abs(rundung), 0.0, tol),
+    ]
+    fehler = [f"{n}: berechnet {a:.2f}, PDF {b}" for n, a, b, t in checks if b is None or abs(a - b) > t]
+    fehler += [f"Zeile Menge x Preis: {z}" for z in r["zeilenfehler"]]
+    fehler += r["warnungen"]
+    print(("OK    " if not fehler else "FEHLER") + "  " + os.path.basename(pfad))
+    print(f"        Bruttobeträge ({r['satz']:.0f} %): netto {summe:.2f}, MwSt {mwst:.2f}, Rundungsbetrag (BT-114) {rundung:+.2f}")
+    for typ, menge, preis, betrag in netto:
+        print(f"        {typ:5} {menge:+g} x {preis:.4f} = {betrag:.2f}")
     for f in fehler:
         print("        " + f)
     return not fehler

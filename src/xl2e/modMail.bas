@@ -170,7 +170,7 @@ Private Function PlatzhalterErsetzen(ByVal s As String) As String
 
     s = Replace(s, "{Rechnungsnummer}", CStr(Feld("f_RechNr").Value))
     s = Replace(s, "{Rechnungsdatum}", DatumText(Feld("f_RechDatum").Value))
-    s = Replace(s, "{Betrag}", Format$(Feld("f_Brutto").Value, "#,##0.00"))
+    s = Replace(s, "{Betrag}", Format$(Zahlbetrag(), "#,##0.00"))
     s = Replace(s, "{Faellig}", DatumText(FaelligAm()))
     s = Replace(s, "{Zahlungsbedingung}", bedingung)
     s = Replace(s, "{Kundennummer}", CStr(Feld("f_KundenNr").Value))

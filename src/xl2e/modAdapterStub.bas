@@ -115,6 +115,8 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-109", "Nettosumme", ZahlXml(Feld("f_Netto").Value, 2)
     Wert grp, "BT-110", "MwSt", ZahlXml(Feld("f_MwSt").Value, 2)
     Wert grp, "BT-112", "Bruttosumme", ZahlXml(Feld("f_Brutto").Value, 2)
+    If Rundung() <> 0 Then Wert grp, "BT-114", "Rundungsbetrag", ZahlXml(Rundung(), 2)
+    Wert grp, "BT-115", "Zahlbetrag", ZahlXml(Zahlbetrag(), 2)
 
     mDoc.Save zielPdf & ".daten.xml"
     Protokoll "Warnung", "STUB: Daten geschrieben nach " & zielPdf & ".daten.xml - PDF ist unverändert, keine E-Rechnung."

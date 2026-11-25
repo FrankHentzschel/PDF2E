@@ -150,6 +150,21 @@ Public Function IstLastschrift() As Boolean
     If NameVorhanden("f_Mandat") Then IstLastschrift = Len(Trim$(CStr(Feld("f_Mandat").Value))) > 0
 End Function
 
+' Rundungsbetrag (BT-114, Feld f_Rundung): nur bei Rechnungen mit Bruttobeträgen
+' ("ENTHALTENE MWSt."), sonst leer. Ältere Mappen haben das Feld evtl. nicht.
+Public Function BruttoBetraege() As Boolean
+    If NameVorhanden("f_Rundung") Then BruttoBetraege = Len(Trim$(CStr(Feld("f_Rundung").Value))) > 0
+End Function
+
+Public Function Rundung() As Currency
+    If BruttoBetraege() Then Rundung = CCur(Feld("f_Rundung").Value)
+End Function
+
+' Zahlbetrag (BT-115) = Rechnungsbetrag (BT-112) + Rundungsbetrag (BT-114)
+Public Function Zahlbetrag() As Currency
+    Zahlbetrag = CCur(Feld("f_Brutto").Value) + Rundung()
+End Function
+
 ' Fälligkeit (BT-9): bei Lastschrift das Einzugsdatum, sonst Rechnungsdatum + Zahlungsziel
 Public Function FaelligAm() As Variant
     FaelligAm = Feld("f_Faellig").Value

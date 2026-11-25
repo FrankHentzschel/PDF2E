@@ -43,7 +43,7 @@ Public Sub ZugferdErzeugen()
     Feld("f_Ausgabedatei").Value = ziel
     Protokoll "Info", "ZUGFeRD erzeugt: " & ziel
     VerarbeitungErzeugt CStr(Feld("f_RechNr").Value), quelle, ziel, CStr(Feld("f_KName").Value), _
-                        CCur(Val(Feld("f_Brutto").Value)), IIf(adapter = "STUB", "Test (STUB)", "erzeugt")
+                        Zahlbetrag(), IIf(adapter = "STUB", "Test (STUB)", "erzeugt")
     MsgBox IIf(adapter = "STUB", "TESTLAUF (Stub) - keine gültige E-Rechnung:", "ZUGFeRD-Rechnung erzeugt:") & vbLf & ziel, vbInformation
     Exit Sub
 

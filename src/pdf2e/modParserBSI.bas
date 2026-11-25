@@ -7,6 +7,8 @@ Attribute VB_Name = "modParserBSI"
 ' BSI-Rechnungen eines Kunden im Detail ab, wird die Abweichung hier per
 ' Select Case variante behandelt, statt ein eigenes Modul anzulegen.
 ' "STANDARD" = Layout wie in den Mustern RE 2603976, 2603894, 2603816, 2603587.
+' Minus-Rechnung mit Rückware und Bruttobeträgen ("ENTHALTENE MWSt.") wie RE 2603475:
+' Mengen der Rückware negativ, Preise und Pfand werden in netto umgerechnet.
 '==============================================================================
 Option Explicit
 
@@ -31,6 +33,8 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reMarkt As Object, reILN As Object, reMail As Object, rePLZ As Object, reREGLN As Object
     Dim reNachlass As Object, reNW As Object, reSepaBetrag As Object, reSepaMandat As Object, reSepaHinweis As Object
     Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean
+    Dim reMinusRB As Object, reEnthalten As Object, reRueckware As Object
+    Dim bruttoBetraege As Boolean, lgRueckgabe As Boolean, menge As Double, betrag As Currency
     Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     ' Position: ArtNr, Bezeichnung, Ka/Fa, Hl./Fl. (fehlt z. B. bei Paletten), Preis, Betrag,
@@ -42,6 +46,12 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reZS = NeuesRegex("Zwischensumme\s+\(incl\.\s+([\d.,]+-?)\s+Pfand\)\s+([\d.,]+-?)")
     Set reSt = NeuesRegex("([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
     Set reRB = NeuesRegex("RECHNUNGSBETRAG\s+EUR\s+([\d.,]+-?)")
+    ' Minus-Rechnung mit Bruttobeträgen, z. B.
+    ' "MINUS-RECHNUNGSBETRAG    incl.   440,50- Pfand) EUR    772,50-"
+    ' "ENTHALTENE MWSt. 19,00 % (aus   772,50-)    123,34-"
+    Set reMinusRB = NeuesRegex("RECHNUNGSBETRAG\s+incl\.\s+([\d.,]+-?)\s+Pfand\)\s+EUR\s+([\d.,]+-?)")
+    Set reEnthalten = NeuesRegex("ENTHALTENE\s+MWSt\.?\s+([\d,]+)\s*%\s*\(aus\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
+    Set reRueckware = NeuesRegex("^\*+\s*R" & ChrW(252) & "ckware\s*\*+$")
     ' Nachlass auf den Warenwert, z. B.
     ' "Skonto     Gesamtes Vergütung     299,75 EU     3,00     8,99-"
     ' Gruppen: 0 Art, 1 Text, 2 Basis, 3 Prozent, 4 Betrag
@@ -116,7 +126,11 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                 l = zeilen(i)
                 s = Trim$(l)
                 If Len(s) = 0 Then GoTo weiter
-                If Left$(s, 1) = ChrW(&H2500) Or Left$(s, 1) = ChrW(&H2550) Then LeergutAbschliessen lgOffen, reArtNr: GoTo weiter
+                If Left$(s, 1) = ChrW(&H2500) Or Left$(s, 1) = ChrW(&H2550) Then
+                    LeergutAbschliessen lgOffen, reArtNr
+                    lgRueckgabe = False
+                    GoTo weiter
+                End If
                 If Left$(s, 8) = "ÜBERTRAG" Then GoTo weiter
                 If Left$(s, 13) = "LEERGUT-KONTO" Then modus = abLeergut: GoTo weiter
                 If modus = abLeergut And Left$(s, 5) = "SALDO" Then GoTo weiter
@@ -154,6 +168,19 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                     mwstSumme = mwstSumme + ZahlDE(m.SubMatches(2))
                     GoTo weiter
                 End If
+                Set m = Treffer(reMinusRB, l)
+                If Not m Is Nothing Then
+                    Feld("f_PDF_Pfand").Value = ZahlDE(m.SubMatches(0))
+                    Feld("f_PDF_Brutto").Value = ZahlDE(m.SubMatches(1))
+                    GoTo weiter
+                End If
+                Set m = Treffer(reEnthalten, l)
+                If Not m Is Nothing Then
+                    steuerSaetze.Add CDbl(ZahlDE(m.SubMatches(0)))
+                    mwstSumme = mwstSumme + ZahlDE(m.SubMatches(2))
+                    bruttoBetraege = True
+                    GoTo weiter
+                End If
                 Set m = Treffer(reRB, l)
                 If Not m Is Nothing Then Feld("f_PDF_Brutto").Value = ZahlDE(m.SubMatches(0)): GoTo weiter
 
@@ -184,6 +211,10 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                     GoTo weiter
                 End If
                 If Not Treffer(reSepaHinweis, l) Is Nothing Then GoTo weiter
+                ' "** Rückware **" unter einer Position: Menge ist dort schon negativ übernommen
+                If Not Treffer(reRueckware, s) Is Nothing Then GoTo weiter
+                ' "Leergutrückgabe:" mit Mengen ohne Betrag; das Pfand steht im LEERGUT-KONTO
+                If modus = abPositionen And s = "Leergutr" & ChrW(252) & "ckgabe:" Then lgRueckgabe = True: GoTo weiter
 
                 If Not Treffer(reIG, l) Is Nothing Then
                     igLieferung = True
@@ -200,10 +231,14 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                 If modus = abPositionen Then
                     Set m = Treffer(rePos, l)
                     If Not m Is Nothing Then
-                        PositionAnhaengen "Ware", m.SubMatches(0), Trim$(m.SubMatches(1)), CDbl(m.SubMatches(2)), _
-                            Einstellung("Einheit Ware"), ZahlDE(m.SubMatches(4)), ZahlDE(m.SubMatches(5)), m.SubMatches(3) & ""
+                        menge = CDbl(m.SubMatches(2))
+                        betrag = ZahlDE(m.SubMatches(5))
+                        If betrag < 0 Then menge = -menge       ' Rückware: "4  80  14,000  56,00-"
+                        PositionAnhaengen "Ware", m.SubMatches(0), Trim$(m.SubMatches(1)), menge, _
+                            Einstellung("Einheit Ware"), ZahlDE(m.SubMatches(4)), betrag, m.SubMatches(3) & ""
                         GoTo weiter
                     End If
+                    If lgRueckgabe And Not Treffer(reArtNr, s) Is Nothing Then GoTo weiter
                 ElseIf modus = abLeergut Then
                     Set m = Treffer(reLG, l)
                     If Not m Is Nothing Then LeergutAbschliessen lgOffen, reArtNr: PfandAnhaengen m: GoTo weiter
@@ -258,8 +293,55 @@ weiter:
         Protokoll "Fehler", "Kein MwSt-Satz und kein Hinweis auf eine Steuerbefreiung gefunden. Bitte Spalten 'USt-Satz' und 'USt-Kat.' im Blatt Positionen ausfüllen."
     Else
         SteuersatzSetzen steuerSaetze
+        If bruttoBetraege Then BruttoInNetto steuerSaetze, mwstSumme
     End If
 End Sub
+
+' Rechnung mit Bruttobeträgen ("ENTHALTENE MWSt."): Die E-Rechnung verlangt
+' Nettopreise. Preise werden auf 4 Stellen netto umgerechnet, Beträge = Menge x
+' Nettopreis. Die Rundungsdifferenz zum Rechnungsbetrag laut PDF (meist wenige
+' Cent) wird als Rundungsbetrag (BT-114, Feld f_Rundung) ausgewiesen.
+' Mit tests/parser_test.py (brutto_in_netto) abgleichen.
+Private Sub BruttoInNetto(saetze As Collection, ByVal mwstPdf As Currency)
+    Dim ws As Worksheet, z As Long, letzte As Long, faktor As Double
+    Dim preis As Currency, betrag As Currency, summe As Currency, mwst As Currency, rundung As Currency
+
+    If saetze.Count <> 1 Then
+        Protokoll "Fehler", "Bruttobeträge mit mehreren MwSt-Sätzen werden nicht unterstützt. Bitte Preise und Beträge im Blatt Positionen netto eintragen."
+        Exit Sub
+    End If
+    faktor = 1 + saetze(1) / 100
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    letzte = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+    For z = 2 To letzte
+        preis = Runden4(CDbl(ws.Cells(z, SP_PREIS).Value) / faktor)
+        If ws.Cells(z, SP_TYP).Value = "Nachlass" Then
+            betrag = RundenKfm(CDbl(ws.Cells(z, SP_BETRAG).Value) / faktor)
+        Else
+            betrag = RundenKfm(CCur(ws.Cells(z, SP_MENGE).Value) * preis)
+        End If
+        ws.Cells(z, SP_PREIS).Value = preis
+        ws.Cells(z, SP_BETRAG).Value = betrag
+        summe = summe + betrag
+    Next z
+
+    mwst = RundenKfm(summe * saetze(1) / 100)
+    If Len(CStr(Feld("f_PDF_Brutto").Value)) > 0 Then
+        rundung = CCur(Feld("f_PDF_Brutto").Value) - (summe + mwst)
+        Feld("f_PDF_Netto").Value = CCur(Feld("f_PDF_Brutto").Value) - mwstPdf
+    End If
+    Feld("f_Rundung").Value = rundung
+    Protokoll "Info", "Rechnung mit Bruttobeträgen (enthaltene MwSt " & saetze(1) & " %): Preise, Pfand und Nachlässe in netto umgerechnet. " & _
+                      "Rundungsdifferenz " & Format$(rundung, "0.00") & " EUR als Rundungsbetrag (BT-114)."
+    If Abs(rundung) > 0.01 * (letzte - 1) Then
+        Protokoll "Warnung", "Rundungsdifferenz " & Format$(rundung, "0.00") & " EUR ist größer als erwartet. Bitte Positionen prüfen."
+    End If
+End Sub
+
+' Kaufmännisch auf 4 Stellen runden (Nettopreis)
+Private Function Runden4(ByVal x As Double) As Currency
+    Runden4 = Sgn(x) * Int(Abs(x) * 10000 + 0.5) / 10000
+End Function
 
 ' Innergemeinschaftliche Lieferung (BR-IC-12): Lieferland ist Pflicht. Ohne
 ' eigenen Lieferort ("Wir lieferten an") gilt die Anschrift des Empfängers.

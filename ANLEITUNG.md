@@ -1,4 +1,4 @@
-# PDF2E 1.10.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.11.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -76,6 +76,11 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 **Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
+
+## Update auf 1.11.0 (Rückware, Bruttobeträge)
+
+1. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
+2. Sonst nichts. Das neue Feld **Rundungsbetrag** hängt das Programm beim ersten Einlesen unten im Blatt „Rechnung“ an.
 
 ## Update auf 1.10.0 (G5-Zentralregulierung)
 
@@ -219,6 +224,7 @@ Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, 
 | 2604264 | Groh & Holzner, Meran (IT), innergemeinschaftlich | nur Leergutrückgabe | −1.810,70 | −1.810,70, ohne MwSt |
 | 2604307 | PART Trading, Hamburg | 4 + EURO-Palette (ohne Hl., mit *) | 0,00 | 15.598,52 |
 | 2604304 | SAGASSER Fachmarkt, Lieferort Ebermannstadt | 4 + Skonto 3 % (−8,99) | 34,20 | 386,70, SEPA-Lastschrift |
+| 2603475 | J & J Festbedarf, Minus-Rechnung | 9 × Rückware | −440,50 (brutto) | −772,50, enthaltene MwSt, Rundungsbetrag +0,01 |
 
 Seit 1.5.0 steht Pfand getrennt nach Lieferung und Rücknahme in der Rechnung. Das Programm leitet beide Mengen aus dem Leergutkonto ab (Lieferung − Rücknahme = Differenz, alter Saldo + Differenz = neuer Saldo). Gelingt das nicht eindeutig, bleibt es bei der Differenz mit einer Warnung im Protokoll.
 
@@ -238,6 +244,14 @@ Steht auf der Rechnung „Steuerfreie innergemeinschaftliche Lieferung“, setzt
 
 Findet PDF2E weder eine MwSt-Zeile noch einen Hinweis auf Steuerbefreiung, steht das im Protokoll. USt-Satz und Kategorie müssen dann im Blatt „Positionen“ von Hand eingetragen werden.
 
+## Rückware und Bruttobeträge (ab 1.11.0)
+
+**Rückware:** Positionen mit negativem Betrag (`5 Bernstein Radler 0,5 / P 5  4  80  14,000  56,00-` mit der Zeile `** Rückware **` darunter) bekommen eine negative Menge. Die Zeilen unter „Leergutrückgabe:“ im Positionsteil (nur Mengen) werden ohne Meldung übergangen, das Pfand steht im LEERGUT-KONTO.
+
+**Bruttobeträge:** Steht unter dem Rechnungsbetrag `ENTHALTENE MWSt. 19,00 % (aus 772,50-) 123,34-` statt `+ 19,00 % MwSt (auf …)`, sind alle Preise, das Pfand und die Summen brutto. Die E-Rechnung verlangt Nettopreise. PDF2E rechnet deshalb jeden Preis auf 4 Nachkommastellen netto um und setzt den Betrag auf Menge × Nettopreis. Weil jede Zeile für sich gerundet wird, weicht die Summe um wenige Cent vom PDF ab (RE 2603475: netto −649,17 statt −649,16). Diese Differenz steht im Feld **Rundungsbetrag** und geht als BT-114 in die E-Rechnung. Der Zahlbetrag (BT-115) stimmt damit genau mit dem PDF überein. Die Prüfung vergleicht Warenwert und Pfand brutto und lässt bei Netto und MwSt bis zu 1 Cent je Position Abweichung zu (Hinweis im Protokoll). Der Rechnungsbetrag muss genau stimmen. Bruttobeträge mit mehreren MwSt-Sätzen werden nicht unterstützt.
+
+Den Summenblock `MINUS-RECHNUNGSBETRAG incl. 440,50- Pfand) EUR 772,50-` liest PDF2E für Pfand und Rechnungsbetrag. Die Rechnung bleibt Rechnungsart 380 mit negativen Beträgen.
+
 ## Skonto und SEPA-Lastschrift (ab 1.8.0)
 
 **Skonto/Nachlass unter dem Warenwert:** Eine Zeile wie `Skonto  Gesamtes Vergütung  299,75 EU  3,00  8,99-` zwischen WARENWERT und NETTOWERT wird als Position vom Typ „Nachlass“ übernommen (Bezeichnung „Skonto 3,00 % auf 299,75 EUR“). In der E-Rechnung wird daraus ein Abschlag auf Belegebene (BG-20) mit dem USt-Satz der Rechnung, wie bei den Aktionen. Das Pfand bleibt unberührt. Der Abgleich „Warenwert“ nutzt dann den NETTOWERT aus dem PDF. Stimmen Prozent × Basis oder die Basis mit dem Warenwert nicht überein, steht eine Warnung im Protokoll.
@@ -246,6 +260,7 @@ Findet PDF2E weder eine MwSt-Zeile noch einen Hinweis auf Steuerbefreiung, steht
 
 ## Noch nicht getestet
 
+- 1.11.0: Rückware und Bruttobeträge sind nur mit der Linux-Ausgabe von pdftotext (RE 2603475) geprüft und noch nicht in Excel kompiliert. `Totals.RoundingAmount` ist aus der Typbibliothek `SmartTools.Invoicing.tlb` gelesen, aber noch nicht mit Smart Tools ausprobiert.
 - 1.8.0: Skonto und SEPA-Lastschrift sind nur mit der Linux-Ausgabe von pdftotext geprüft und noch nicht in Excel kompiliert. Die Namen in der Smart-Tools-Bibliothek (`PaymentMeansCode_SEPA_direct_debit`, `Payment.DirectDebit.MandateReferenceId`, `.CreditorId`) sind aus der installierten `SmartTools.Invoicing.dll` gelesen.
 
 - Die neue Modulaufteilung (1.6.0) ist noch nicht in Excel kompiliert worden. Die Logik ist unverändert gegenüber 1.5.0, die am 04.11.2026 mit RE 2603587 eine gültige E-Rechnung erzeugt hat.

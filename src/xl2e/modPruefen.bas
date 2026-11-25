@@ -9,6 +9,7 @@ Private mFehler As Long
 Public Function RechnungPruefen() As Boolean
     Dim ws As Worksheet, z As Long, letzte As Long
     Dim ware As Currency, pfand As Currency, typ As String, erwartet As Currency
+    Dim wareB As Currency, pfandB As Currency, brutto As Currency, toleranz As Currency
 
     Application.Calculate
     mFehler = 0
@@ -92,14 +93,30 @@ Public Function RechnungPruefen() As Boolean
             End If
         End If
         If typ = "Pfand" Then pfand = pfand + ws.Cells(z, SP_BETRAG).Value Else ware = ware + ws.Cells(z, SP_BETRAG).Value
+        ' Bruttobeträge: Netto zurückgerechnet, für den Abgleich mit den Bruttowerten laut Rechnung
+        If IsNumeric(ws.Cells(z, SP_USTSATZ).Value) Then
+            brutto = RundenKfm(CCur(ws.Cells(z, SP_BETRAG).Value) * (1 + CCur(ws.Cells(z, SP_USTSATZ).Value) / 100))
+            If typ = "Pfand" Then pfandB = pfandB + brutto Else wareB = wareB + brutto
+        End If
     Next z
 
     ' Summenabgleich mit den Werten aus der Quellrechnung (Felder f_PDF_*)
-    Abgleich "Warenwert (Ware - Nachlässe)", ware, Feld("f_PDF_Warenwert").Value
-    Abgleich "Pfand", pfand, Feld("f_PDF_Pfand").Value
-    Abgleich "Nettosumme", Feld("f_Netto").Value, Feld("f_PDF_Netto").Value
-    Abgleich "MwSt", Feld("f_MwSt").Value, Feld("f_PDF_MwSt").Value
-    Abgleich "Rechnungsbetrag", Feld("f_Brutto").Value, Feld("f_PDF_Brutto").Value
+    ' Bei Bruttobeträgen ("ENTHALTENE MWSt.") sind Warenwert und Pfand laut Rechnung
+    ' brutto; je Position darf die Umrechnung um bis zu 1 Cent abweichen. Der
+    ' Rechnungsbetrag muss mit Rundungsbetrag (BT-114) genau stimmen.
+    If BruttoBetraege() Then
+        toleranz = 0.01 * (letzte - 1)
+        Abgleich "Warenwert brutto (Ware - Nachlässe)", wareB, Feld("f_PDF_Warenwert").Value, toleranz
+        Abgleich "Pfand brutto", pfandB, Feld("f_PDF_Pfand").Value, toleranz
+        Abgleich "Nettosumme", Feld("f_Netto").Value, Feld("f_PDF_Netto").Value, toleranz
+        Abgleich "MwSt", Feld("f_MwSt").Value, Feld("f_PDF_MwSt").Value, toleranz
+    Else
+        Abgleich "Warenwert (Ware - Nachlässe)", ware, Feld("f_PDF_Warenwert").Value
+        Abgleich "Pfand", pfand, Feld("f_PDF_Pfand").Value
+        Abgleich "Nettosumme", Feld("f_Netto").Value, Feld("f_PDF_Netto").Value
+        Abgleich "MwSt", Feld("f_MwSt").Value, Feld("f_PDF_MwSt").Value
+    End If
+    Abgleich "Rechnungsbetrag", Zahlbetrag(), Feld("f_PDF_Brutto").Value
 
     RechnungPruefen = (mFehler = 0)
     Feld("f_Status").Value = IIf(mFehler = 0, "OK - bereit zum Erzeugen", mFehler & " Fehler - siehe Protokoll")
@@ -181,10 +198,20 @@ Private Function GtinGueltig(ByVal s As String) As Boolean
     GtinGueltig = ((10 - summe Mod 10) Mod 10 = CLng(Right$(s, 1)))
 End Function
 
-Private Sub Abgleich(ByVal was As String, ByVal berechnet As Variant, ByVal laut As Variant)
+' toleranz > 0 (nur bei Bruttobeträgen): kleinere Abweichungen sind Rundung, nur Info
+Private Sub Abgleich(ByVal was As String, ByVal berechnet As Variant, ByVal laut As Variant, _
+                     Optional ByVal toleranz As Currency = 0)
+    Dim diff As Currency
     If Len(CStr(laut)) = 0 Then
         Fehler was & ": Wert aus der Rechnung fehlt."
-    ElseIf RundenKfm(CCur(berechnet)) <> RundenKfm(CCur(laut)) Then
+        Exit Sub
+    End If
+    diff = Abs(RundenKfm(CCur(berechnet)) - RundenKfm(CCur(laut)))
+    If diff = 0 Then Exit Sub
+    If diff <= toleranz Then
+        Protokoll "Info", was & ": berechnet " & Format$(berechnet, "#,##0.00") & ", laut Rechnung " & Format$(laut, "#,##0.00") & _
+                          " (Rundung aus der Umrechnung brutto in netto)"
+    Else
         Fehler was & ": berechnet " & Format$(berechnet, "#,##0.00") & ", laut Rechnung " & Format$(laut, "#,##0.00")
     End If
 End Sub

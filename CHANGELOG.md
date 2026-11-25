@@ -3,6 +3,16 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.0 und XL2E 1.2.1 – 25.11.2026
+
+- **Neue Funktion:** Minus-Rechnung mit Rückware und Bruttobeträgen (RE 2603475, J & J Festbedarf): Summenblock `MINUS-RECHNUNGSBETRAG incl. … Pfand) EUR …` und `ENTHALTENE MWSt. … (aus …)` werden gelesen. Bisher brach die Prüfung mit 26 Fehlern ab (kein MwSt-Satz, Menge × Preis bei jeder Rückware-Zeile, Pfand/Netto/Rechnungsbetrag fehlten).
+  - Rückware (negativer Betrag) bekommt eine negative Menge.
+  - Bruttobeträge: Preise auf 4 Stellen netto umgerechnet, Betrag = Menge × Nettopreis; Rundungsdifferenz als Rundungsbetrag BT-114 (neues Feld `f_Rundung`, wird in älteren Mappen angehängt), Zahlbetrag BT-115 = Rechnungsbetrag laut PDF.
+  - Prüfung bei Bruttobeträgen: Warenwert und Pfand brutto, Netto und MwSt mit Toleranz 1 Cent je Position.
+  - Zeilen unter „Leergutrückgabe:“ im Positionsteil erscheinen nicht mehr als „Nicht übernommen“.
+- **Fehlerbehebung:** Der Rechnungsbetrag im Verarbeitungsprotokoll (Backend) wurde mit `Val()` gelesen und verlor bei deutschen Ländereinstellungen vermutlich die Nachkommastellen. Jetzt Zahlbetrag als Currency, ebenso `{Betrag}` in der E-Mail.
+- Testfall `tests/pdftotext/Rechnung_2603475.txt`. XL2E 1.2.1: dieselben gemeinsamen Module.
+
 ## PDF2E 1.10.0 und XL2E 1.2.0 – 25.11.2026
 
 - **Neue Funktion:** Vorgaben der G5-Zentralregulierung (SGH Service GmbH, Merkblatt 11/2026 und E-Rechnung-Guideline EN 16931 V1.1, gültig ab 01.12.2026). Gilt nur für Empfänger mit `G5` in der Spalte „Vorgaben“ (von Hand eintragen), REWE, EDEKA und alle anderen Empfänger bleiben unverändert.

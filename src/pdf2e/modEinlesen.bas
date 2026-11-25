@@ -18,7 +18,7 @@ Private Const FELDER_LEEREN As String = _
     "f_Quelldatei,f_RechNr,f_RechDatum,f_LSNr,f_LSDatum,f_KundenNr,f_KGLN,f_KName,f_KStrasse,f_KPLZ,f_KOrt," & _
     "f_KEmail,f_KUstId,f_LName,f_LZeile2,f_LPLZ,f_LOrt,f_LGLN,f_Marktnr,f_Kondition,f_Konto," & _
     "f_PDF_Warenwert,f_PDF_Pfand,f_PDF_Netto,f_PDF_MwSt,f_PDF_Brutto,f_Status,f_Ausgabedatei," & _
-    "f_Mandat,f_GlaeubigerId,f_Einzug"
+    "f_Mandat,f_GlaeubigerId,f_Einzug,f_Rundung"
 
 Public Sub RechnungEinlesen()
     Dim pfad As String
@@ -31,6 +31,7 @@ Public Sub RechnungEinlesen()
     Application.Calculation = xlCalculationManual
 
     LastschriftFelderSicherstellen
+    RundungFeldSicherstellen
     FeldnamenPruefen
     ArbeitsblaetterLeeren
     Feld("f_Quelldatei").Value = pfad
@@ -116,6 +117,22 @@ Private Sub LastschriftFelderSicherstellen()
             ThisWorkbook.Names.Add name:=CStr(namen(i)), RefersTo:="='" & ws.name & "'!$B$" & z
         End If
     Next i
+End Sub
+
+' Feld für den Rundungsbetrag (BT-114, ab PDF2E 1.11.0). Fehlt es in einer älteren
+' Mappe, wird es unten im Blatt "Rechnung" angehängt.
+Private Sub RundungFeldSicherstellen()
+    Dim ws As Worksheet, z As Long
+    If NameVorhanden("f_Rundung") Then Exit Sub
+    Set ws = ThisWorkbook.Worksheets(BLATT_RECHNUNG)
+    z = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 2
+    ws.Cells(z, 1).Value = "Rundungsbetrag"
+    ws.Cells(z, 2).Interior.Color = RGB(238, 238, 238)
+    ws.Cells(z, 2).NumberFormat = "#,##0.00"
+    ws.Cells(z, 3).Value = "BT-114, nur bei Bruttobeträgen (ENTHALTENE MWSt.)"
+    ws.Cells(z, 3).Font.Italic = True
+    ws.Cells(z, 3).Font.Color = RGB(119, 119, 119)
+    ThisWorkbook.Names.Add name:="f_Rundung", RefersTo:="='" & ws.name & "'!$B$" & z
 End Sub
 
 ' Jeder Feldname (f_...) muss auf eine eigene Zelle zeigen. Zeigen zwei Namen auf
