@@ -3,6 +3,10 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.1 und XL2E 1.2.2 – 25.11.2026
+
+- **Fehlerbehebung:** Nach dem Import neuer Module in eine geöffnete ältere Mappe (ohne Neustart) brach „PDF einlesen“ mit „Element in dieser Auflistung nicht gefunden“ ab (DAO-Fehler 3265). Die Migration des Backends auf Schema-Version 2 (Spalte ZRNummer) läuft nur beim Öffnen der Mappe; beim Einlesen fehlte die Spalte. Jetzt werden Schema-Version und neue Einstellungen auch vor jedem Laden der Stammdaten geprüft und bei Bedarf nachgeholt.
+
 ## PDF2E 1.11.0 und XL2E 1.2.1 – 25.11.2026
 
 - **Neue Funktion:** Minus-Rechnung mit Rückware und Bruttobeträgen (RE 2603475, J & J Festbedarf): Summenblock `MINUS-RECHNUNGSBETRAG incl. … Pfand) EUR …` und `ENTHALTENE MWSt. … (aus …)` werden gelesen. Bisher brach die Prüfung mit 26 Fehlern ab (kein MwSt-Satz, Menge × Preis bei jeder Rückware-Zeile, Pfand/Netto/Rechnungsbetrag fehlten).

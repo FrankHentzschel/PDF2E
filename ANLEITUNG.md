@@ -1,4 +1,4 @@
-# PDF2E 1.11.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.11.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -77,9 +77,9 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
 
-## Update auf 1.11.0 (Rückware, Bruttobeträge)
+## Update auf 1.11.x (Rückware, Bruttobeträge)
 
-1. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
+1. VbaSync „Alle importieren“ aus `vba`. Kompilieren. Danach die Mappe speichern, schließen und neu öffnen (bzw. über die Starter-Mappe starten), damit der Programmstart läuft: Backend-Umstellung, neue Einstellungen, Versionsnummer im Startblatt. Ab 1.11.1 holt „PDF einlesen“ die Backend-Umstellung notfalls selbst nach.
 2. Sonst nichts. Das neue Feld **Rundungsbetrag** hängt das Programm beim ersten Einlesen unten im Blatt „Rechnung“ an.
 
 ## Update auf 1.10.0 (G5-Zentralregulierung)

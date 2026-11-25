@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.11.0"
+Public Const TOOL_VERSION As String = "1.11.1"
 Public Const TOOL_STAND As String = "25.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -56,6 +56,7 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.11.1", "25.11.2026", "Fehlerbehebung", "Einlesen nach Import neuer Module ohne Neustart der Mappe brach mit „Element in dieser Auflistung nicht gefunden“ ab (Backend noch auf altem Schema, Spalte ZRNummer fehlte). Schema-Prüfung/Migration und neue Einstellungen jetzt auch vor jedem Laden der Stammdaten")
     c.Add Array("1.11.0", "25.11.2026", "Neue Funktion", "Minus-Rechnung mit Rückware und Bruttobeträgen (ENTHALTENE MWSt., RE 2603475): Summenblock MINUS-RECHNUNGSBETRAG erkannt, Rückware mit negativer Menge, Preise und Pfand in netto umgerechnet, Rundungsdifferenz als Rundungsbetrag (BT-114); Leergutrückgabe-Zeilen ohne Meldung; Rechnungsbetrag im Verarbeitungsprotokoll mit Cent")
     c.Add Array("1.10.0", "25.11.2026", "Neue Funktion", "G5-Zentralregulierung (SGH Service): Vorgabe G5 je Empfänger, ZR-Nummer des Händlers als Käuferreferenz (BT-10, neue Spalte ZR-Nummer im Blatt Empfaenger), G5-Lieferantennummer der Brauerei als Verkäuferkennung (BT-29, Einstellung G5 Lieferantennummer), E-Mail an die zentrale Adresse (Einstellung G5 E-Mail), Prüfung beider Nummern; Backend Schema-Version 2")
     c.Add Array("1.9.1", "23.11.2026", "Fehlerbehebung", "Positionen ohne Hl./Fl.-Angabe und mit * am Zeilenende (z. B. EURO-Palette) wurden nicht übernommen; Ort ohne Zusatz (Deutschland)")
