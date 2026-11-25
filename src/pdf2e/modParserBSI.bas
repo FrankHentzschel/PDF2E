@@ -304,12 +304,17 @@ End Sub
 
 ' Rechnung mit Bruttobeträgen ("ENTHALTENE MWSt."): Die E-Rechnung verlangt
 ' Nettopreise. Preise werden auf 4 Stellen netto umgerechnet, Beträge = Menge x
-' Nettopreis. Die Rundungsdifferenz zum Rechnungsbetrag laut PDF (meist wenige
-' Cent) wird als Rundungsbetrag (BT-114, Feld f_Rundung) ausgewiesen.
+' Nettopreis. Damit Nettosumme, MwSt und Zahlbetrag genau der Rechnung
+' entsprechen (Vorgabe Frank 25.11.2026), wird die Rundungsdifferenz zur
+' Nettosumme laut Rechnung (Rechnungsbetrag - enthaltene MwSt) centweise auf die
+' Positionen mit dem größten Rundungsrest verteilt; deren Nettopreis wird passend
+' neu berechnet. Nur was so nicht aufgeht (selten), wird Rundungsbetrag (BT-114).
 ' Mit tests/parser_test.py (brutto_in_netto) abgleichen.
 Private Sub BruttoInNetto(saetze As Collection, ByVal mwstPdf As Currency)
-    Dim ws As Worksheet, z As Long, letzte As Long, faktor As Double
+    Dim ws As Worksheet, z As Long, letzte As Long, faktor As Double, i As Long, beste As Long
     Dim preis As Currency, betrag As Currency, summe As Currency, mwst As Currency, rundung As Currency
+    Dim ziel As Currency, schritt As Currency, n As Long, verteilt As Long, menge As Currency
+    Dim rest() As Double, gesperrt() As Boolean
 
     If saetze.Count <> 1 Then
         Protokoll "Fehler", "Bruttobeträge mit mehreren MwSt-Sätzen werden nicht unterstützt. Bitte Preise und Beträge im Blatt Positionen netto eintragen."
@@ -318,13 +323,18 @@ Private Sub BruttoInNetto(saetze As Collection, ByVal mwstPdf As Currency)
     faktor = 1 + saetze(1) / 100
     Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
     letzte = ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+    If letzte < 2 Then Exit Sub
+    ReDim rest(2 To letzte)
+    ReDim gesperrt(2 To letzte)
     For z = 2 To letzte
         preis = Runden4(CDbl(ws.Cells(z, SP_PREIS).Value) / faktor)
         If ws.Cells(z, SP_TYP).Value = "Nachlass" Then
             betrag = RundenKfm(CDbl(ws.Cells(z, SP_BETRAG).Value) / faktor)
+            gesperrt(z) = True
         Else
             betrag = RundenKfm(CCur(ws.Cells(z, SP_MENGE).Value) * preis)
         End If
+        rest(z) = CDbl(ws.Cells(z, SP_BETRAG).Value) / faktor - CDbl(betrag)   ' genauer Nettobetrag - gerundeter
         ' Nettopreis mit 4 Stellen: als Double schreiben und 4 Stellen anzeigen. Ein
         ' Currency-Wert bzw. das Format mit 2 Stellen führte in Excel zu 11,76 statt
         ' 11,7647 und damit zu Fehlern "Menge x Preis" (Test 1.11.1).
@@ -334,14 +344,47 @@ Private Sub BruttoInNetto(saetze As Collection, ByVal mwstPdf As Currency)
         summe = summe + betrag
     Next z
 
-    mwst = RundenKfm(summe * saetze(1) / 100)
     If Len(CStr(Feld("f_PDF_Brutto").Value)) > 0 Then
+        ziel = CCur(Feld("f_PDF_Brutto").Value) - mwstPdf
+        Feld("f_PDF_Netto").Value = ziel
+        ' Differenz centweise verteilen: jeweils auf die Position, deren Rundungsrest
+        ' am weitesten in die nötige Richtung zeigt und deren Preis sich passend setzen lässt
+        schritt = IIf(ziel > summe, 0.01, -0.01)
+        n = CLng(Abs(ziel - summe) * 100)
+        Do While verteilt < n
+            beste = 0
+            For i = 2 To letzte
+                If Not gesperrt(i) Then
+                    If beste = 0 Then
+                        beste = i
+                    ElseIf rest(i) * Sgn(schritt) > rest(beste) * Sgn(schritt) Then
+                        beste = i
+                    End If
+                End If
+            Next i
+            If beste = 0 Then Exit Do
+            gesperrt(beste) = True
+            menge = CCur(ws.Cells(beste, SP_MENGE).Value)
+            If menge <> 0 Then
+                betrag = CCur(ws.Cells(beste, SP_BETRAG).Value) + schritt
+                preis = Runden4(CDbl(betrag) / CDbl(menge))
+                If RundenKfm(menge * preis) = betrag Then
+                    ws.Cells(beste, SP_PREIS).Value = CDbl(preis)
+                    ws.Cells(beste, SP_BETRAG).Value = betrag
+                    summe = summe + schritt
+                    verteilt = verteilt + 1
+                End If
+            End If
+        Loop
+        mwst = RundenKfm(summe * saetze(1) / 100)
         rundung = CCur(Feld("f_PDF_Brutto").Value) - (summe + mwst)
-        Feld("f_PDF_Netto").Value = CCur(Feld("f_PDF_Brutto").Value) - mwstPdf
     End If
     Feld("f_Rundung").Value = rundung
-    Protokoll "Info", "Rechnung mit Bruttobeträgen (enthaltene MwSt " & saetze(1) & " %): Preise, Pfand und Nachlässe in netto umgerechnet. " & _
-                      "Rundungsdifferenz " & Format$(rundung, "0.00") & " EUR als Rundungsbetrag (BT-114)."
+    Protokoll "Info", "Rechnung mit Bruttobeträgen (enthaltene MwSt " & saetze(1) & " %): Preise, Pfand und Nachlässe in netto umgerechnet" & _
+                      IIf(verteilt > 0, ", Rundungsdifferenz " & Format$(verteilt * schritt, "0.00") & " EUR auf " & verteilt & " Position(en) verteilt", "") & "."
+    If rundung <> 0 Then
+        Protokoll "Info", "Restliche Rundungsdifferenz " & Format$(rundung, "0.00") & " EUR als Rundungsbetrag (BT-114)."
+    End If
     If Abs(rundung) > 0.01 * (letzte - 1) Then
         Protokoll "Warnung", "Rundungsdifferenz " & Format$(rundung, "0.00") & " EUR ist größer als erwartet. Bitte Positionen prüfen."
     End If

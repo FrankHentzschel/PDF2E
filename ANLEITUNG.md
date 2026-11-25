@@ -1,4 +1,4 @@
-# PDF2E 1.11.3 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.11.4 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -224,8 +224,8 @@ Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, 
 | 2604264 | Groh & Holzner, Meran (IT), innergemeinschaftlich | nur Leergutrückgabe | −1.810,70 | −1.810,70, ohne MwSt |
 | 2604307 | PART Trading, Hamburg | 4 + EURO-Palette (ohne Hl., mit *) | 0,00 | 15.598,52 |
 | 2604304 | SAGASSER Fachmarkt, Lieferort Ebermannstadt | 4 + Skonto 3 % (−8,99) | 34,20 | 386,70, SEPA-Lastschrift |
-| 2603531 | Barverkauf ab Rampe (Telefonnummer im Anschriftenblock) | 4 | 43,40 (brutto) | 244,40, enthaltene MwSt, Rundungsbetrag −0,01 |
-| 2603475 | J & J Festbedarf, Minus-Rechnung | 9 × Rückware | −440,50 (brutto) | −772,50, enthaltene MwSt, Rundungsbetrag +0,01 |
+| 2603531 | Barverkauf ab Rampe (Telefonnummer im Anschriftenblock) | 4 | 43,40 (brutto) | 244,40, enthaltene MwSt |
+| 2603475 | J & J Festbedarf, Minus-Rechnung | 9 × Rückware | −440,50 (brutto) | −772,50, enthaltene MwSt |
 
 Seit 1.5.0 steht Pfand getrennt nach Lieferung und Rücknahme in der Rechnung. Das Programm leitet beide Mengen aus dem Leergutkonto ab (Lieferung − Rücknahme = Differenz, alter Saldo + Differenz = neuer Saldo). Gelingt das nicht eindeutig, bleibt es bei der Differenz mit einer Warnung im Protokoll.
 
@@ -249,7 +249,7 @@ Findet PDF2E weder eine MwSt-Zeile noch einen Hinweis auf Steuerbefreiung, steht
 
 **Rückware:** Positionen mit negativem Betrag (`5 Bernstein Radler 0,5 / P 5  4  80  14,000  56,00-` mit der Zeile `** Rückware **` darunter) bekommen eine negative Menge. Die Zeilen unter „Leergutrückgabe:“ im Positionsteil (nur Mengen) werden ohne Meldung übergangen, das Pfand steht im LEERGUT-KONTO.
 
-**Bruttobeträge:** Steht unter dem Rechnungsbetrag `ENTHALTENE MWSt. 19,00 % (aus 772,50-) 123,34-` statt `+ 19,00 % MwSt (auf …)`, sind alle Preise, das Pfand und die Summen brutto. Die E-Rechnung verlangt Nettopreise. PDF2E rechnet deshalb jeden Preis auf 4 Nachkommastellen netto um und setzt den Betrag auf Menge × Nettopreis. Weil jede Zeile für sich gerundet wird, weicht die Summe um wenige Cent vom PDF ab (RE 2603475: netto −649,17 statt −649,16). Diese Differenz steht im Feld **Rundungsbetrag** und geht als BT-114 in die E-Rechnung. Der Zahlbetrag (BT-115) stimmt damit genau mit dem PDF überein. Die Prüfung vergleicht Warenwert und Pfand brutto und lässt bei Netto und MwSt bis zu 1 Cent je Position Abweichung zu (Hinweis im Protokoll). Der Rechnungsbetrag muss genau stimmen. Bruttobeträge mit mehreren MwSt-Sätzen werden nicht unterstützt.
+**Bruttobeträge:** Steht unter dem Rechnungsbetrag `ENTHALTENE MWSt. 19,00 % (aus 772,50-) 123,34-` statt `+ 19,00 % MwSt (auf …)`, sind alle Preise, das Pfand und die Summen brutto. Die E-Rechnung verlangt Nettopreise. PDF2E rechnet deshalb jeden Preis auf 4 Nachkommastellen netto um und setzt den Betrag auf Menge × Nettopreis. Weil jede Zeile für sich gerundet wird, weicht die Summe um wenige Cent von der Nettosumme der Rechnung (Rechnungsbetrag − enthaltene MwSt) ab (RE 2603475: −649,17 statt −649,16). Ab 1.11.4 verteilt PDF2E diese Cents auf die Positionen mit dem größten Rundungsrest und setzt deren Nettopreis passend (z. B. Pfand Gourmet 2,6000 statt 2,6050). Nettosumme, MwSt und Zahlbetrag der E-Rechnung entsprechen damit genau der Rechnung. Nur wenn sich ein Cent so nicht verteilen lässt, steht er im Feld **Rundungsbetrag** und geht als BT-114 in die E-Rechnung. Die Prüfung vergleicht Warenwert und Pfand brutto mit bis zu 1 Cent Toleranz je Position (Hinweis im Protokoll). Der Rechnungsbetrag muss genau stimmen. Bruttobeträge mit mehreren MwSt-Sätzen werden nicht unterstützt.
 
 Den Summenblock `MINUS-RECHNUNGSBETRAG incl. 440,50- Pfand) EUR 772,50-` liest PDF2E für Pfand und Rechnungsbetrag. Die Rechnung bleibt Rechnungsart 380 mit negativen Beträgen.
 

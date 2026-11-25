@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.4 – 25.11.2026
+
+- **Änderung (Vorgabe Frank):** Bei Bruttobeträgen sollen die Beträge der E-Rechnung denen der Rechnung entsprechen. Die Rundungsdifferenz zur Nettosumme laut Rechnung (Rechnungsbetrag − enthaltene MwSt) wird jetzt centweise auf die Positionen mit dem größten Rundungsrest verteilt, deren Nettopreis passend neu berechnet. Nettosumme, MwSt und Zahlbetrag stimmen damit genau (RE 2603475: −649,16 / −123,34 / −772,50; RE 2603531: 205,38 / 39,02 / 244,40). Der Rundungsbetrag BT-114 bleibt nur als Rückfall, wenn sich ein Cent nicht verteilen lässt.
+- XL2E unverändert.
+
 ## PDF2E 1.11.3 – 25.11.2026
 
 - **Fehlerbehebung:** RE 2603531 (Barverkauf ab Rampe, Bruttobeträge, positiver Betrag): Die Summenzeile `RECHNUNGSBETRAG (incl. 43,40 Pfand) EUR 244,40` mit Klammer wurde nicht erkannt; Pfand, Nettosumme und Rechnungsbetrag fehlten.

@@ -264,16 +264,39 @@ def kfm(x, stellen=2):
 
 
 def brutto_in_netto(r):
-    """Nachbau von BruttoInNetto (modParserBSI): Nettopreis 4 Stellen, Betrag = Menge x Preis."""
+    """Nachbau von BruttoInNetto (modParserBSI): Nettopreis 4 Stellen, Betrag = Menge x Preis,
+    Differenz zur Nettosumme laut Rechnung centweise auf Positionen mit dem größten Rundungsrest."""
     faktor = 1 + r["satz"] / 100
-    netto = []
+    netto, rest, gesperrt = [], [], []
     for typ, menge, preis, betrag in r["zeilen"]:
         p = kfm(preis / faktor, 4)
-        netto.append((typ, menge, p, kfm(menge * p)))
+        b = kfm(menge * p)
+        netto.append([typ, menge, p, b])
+        rest.append(betrag / faktor - b)
+        gesperrt.append(False)
     summe = round(sum(z[3] for z in netto), 2)
+    verteilt = 0
+    if "pdf_brutto" in r:
+        ziel = round(r["pdf_brutto"] - r["mwst"], 2)
+        schritt = 0.01 if ziel > summe else -0.01
+        n = round(abs(ziel - summe) * 100)
+        while verteilt < n:
+            kand = [i for i in range(len(netto)) if not gesperrt[i]]
+            if not kand:
+                break
+            i = max(kand, key=lambda k: rest[k] * (1 if schritt > 0 else -1))
+            gesperrt[i] = True
+            menge = netto[i][1]
+            if menge:
+                b = round(netto[i][3] + schritt, 2)
+                p = kfm(b / menge, 4)
+                if abs(kfm(menge * p) - b) < 0.005:
+                    netto[i][2], netto[i][3] = p, b
+                    summe = round(summe + schritt, 2)
+                    verteilt += 1
     mwst = kfm(summe * r["satz"] / 100)
     rundung = round(r.get("pdf_brutto", summe + mwst) - (summe + mwst), 2)
-    return netto, summe, mwst, rundung
+    return [tuple(z) for z in netto], summe, mwst, rundung
 
 
 def pruefe(pfad):
@@ -326,13 +349,14 @@ def pruefe_brutto(pfad, r):
     checks = [
         ("Warenwert brutto", wareB, r.get("pdf_warenwert"), tol),
         ("Pfand brutto", pfandB, r.get("pdf_pfand"), tol),
-        ("Netto", summe, None if r.get("pdf_brutto") is None else r["pdf_brutto"] - r["mwst"], tol),
-        ("MwSt", mwst, r["mwst"], tol),
+        ("Netto", summe, None if r.get("pdf_brutto") is None else r["pdf_brutto"] - r["mwst"], 0.005),
+        ("MwSt", mwst, r["mwst"], 0.005),
         ("Zahlbetrag", summe + mwst + rundung, r.get("pdf_brutto"), 0.005),
-        ("Rundung", abs(rundung), 0.0, tol),
+        ("Rundung", abs(rundung), 0.0, 0.005),
     ]
     fehler = [f"{n}: berechnet {a:.2f}, PDF {b}" for n, a, b, t in checks if b is None or abs(a - b) > t]
     fehler += [f"Zeile Menge x Preis: {z}" for z in r["zeilenfehler"]]
+    fehler += [f"Menge x Nettopreis <> Betrag: {z}" for z in netto if abs(kfm(z[1] * z[2]) - z[3]) > 0.005]
     fehler += r["warnungen"]
     print(("OK    " if not fehler else "FEHLER") + "  " + os.path.basename(pfad))
     print(f"        Bruttobeträge ({r['satz']:.0f} %): netto {summe:.2f}, MwSt {mwst:.2f}, Rundungsbetrag (BT-114) {rundung:+.2f}")
