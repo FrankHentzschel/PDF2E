@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.11.6"
+Public Const TOOL_VERSION As String = "1.11.7"
 Public Const TOOL_STAND As String = "25.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -56,6 +56,7 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.11.7", "25.11.2026", "Fehlerbehebung", "Prüfung übernimmt Angaben, die nach dem Einlesen im Blatt Empfaenger nachgetragen wurden (USt-IdNr., E-Mail, Konto, Kondition), in leere Felder des Blatts Rechnung; bisher war neues Einlesen nötig")
     c.Add Array("1.11.6", "25.11.2026", "Fehlerbehebung", "RE 2604315 (Barverkauf): Position mit negativer Menge und * (59 Rabatt 1- 15,00-*) erkannt; bei Bruttobeträgen werden nur echte Rundungsdifferenzen (max. 1 Cent je Position) verteilt, größere Differenzen bleiben als Fehler sichtbar")
     c.Add Array("1.11.5", "25.11.2026", "Fehlerbehebung", "RE 2604314 (Italien): Hinweis „Steuerfreie Lieferung nach Italien ab Brauereihof“ und „UST - ID:“ erkannt (bisher nur „Steuerfreie innergemeinschaftliche Lieferung“ / „USt-ID:“); Kategorie K nur bei EU-Land, sonst klare Meldung")
     c.Add Array("1.11.4", "25.11.2026", "Fehlerbehebung", "Bruttobeträge: Rundungsdifferenz wird centweise auf Positionen verteilt, damit Nettosumme, MwSt und Zahlbetrag genau der Rechnung entsprechen; Rundungsbetrag BT-114 nur noch als Rückfall")

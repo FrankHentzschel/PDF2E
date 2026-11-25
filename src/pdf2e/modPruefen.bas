@@ -14,6 +14,7 @@ Public Function RechnungPruefen() As Boolean
     Application.Calculate
     mFehler = 0
     Protokoll "Prüfung", "---- Prüfung gestartet ----"
+    EmpfaengerNachtragen            ' z. B. USt-IdNr. erst nach dem Einlesen im Blatt Empfaenger eingetragen
 
     ' Pflichtangaben Rechnung
     Pflicht "f_RechNr", "Rechnungsnummer"

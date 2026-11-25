@@ -223,6 +223,24 @@ Private Sub VorgabenSetzen()
     PfandartikelAnlegen
 End Sub
 
+' Vor jeder Prüfung: Was der Anwender nach dem Einlesen im Blatt "Empfaenger"
+' nachgetragen hat (USt-IdNr., E-Mail, Konto, Kondition), in leere Felder des
+' Blatts "Rechnung" übernehmen. Von Hand im Blatt "Rechnung" Eingetragenes bleibt.
+Public Sub EmpfaengerNachtragen()
+    Dim wsE As Worksheet, z As Long
+    If Len(Trim$(CStr(Feld("f_KundenNr").Value))) = 0 Then Exit Sub
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
+    If z = 0 Then Exit Sub
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    If Len(Trim$(CStr(Feld("f_KUstId").Value))) = 0 And Len(Trim$(CStr(wsE.Cells(z, 4).Value))) > 0 Then
+        Feld("f_KUstId").Value = "'" & UStIdBereinigt(wsE.Cells(z, 4).Value)
+        Protokoll "Info", "USt-IdNr. aus dem Blatt 'Empfaenger' übernommen: " & UStIdBereinigt(wsE.Cells(z, 4).Value)
+    End If
+    If Len(Trim$(CStr(Feld("f_KEmail").Value))) = 0 And Len(Trim$(CStr(wsE.Cells(z, 3).Value))) > 0 Then Feld("f_KEmail").Value = wsE.Cells(z, 3).Value
+    If Len(Trim$(CStr(wsE.Cells(z, 5).Value))) > 0 And Len(Trim$(CStr(Feld("f_Konto").Value))) = 0 Then Feld("f_Konto").Value = wsE.Cells(z, 5).Value
+    If Len(Trim$(CStr(wsE.Cells(z, 6).Value))) > 0 And Len(Trim$(CStr(Feld("f_Kondition").Value))) = 0 Then Feld("f_Kondition").Value = wsE.Cells(z, 6).Value
+End Sub
+
 ' Neuen Rechnungsempfänger mit den aktuellen Vorgaben ins Blatt "Empfaenger"
 ' übernehmen, damit der Anwender nichts von Hand anlegen muss. Abweichende
 ' Vorgaben (Konto, Kondition, E-Mail) werden dort nur bei Bedarf eingetragen.

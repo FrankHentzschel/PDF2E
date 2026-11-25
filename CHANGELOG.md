@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.7 und XL2E 1.2.3 – 25.11.2026
+
+- **Fehlerbehebung:** Wurde nach dem Einlesen die USt-IdNr. (oder E-Mail, Konto, Kondition) im Blatt „Empfaenger“ nachgetragen, meldete „Prüfen“ weiter „REWE: USt-IdNr. fehlt“, weil die Prüfung das Blatt „Rechnung“ liest. Jetzt übernimmt „Prüfen“ solche Angaben in leere Felder des Blatts „Rechnung“. Von Hand im Blatt „Rechnung“ Eingetragenes bleibt unverändert.
+- XL2E 1.2.3: dieselben gemeinsamen Module.
+
 ## PDF2E 1.11.6 – 25.11.2026
 
 - **Fehlerbehebung:** RE 2604315 (Barverkauf, Kd. 10026): Die Position `59 Rabatt  1-  15,000  15,00-*` (negative Menge, `*` direkt am Betrag) wurde nicht übernommen; Warenwert 104,87 statt 90,00. Jetzt Position mit Menge −1.
