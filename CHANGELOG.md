@@ -3,6 +3,10 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.2 – 25.11.2026
+
+- **Fehlerbehebung:** Bei Bruttobeträgen (RE 2603475) stand der Nettopreis in Excel nur mit 2 Stellen im Blatt Positionen (11,76 statt 11,7647). Die Prüfung meldete deshalb „Menge x Preis“ bei 5 Zeilen. Der Preis wird jetzt als Double mit Zahlenformat `#,##0.0000` geschrieben. XL2E unverändert (nur `modParserBSI` und `modProdukt` geändert).
+
 ## PDF2E 1.11.1 und XL2E 1.2.2 – 25.11.2026
 
 - **Fehlerbehebung:** Nach dem Import neuer Module in eine geöffnete ältere Mappe (ohne Neustart) brach „PDF einlesen“ mit „Element in dieser Auflistung nicht gefunden“ ab (DAO-Fehler 3265). Die Migration des Backends auf Schema-Version 2 (Spalte ZRNummer) läuft nur beim Öffnen der Mappe; beim Einlesen fehlte die Spalte. Jetzt werden Schema-Version und neue Einstellungen auch vor jedem Laden der Stammdaten geprüft und bei Bedarf nachgeholt.

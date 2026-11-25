@@ -320,7 +320,11 @@ Private Sub BruttoInNetto(saetze As Collection, ByVal mwstPdf As Currency)
         Else
             betrag = RundenKfm(CCur(ws.Cells(z, SP_MENGE).Value) * preis)
         End If
-        ws.Cells(z, SP_PREIS).Value = preis
+        ' Nettopreis mit 4 Stellen: als Double schreiben und 4 Stellen anzeigen. Ein
+        ' Currency-Wert bzw. das Format mit 2 Stellen führte in Excel zu 11,76 statt
+        ' 11,7647 und damit zu Fehlern "Menge x Preis" (Test 1.11.1).
+        ws.Cells(z, SP_PREIS).NumberFormat = "#,##0.0000"
+        ws.Cells(z, SP_PREIS).Value = CDbl(preis)
         ws.Cells(z, SP_BETRAG).Value = betrag
         summe = summe + betrag
     Next z
