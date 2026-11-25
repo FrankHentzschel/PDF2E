@@ -14,7 +14,7 @@ import re
 import sys
 
 RE_LS = re.compile(r"^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
-RE_POS = re.compile(r"^\s*(\d+)\s+(.+?)\s+(\d+)\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+-?)(?:\s+\*)?\s*$")
+RE_POS = re.compile(r"^\s*(\d+)\s+(.+?)\s+(\d+-?)\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+-?)(?:\s*\*)?\s*$")
 RE_AKT = re.compile(r"^\s*Aktion\s+(.+?)\s+(\d+)\s+Ka/F\s+([\d.,]+)\s+([\d.,]+)-\s*$")
 RE_LG = re.compile(r"^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:(.*\S)\s+)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
 RE_WW = re.compile(r"WARENWERT:\s+([\d.,]+-?)")
@@ -224,7 +224,7 @@ def parse(text):
                 m = RE_POS.match(l)
                 if m:
                     menge, preis, betrag = zahl(m[3]), zahl(m[5]), zahl(m[6])
-                    if betrag < 0:
+                    if betrag < 0 and menge > 0:
                         menge = -menge          # Rückware
                     r["ware"] += betrag
                     r["zeilen"].append(("Ware", menge, preis, betrag))
@@ -280,6 +280,8 @@ def brutto_in_netto(r):
         ziel = round(r["pdf_brutto"] - r["mwst"], 2)
         schritt = 0.01 if ziel > summe else -0.01
         n = round(abs(ziel - summe) * 100)
+        if n > len(netto):
+            n = 0                       # keine Rundungsdifferenz, nicht verteilen
         while verteilt < n:
             kand = [i for i in range(len(netto)) if not gesperrt[i]]
             if not kand:

@@ -43,7 +43,8 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     ' Position: ArtNr, Bezeichnung, Ka/Fa, Hl./Fl. (fehlt z. B. bei Paletten), Preis, Betrag,
     ' am Ende optional ein "*" (z. B. "136 EURO-Palette  29  12,000  348,00 *")
-    Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+)\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+-?)(?:\s+\*)?\s*$")
+    ' Menge auch negativ, z. B. "59 Rabatt   1-   15,000   15,00-*" (RE 2604315)
+    Set rePos = NeuesRegex("^\s*(\d+)\s+(.+?)\s+(\d+-?)\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+-?)(?:\s*\*)?\s*$")
     Set reAkt = NeuesRegex("^\s*Aktion\s+(.+?)\s+(\d+)\s+Ka/F\s+([\d.,]+)\s+([\d.,]+)-\s*$")
     Set reLG = NeuesRegex("^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(?:(.*\S)\s+)?(-?\d+-?)\s+(\d+,\d{2})\s+([\d.]*\d,\d{2}-?)\s*$")
     Set reWW = NeuesRegex("WARENWERT:\s+([\d.,]+-?)")
@@ -242,9 +243,9 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                 If modus = abPositionen Then
                     Set m = Treffer(rePos, l)
                     If Not m Is Nothing Then
-                        menge = CDbl(m.SubMatches(2))
+                        menge = CDbl(ZahlDE(m.SubMatches(2)))    ' "1-" = -1 (Rabatt)
                         betrag = ZahlDE(m.SubMatches(5))
-                        If betrag < 0 Then menge = -menge       ' Rückware: "4  80  14,000  56,00-"
+                        If betrag < 0 And menge > 0 Then menge = -menge   ' Rückware: "4  80  14,000  56,00-"
                         PositionAnhaengen "Ware", m.SubMatches(0), Trim$(m.SubMatches(1)), menge, _
                             Einstellung("Einheit Ware"), ZahlDE(m.SubMatches(4)), betrag, m.SubMatches(3) & ""
                         GoTo weiter
@@ -360,6 +361,14 @@ Private Sub BruttoInNetto(saetze As Collection, ByVal mwstPdf As Currency)
         ' am weitesten in die nötige Richtung zeigt und deren Preis sich passend setzen lässt
         schritt = IIf(ziel > summe, 0.01, -0.01)
         n = CLng(Abs(ziel - summe) * 100)
+        ' Nur echte Rundungsdifferenzen verteilen (höchstens 1 Cent je Position). Eine
+        ' größere Differenz ist ein Lesefehler (z. B. fehlende Position) und darf nicht
+        ' über die Preise kaschiert werden: dann bleibt sie stehen und die Prüfung meldet sie.
+        If n > letzte - 1 Then
+            Protokoll "Warnung", "Differenz zur Nettosumme der Rechnung " & Format$(ziel - summe, "0.00") & _
+                                 " EUR ist keine Rundungsdifferenz und wird nicht verteilt. Fehlt eine Position?"
+            n = 0
+        End If
         Do While verteilt < n
             beste = 0
             For i = 2 To letzte

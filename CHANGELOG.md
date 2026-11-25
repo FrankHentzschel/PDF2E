@@ -3,6 +3,12 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.6 – 25.11.2026
+
+- **Fehlerbehebung:** RE 2604315 (Barverkauf, Kd. 10026): Die Position `59 Rabatt  1-  15,000  15,00-*` (negative Menge, `*` direkt am Betrag) wurde nicht übernommen; Warenwert 104,87 statt 90,00. Jetzt Position mit Menge −1.
+- **Fehlerbehebung:** Bei Bruttobeträgen verteilte 1.11.4 auch eine große Differenz (hier −14,87) teilweise auf die Preise. Jetzt werden nur echte Rundungsdifferenzen verteilt (höchstens 1 Cent je Position); eine größere Differenz bleibt stehen, wird gewarnt und von der Prüfung als Fehler gemeldet.
+- Testfall `tests/pdftotext/Rechnung_2604315.txt`. XL2E unverändert.
+
 ## PDF2E 1.11.5 – 25.11.2026
 
 - **Fehlerbehebung:** RE 2604314 (Verona Birre, Italien) schreibt den Hinweis anders als RE 2604264: `** Steuerfreie Lieferung nach Italien ab Brauereihof **` und `UST - ID: IT04962160232`. Beides wurde nicht erkannt, daher „Kein MwSt-Satz“. Jetzt reichen „Steuerfreie Lieferung“ bzw. „Steuerfreie innergemeinschaftliche Lieferung“ und USt-ID mit beliebigen Leerzeichen/Bindestrichen. Kategorie K wird nur gesetzt, wenn das Land des Empfängers ein anderes EU-Land ist; sonst (z. B. Schweiz, Ausfuhr) eine klare Fehlermeldung.
