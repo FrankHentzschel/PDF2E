@@ -28,7 +28,7 @@ Attribute VB_Name = "modDaten"
 '==============================================================================
 Option Explicit
 
-Public Const SCHEMA_VERSION As Long = 1
+Public Const SCHEMA_VERSION As Long = 2                ' 2 = Empfaenger.ZRNummer (ab PDF2E 1.10.0)
 Private Const DB_SPRACHE As String = ";LANGID=0x0409;CP=1252;COUNTRY=0"   ' dbLangGeneral
 Private Const DB_VERSION120 As Long = 128                                ' dbVersion120 (.accdb)
 Private Const DB_OPEN_DYNASET As Long = 2
@@ -55,7 +55,7 @@ Private Function Felder(ByVal tabelle As String) As Variant
         Case "Bankkonten":          Felder = Array("Bezeichnung:T", "Kontoinhaber:T", "IBAN:T", "BIC:T", "Standard:T")
         Case "Zahlungskonditionen": Felder = Array("Bezeichnung:T", "Zahlungstext:M", "ZielTage:N", "Standard:T")
         Case "Empfaenger":          Felder = Array("Schluessel:T", "Kundenname:T", "EMail:T", "UStId:T", "Konto:T", _
-                                                   "Kondition:T", "Bemerkung:M", "Vorgaben:T")
+                                                   "Kondition:T", "Bemerkung:M", "Vorgaben:T", "ZRNummer:T")
         Case "Pfandartikel":        Felder = Array("LeergutNr:T", "Bezeichnung:T", "GTIN:T", "Bemerkung:M")
         Case Else:                  Felder = Empty
     End Select
@@ -256,7 +256,9 @@ Private Sub SchemaSchritt(ByVal db As Object, ByVal v As Long)
                        "Brutto CURRENCY, Status TEXT(30), ErzeugtAm DATETIME, ErzeugtVon TEXT(100), Rechner TEXT(100), " & _
                        "MailAm DATETIME, MailVon TEXT(100))", DB_FAIL_ON_ERROR
             db.Execute "CREATE UNIQUE INDEX ux_Verarbeitung ON Verarbeitung (RechNr)", DB_FAIL_ON_ERROR
-        ' Case 2: künftige Änderungen, z. B. ALTER TABLE Empfaenger ADD COLUMN ...
+        Case 2                                  ' ZR-Nummer des Händlers (G5-Zentralregulierung, BT-10)
+            db.Execute "ALTER TABLE [Empfaenger] ADD COLUMN [ZRNummer] TEXT(255)", DB_FAIL_ON_ERROR
+        ' Case 3: künftige Änderungen nur anhängen
     End Select
 End Sub
 
@@ -408,6 +410,8 @@ Public Sub BlattLaden(ByVal blatt As String)
     Application.EnableEvents = False
     mIntern = True
     On Error GoTo Ende
+    ' Ältere Mappen: neue Datenspalte vor den Verwaltungsspalten einfügen (z. B. ZR-Nummer ab Schema 2)
+    If CStr(ws.Cells(1, n).Value) = "Geändert am" Then ws.Columns(n).Insert
     VerwaltungsspaltenSicherstellen ws, m
     For s = 2 To n                              ' ältere Mappen: fehlende Spaltenüberschrift ergänzen
         If Len(CStr(ws.Cells(1, s).Value)) = 0 Then
@@ -824,7 +828,7 @@ End Sub
 ' erstbefuellung = True: aus dieser Mappe beim Anlegen des Backends.
 Private Sub ImportAusMappe(ByVal wb As Workbook, ByVal erstbefuellung As Boolean, ByVal liste As Variant)
     Dim t As Variant, ws As Worksheet, f As Variant, n As Long, z As Long, s As Long
-    Dim db As Object, rs As Object, schluessel As String, neu As Long, da As Long, krit As String
+    Dim db As Object, rs As Object, schluessel As String, neu As Long, da As Long, krit As String, nQ As Long
     Set db = DbOeffnen()
     For Each t In liste
         Set ws = Nothing
@@ -835,6 +839,11 @@ Private Sub ImportAusMappe(ByVal wb As Workbook, ByVal erstbefuellung As Boolean
             f = Felder(CStr(t))
             n = UBound(f) + 1
             neu = 0: da = 0
+            ' Ältere Mappe mit weniger Datenspalten: nur bis vor die Verwaltungsspalten lesen
+            nQ = n
+            For s = 2 To n
+                If CStr(ws.Cells(1, s).Value) = "Geändert am" Then nQ = s - 1: Exit For
+            Next s
             Set rs = db.OpenRecordset(CStr(t), DB_OPEN_DYNASET)
             For z = 2 To ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
                 schluessel = Trim$(CStr(ws.Cells(z, 1).Value))
@@ -846,7 +855,7 @@ Private Sub ImportAusMappe(ByVal wb As Workbook, ByVal erstbefuellung As Boolean
                     rs.FindFirst krit
                     If rs.NoMatch Then
                         rs.AddNew
-                        For s = 1 To n
+                        For s = 1 To nQ
                             rs.Fields(FeldName(f(s - 1))).Value = DbWert(ws.Cells(z, s).Value, FeldTyp(f(s - 1)))
                         Next s
                         rs.Fields("Rev").Value = 1

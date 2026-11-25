@@ -53,6 +53,7 @@ Public Sub SmartToolsEinbetten(ByVal zielPdf As String)
     ZahlungSetzen inv
     PositionenUndSummenSetzen inv
     If EmpfaengerVorgabe() = "REWE" Then ReweVorgabenSetzen inv
+    If EmpfaengerVorgabe() = "G5" Then G5KennungenSetzen inv
 
     verstoesse = inv.Validate()
     If UBound(verstoesse) >= 0 Then
@@ -314,6 +315,17 @@ Private Sub ReweVorgabenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD
     text = EinstellungOderLeer("REWE Hinweis AAK")
     If Len(text) = 0 Then text = REWE_AAK_STANDARD
     inv.AddNote NeueNotiz(text, TEXT_AAK)                               ' BT-21 AAK, BT-22
+End Sub
+
+' G5-Zentralregulierung (SGH Service, E-Rechnung-Guideline EN 16931 V1.1):
+' ZR-Nummer des Händlers als Käuferreferenz, G5-Lieferantennummer der Brauerei
+' als Verkäuferkennung ohne Schema (ram:SellerTradeParty/ram:ID)
+Private Sub G5KennungenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
+    Dim kennung As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_GlobalIdentifier
+    inv.BuyerReference = EmpfaengerZRNummer()                           ' BT-10
+    Set kennung = New SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_GlobalIdentifier
+    kennung.Value = Replace(Trim$(EinstellungOderLeer("G5 Lieferantennummer")), " ", "")
+    inv.Seller.AddId kennung                                            ' BT-29, ohne Schema
 End Sub
 
 '------------------------------------------------------------------------------

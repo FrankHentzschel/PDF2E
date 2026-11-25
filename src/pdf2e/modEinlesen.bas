@@ -8,6 +8,9 @@ Option Explicit
 
 ' Spalte "Vorgaben" im Blatt "Empfaenger" (z. B. REWE)
 Public Const SP_E_VORGABEN As Long = 8
+' Spalte "ZR-Nummer" im Blatt "Empfaenger" (G5-Zentralregulierung, BT-10)
+Public Const SP_E_ZRNR As Long = 9
+Private Const G5_EMAIL_STANDARD As String = "g5.e-invoice@documents.sgh-net.de"
 Public Const BLATT_PFANDARTIKEL As String = "Pfandartikel"
 
 ' Eingabefelder, die vor jedem Einlesen geleert werden (Formelfelder fehlen bewusst)
@@ -199,6 +202,7 @@ Private Sub VorgabenSetzen()
     If TabellenZeile("Empfaenger", EmpfaengerSchluessel()) = 0 Then EmpfaengerAnlegen
     ReweErkennen
     EdekaErkennen
+    G5VorgabenSetzen
     PfandartikelAnlegen
 End Sub
 
@@ -258,6 +262,49 @@ Private Sub EdekaErkennen()
         ZeileSpeichern "Empfaenger", z
         Protokoll "Info", "Empfänger " & EmpfaengerSchluessel() & " als EDEKA erkannt (Blatt 'Empfaenger', Spalte 'Vorgaben')."
     End If
+End Sub
+
+' G5-Zentralregulierung (SGH Service GmbH): Empfänger werden von Hand in der
+' Spalte "Vorgaben" mit G5 markiert. Die E-Rechnung geht dann immer an die
+' zentrale Adresse (Einstellung "G5 E-Mail"), nicht an die Adresse des Händlers.
+Private Sub G5VorgabenSetzen()
+    Dim adr As String
+    ZRSpalteSicherstellen
+    If EmpfaengerVorgabe() <> "G5" Then Exit Sub
+    adr = Trim$(EinstellungOderLeer("G5 E-Mail"))
+    If Len(adr) = 0 Then adr = G5_EMAIL_STANDARD
+    If StrComp(adr, Trim$(CStr(Feld("f_KEmail").Value)), vbTextCompare) <> 0 Then
+        Feld("f_KEmail").Value = adr
+        Protokoll "Info", "G5: E-Mail an die zentrale Adresse " & adr & " (Einstellung 'G5 E-Mail')."
+    End If
+End Sub
+
+' ZR-Nummer des aktuellen Rechnungsempfängers (Blatt "Empfaenger", Spalte
+' "ZR-Nummer"), ohne Leerzeichen. Leer = keine.
+Public Function EmpfaengerZRNummer() As String
+    Dim z As Long
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
+    If z > 0 Then EmpfaengerZRNummer = Replace(Trim$(CStr(ThisWorkbook.Worksheets("Empfaenger").Cells(z, SP_E_ZRNR).Value)), " ", "")
+End Function
+
+' Ältere Arbeitsmappen: Spalte "ZR-Nummer" ergänzen (vor den Verwaltungsspalten)
+Private Sub ZRSpalteSicherstellen()
+    Dim wsE As Worksheet
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    If CStr(wsE.Cells(1, SP_E_ZRNR).Value) = "ZR-Nummer" Then Exit Sub
+    If CStr(wsE.Cells(1, SP_E_ZRNR).Value) = "Geändert am" Then wsE.Columns(SP_E_ZRNR).Insert
+    wsE.Columns(SP_E_ZRNR).NumberFormat = "@"
+    wsE.Columns(SP_E_ZRNR).ColumnWidth = 12
+    With wsE.Cells(1, SP_E_ZRNR)
+        .Value = "ZR-Nummer"
+        .Font.Bold = True
+        .Interior.Color = wsE.Cells(1, 1).Interior.Color
+        .Font.Color = wsE.Cells(1, 1).Font.Color
+        If .Comment Is Nothing Then
+            .AddComment "Nur bei Vorgaben = G5: ZR-Nummer (Mitgliedsnummer) des Händlers bei der G5, " & _
+                        "7 Ziffern, beginnt mit 27. Wird als Käuferreferenz (BT-10) übergeben."
+        End If
+    End With
 End Sub
 
 ' Pfandartikel der Rechnung, die noch nicht im Blatt "Pfandartikel" stehen,
@@ -342,7 +389,8 @@ Private Sub VorgabenSpalteSicherstellen()
             .Font.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Font.Color
             .AddComment "Sondervorgaben des Empfängers: REWE = Vorgaben der REWE-Zentralregulierung " & _
                         "(Hinweis Entgeltminderungen, Pflicht: RE-GLN, Lieferort-GLN, USt-IdNr.); " & _
-                        "EDEKA = Pfand getrennt, GTIN je Pfandartikel Pflicht"
+                        "EDEKA = Pfand getrennt, GTIN je Pfandartikel Pflicht; " & _
+                        "G5 = G5-Zentralregulierung (ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse)"
             .ColumnWidth = 14
         End If
     End With

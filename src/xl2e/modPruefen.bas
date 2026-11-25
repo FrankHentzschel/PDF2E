@@ -52,6 +52,7 @@ Public Function RechnungPruefen() As Boolean
         End If
     End If
     PfandGtinPruefen EmpfaengerVorgabe() = "EDEKA"
+    If EmpfaengerVorgabe() = "G5" Then G5Pruefen
 
     ' Innergemeinschaftliche Lieferung (USt-Kategorie K, EN 16931 BR-IC)
     If KategorieVorhanden("K") Then
@@ -192,3 +193,30 @@ Private Sub Fehler(ByVal meldung As String)
     mFehler = mFehler + 1
     Protokoll "Fehler", meldung
 End Sub
+
+' G5-Zentralregulierung (SGH Service, Merkblatt 11/2026): ZR-Nummer des Händlers
+' (BT-10) und G5-Lieferantennummer der Brauerei (BT-29) sind Pflicht im XML
+Private Sub G5Pruefen()
+    Dim zr As String, lief As String
+    zr = EmpfaengerZRNummer()
+    If Len(zr) = 0 Then
+        Fehler "G5: ZR-Nummer des Rechnungsempfängers fehlt. Bitte im Blatt 'Empfaenger' beim Kunden " & _
+               EmpfaengerSchluessel() & " (Spalte ZR-Nummer) eintragen."
+    ElseIf Not G5NummerOk(zr, False) Then
+        Fehler "G5: ZR-Nummer '" & zr & "' ist ungültig (7 Ziffern, beginnt mit 27). Blatt 'Empfaenger', Kunde " & _
+               EmpfaengerSchluessel() & "."
+    End If
+    lief = Replace(Trim$(EinstellungOderLeer("G5 Lieferantennummer")), " ", "")
+    If Len(lief) = 0 Then
+        Fehler "G5: Lieferantennummer der Brauerei fehlt (Blatt 'Einstellungen', Zeile 'G5 Lieferantennummer')."
+    ElseIf Not G5NummerOk(lief, True) Then
+        Fehler "G5: Lieferantennummer '" & lief & "' ist ungültig (7 Ziffern, beginnt mit 27, endet auf 0). Blatt 'Einstellungen'."
+    End If
+End Sub
+
+' 7 Ziffern, beginnt mit 27; Lieferantennummer endet zusätzlich auf 0
+Private Function G5NummerOk(ByVal nr As String, ByVal endetAufNull As Boolean) As Boolean
+    If Not (nr Like "27#####") Then Exit Function
+    If endetAufNull And Right$(nr, 1) <> "0" Then Exit Function
+    G5NummerOk = True
+End Function

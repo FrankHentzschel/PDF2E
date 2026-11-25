@@ -163,8 +163,12 @@ for i,row in enumerate([("Sofort","Zahlbar sofort ohne Abzug.",0,"x"),("14 Tage 
     for j,v in enumerate(row,1): ws.cell(i,j,v).fill=INP
 
 # Empfaenger
+from openpyxl.comments import Comment
 ws=wb.create_sheet("Empfaenger")
-header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben"],[11,36,30,16,26,26,30,14])
+header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben","ZR-Nummer"],[11,36,30,16,26,26,30,14,12])
+for i in range(2,501): ws[f"I{i}"].number_format='@'
+ws["H1"].comment=Comment("Sondervorgaben des Empfängers: REWE, EDEKA oder G5 (G5-Zentralregulierung: ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse).","PDF2E")
+ws["I1"].comment=Comment("Nur bei Vorgaben = G5: ZR-Nummer (Mitgliedsnummer) des Händlers bei der G5, 7 Ziffern, beginnt mit 27. Wird als Käuferreferenz (BT-10) übergeben.","PDF2E")
 for j,v in enumerate([] if XL else ["11770","Markgrafen Getränkevertrieb GmbH","gam406@markgrafen.com","","","","Beispiel aus Muster RE 2603976; E-Mail bitte bestätigen"],1):
     c=ws.cell(2,j,v); c.fill=INP
 ws["A2"].number_format='@'
@@ -188,6 +192,8 @@ EINST=[("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools
 ("Pfandart","RETURNABLE","Kennzeichnung der Pfandpositionen: RETURNABLE (Mehrweg) oder DISPOSABLE (Einweg)"),
 ("Profil","EN16931","ZUGFeRD-Profil (derzeit nur EN16931)"),
 ("Prüfbericht anzeigen","Ja","Ja = bei Regelverletzungen den Prüfbericht von Smart Tools anzeigen"),
+("G5 Lieferantennummer","","Eigene Lieferantennummer der Brauerei bei der G5 (7 Ziffern, beginnt mit 27, endet auf 0). Pflicht für Empfänger mit Vorgaben = G5 (BT-29)"),
+("G5 E-Mail","g5.e-invoice@documents.sgh-net.de","Zentrale Adresse der G5-Zentralregulierung (SGH Service) für alle Empfänger mit Vorgaben = G5"),
 ("REWE Hinweis AAK","Bezüglich der Entgeltminderungen verweisen wir auf die aktuellen Zahlungs- und Konditionsvereinbarungen","Pflichttext für Empfänger mit Vorgaben = REWE (BT-22, Code AAK)"),
 ("Quellcode-Ordner","","Nur Entwicklung: Zielordner für PDF2E_Exportieren (leer = Unterordner src neben der Mappe)"),
 ("Textdatei behalten","Nein","Ja = pdftotext-Ausgabe im TEMP-Ordner behalten (Fehlersuche), Pfad steht im Protokoll"),
