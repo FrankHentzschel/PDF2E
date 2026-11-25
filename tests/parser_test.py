@@ -22,7 +22,7 @@ RE_ZS = re.compile(r"Zwischensumme\s+\(incl\.\s+([\d.,]+-?)\s+Pfand\)\s+([\d.,]+
 RE_ST = re.compile(r"([\d,]+)\s*%\s*MwSt\s+\(auf\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
 RE_RB = re.compile(r"RECHNUNGSBETRAG\s+EUR\s+([\d.,]+-?)")
 # Minus-Rechnung mit Bruttobeträgen (RE 2603475)
-RE_MINUS_RB = re.compile(r"RECHNUNGSBETRAG\s+incl\.\s+([\d.,]+-?)\s+Pfand\)\s+EUR\s+([\d.,]+-?)")
+RE_MINUS_RB = re.compile(r"RECHNUNGSBETRAG\s+\(?incl\.\s+([\d.,]+-?)\s+Pfand\)\s+EUR\s+([\d.,]+-?)")
 RE_ENTHALTEN = re.compile(r"ENTHALTENE\s+MWSt\.?\s+([\d,]+)\s*%\s*\(aus\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
 RE_RUECKWARE = re.compile(r"^\*+\s*Rückware\s*\*+$")
 # Nachlass auf den Warenwert, z. B. Skonto: Art, Text, Basis, Prozent, Betrag
@@ -272,7 +272,7 @@ def brutto_in_netto(r):
         netto.append((typ, menge, p, kfm(menge * p)))
     summe = round(sum(z[3] for z in netto), 2)
     mwst = kfm(summe * r["satz"] / 100)
-    rundung = round(r["pdf_brutto"] - (summe + mwst), 2)
+    rundung = round(r.get("pdf_brutto", summe + mwst) - (summe + mwst), 2)
     return netto, summe, mwst, rundung
 
 

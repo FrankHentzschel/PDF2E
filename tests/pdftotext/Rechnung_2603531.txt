@@ -1,0 +1,35 @@
+   0170-4383514
+   Justin
+   ab Rampe
+
+                                         LIEFERSCHEIN/RECHNUNG
+   91344 Waischenfeld
+
+                                                 10026    2603531     22.09.2026
+
+
+
+  ARTNR BEZEICHNUNG                    Ka/Fa     Hl./Fl.        PREIS   BETRAG EUR
+ ──────────────────────────────────────────────────────────────────────────────────
+ 149476 Lieferschein:    4460 vom 22.09.2026      8
+     15 Breitenlesauer Hell 0,5 / P11      9        180        15,000       135,00
+      5 Bernstein Radler 0,5 / P 5         2         40        14,000        28,00
+    300 Kirsch Gaas-Seidla 0,5 l           1         20        16,000        16,00
+     71 König Otto Apfelschorle 0,5        2         40        11,000        22,00
+ ──────────────────────────────────────────────────────────────────────────────────
+        WARENWERT:                                                          201,00
+
+
+   ──────────────────────────────────────────────────────────────────────────────────
+   LEERGUT-KONTO:            ALTER     MENGE  MENGE NEUER   MENGE  PFAND       PFAND
+                             SALDO LIEFERUNG ZURÜCK SALDO    DIFF.  SATZ      BETRAG
+99001 Euro 0,5                 655        14          669      14   3,10       43,40
+   ──────────────────────────────────────────────────────────────────────────────────
+                           RECHNUNGSBETRAG (incl.         43,40 Pfand) EUR    244,40
+                          ═══════════════════════════════════════════════════════════
+
+
+
+ ENTHALTENE MWSt. 19,00 % (aus       244,40 )              39,02
+ ────────────────────────────────────────────────────────────────
+

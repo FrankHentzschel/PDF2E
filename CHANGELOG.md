@@ -3,6 +3,12 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.3 – 25.11.2026
+
+- **Fehlerbehebung:** RE 2603531 (Barverkauf ab Rampe, Bruttobeträge, positiver Betrag): Die Summenzeile `RECHNUNGSBETRAG (incl. 43,40 Pfand) EUR 244,40` mit Klammer wurde nicht erkannt; Pfand, Nettosumme und Rechnungsbetrag fehlten.
+- **Fehlerbehebung:** Eine Telefonnummer im Anschriftenblock (`0170-4383514`) wurde Teil des Empfängernamens. Sie wird jetzt übergangen und im Protokoll genannt.
+- Testfall `tests/pdftotext/Rechnung_2603531.txt`. XL2E unverändert.
+
 ## PDF2E 1.11.2 – 25.11.2026
 
 - **Fehlerbehebung:** Bei Bruttobeträgen (RE 2603475) stand der Nettopreis in Excel nur mit 2 Stellen im Blatt Positionen (11,76 statt 11,7647). Die Prüfung meldete deshalb „Menge x Preis“ bei 5 Zeilen. Der Preis wird jetzt als Double mit Zahlenformat `#,##0.0000` geschrieben. XL2E unverändert (nur `modParserBSI` und `modProdukt` geändert).

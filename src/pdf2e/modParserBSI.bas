@@ -33,7 +33,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reMarkt As Object, reILN As Object, reMail As Object, rePLZ As Object, reREGLN As Object
     Dim reNachlass As Object, reNW As Object, reSepaBetrag As Object, reSepaMandat As Object, reSepaHinweis As Object
     Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean
-    Dim reMinusRB As Object, reEnthalten As Object, reRueckware As Object
+    Dim reMinusRB As Object, reEnthalten As Object, reRueckware As Object, reTelefon As Object
     Dim bruttoBetraege As Boolean, lgRueckgabe As Boolean, menge As Double, betrag As Currency
     Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
@@ -49,7 +49,8 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     ' Minus-Rechnung mit Bruttobeträgen, z. B.
     ' "MINUS-RECHNUNGSBETRAG    incl.   440,50- Pfand) EUR    772,50-"
     ' "ENTHALTENE MWSt. 19,00 % (aus   772,50-)    123,34-"
-    Set reMinusRB = NeuesRegex("RECHNUNGSBETRAG\s+incl\.\s+([\d.,]+-?)\s+Pfand\)\s+EUR\s+([\d.,]+-?)")
+    ' auch ohne MINUS mit Klammer: "RECHNUNGSBETRAG (incl.   43,40 Pfand) EUR   244,40" (RE 2603531)
+    Set reMinusRB = NeuesRegex("RECHNUNGSBETRAG\s+\(?incl\.\s+([\d.,]+-?)\s+Pfand\)\s+EUR\s+([\d.,]+-?)")
     Set reEnthalten = NeuesRegex("ENTHALTENE\s+MWSt\.?\s+([\d,]+)\s*%\s*\(aus\s+([\d.,]+-?)\s*\)\s+([\d.,]+-?)")
     Set reRueckware = NeuesRegex("^\*+\s*R" & ChrW(252) & "ckware\s*\*+$")
     ' Nachlass auf den Warenwert, z. B.
@@ -73,6 +74,8 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     ' Gruppen: 0 Kennzeichen, 1 PLZ mit Kennzeichen, 2 PLZ ohne, 3 Ort
     Set rePLZ = NeuesRegex("^(?:([A-Z]{1,3})\s*-\s*(\d{4,5})|(\d{5}))\s+(.+)$")
     Set reArtNr = NeuesRegex("^\d{5}\s")
+    ' Telefonnummer im Anschriftenblock, z. B. "0170-4383514" (Barverkauf ab Rampe, RE 2603531)
+    Set reTelefon = NeuesRegex("^(?:Tel\.?:?\s*)?\+?\d[\d \-/()]{5,}\d$")
     Set reLGRest = NeuesRegex("\d+,\d{2}\s+[\d.]*\d,\d{2}-?\s*$")
 
     Select Case UCase$(variante)
@@ -106,6 +109,8 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
             Set m = Treffer(reREGLN, Trim$(s))
             If Not m Is Nothing Then
                 Feld("f_KGLN").Value = "'" & Replace(m.SubMatches(0), " ", "")
+            ElseIf Not Treffer(reTelefon, Trim$(s)) Is Nothing Then
+                Protokoll "Info", "Telefonnummer im Anschriftenblock nicht als Name übernommen: " & Trim$(s)
             ElseIf LCase$(Left$(s, 4)) <> "per " Then
                 links.Add Trim$(s)
             End If
