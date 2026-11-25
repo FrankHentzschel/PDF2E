@@ -12,6 +12,10 @@ Attribute VB_Name = "modParserBSI"
 '==============================================================================
 Option Explicit
 
+' EU-Mitgliedstaaten außer DE (ISO 3166, Griechenland = GR) für die steuerfreie
+' innergemeinschaftliche Lieferung (USt-Kategorie K)
+Private Const EU_LAENDER As String = "|AT|BE|BG|CY|CZ|DK|EE|ES|FI|FR|GR|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK|"
+
 Private Enum Abschnitt
     abPositionen = 1
     abLeergut = 2
@@ -60,8 +64,10 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reNW = NeuesRegex("NETTOWERT:\s+([\d.,]+-?)")
     Set reWWLeer = NeuesRegex("WARENWERT:\s*$")             ' z. B. reine Leergutrückgabe
     ' Steuerfreie innergemeinschaftliche Lieferung mit USt-IdNr. des Empfängers
-    Set reIG = NeuesRegex("Steuerfreie innergemeinschaftliche Lieferung")
-    Set reUStId = NeuesRegex("^\s*USt-?ID(?:-?Nr\.?)?:?\s+([A-Za-z]{2}[\w .-]*\w)\s*$")
+    ' auch "** Steuerfreie Lieferung nach Italien ab Brauereihof **" (RE 2604314)
+    Set reIG = NeuesRegex("[Ss]teuerfreie\s+(?:innergemeinschaftliche\s+)?Lieferung")
+    ' "USt-ID: IT…", auch "UST - ID: IT…" (RE 2604314)
+    Set reUStId = NeuesRegex("^\s*U[Ss][Tt]\s*-?\s*ID(?:\s*-?\s*Nr\.?)?\s*:?\s+([A-Za-z]{2}[\w .-]*\w)\s*$")
     ' SEPA-Lastschrift (Text unter dem Rechnungsbetrag)
     Set reSepaBetrag = NeuesRegex("Forderung von\s+([\d.,]+)\s+ziehen wir mit einer SEPA-Lastschrift")
     Set reSepaMandat = NeuesRegex("^\s*(\S+)\s+und mit der Gl(?:ae|" & ChrW(228) & ")ubiger-ID\s+(\S+)\s+am\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+ein")
@@ -290,7 +296,10 @@ weiter:
     LeergutAbschliessen lgOffen, reArtNr
     If anzahlLS > 1 Then Protokoll "Warnung", "Mehrere Lieferscheine: " & lsListe & ". In der E-Rechnung steht nur der erste."
     Feld("f_PDF_MwSt").Value = mwstSumme
-    If igLieferung Then
+    If igLieferung And InStr(EU_LAENDER, "|" & UCase$(Trim$(CStr(Feld("f_KLand").Value))) & "|") = 0 Then
+        Protokoll "Fehler", "Steuerfreie Lieferung, aber Land des Empfängers '" & Feld("f_KLand").Value & _
+                         "' ist kein anderes EU-Land. Ausfuhrlieferungen in Drittländer werden noch nicht unterstützt; bitte 'USt-Satz' und 'USt-Kat.' im Blatt Positionen prüfen."
+    ElseIf igLieferung Then
         If steuerSaetze.Count > 0 Then Protokoll "Warnung", "Innergemeinschaftliche Lieferung, aber MwSt auf der Rechnung. Bitte prüfen."
         SteuerfreiSetzen "K"
         LieferortVomEmpfaenger

@@ -1,4 +1,4 @@
-# PDF2E 1.11.4 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.11.5 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -241,7 +241,7 @@ Ab 1.8.2: Steht in der Spalte USt-IdNr. der Kundenname, leert das Programm das F
 
 ## Innergemeinschaftliche Lieferung (ab 1.9.0)
 
-Steht auf der Rechnung „Steuerfreie innergemeinschaftliche Lieferung“, setzt PDF2E alle Positionen auf USt-Kategorie **K** mit 0 %. Die E-Rechnung bekommt den Befreiungsgrund „Steuerfreie innergemeinschaftliche Lieferung“ mit Code VATEX-EU-IC (BT-120/121). Die Zeile `USt-ID: IT…` wird als USt-IdNr. des Empfängers (BT-48) übernommen. Ein Eintrag im Blatt „Empfaenger“ hat Vorrang. Ausländische Anschriften mit Länderkennzeichen vor der PLZ (z. B. `I- 39012 Meran`, `A-6020 Innsbruck`) werden erkannt, das Land kommt ins Feld „Land“. Fehlt „Wir lieferten an“, gilt die Anschrift des Empfängers als Lieferort, denn das Lieferland ist bei K Pflicht (BR-IC-12). Die Prüfung verlangt dann eine USt-IdNr. des Empfängers und ein Land ungleich DE.
+Steht auf der Rechnung „Steuerfreie innergemeinschaftliche Lieferung“ oder „Steuerfreie Lieferung …“ (z. B. „nach Italien ab Brauereihof“) und liegt die Anschrift in einem anderen EU-Land, setzt PDF2E alle Positionen auf USt-Kategorie **K** mit 0 %. Die E-Rechnung bekommt den Befreiungsgrund „Steuerfreie innergemeinschaftliche Lieferung“ mit Code VATEX-EU-IC (BT-120/121). Die Zeile `USt-ID: IT…` (auch `UST - ID: IT…`) wird als USt-IdNr. des Empfängers (BT-48) übernommen. Ein Eintrag im Blatt „Empfaenger“ hat Vorrang. Ausländische Anschriften mit Länderkennzeichen vor der PLZ (z. B. `I- 39012 Meran`, `A-6020 Innsbruck`) werden erkannt, das Land kommt ins Feld „Land“. Fehlt „Wir lieferten an“, gilt die Anschrift des Empfängers als Lieferort, denn das Lieferland ist bei K Pflicht (BR-IC-12). Die Prüfung verlangt dann eine USt-IdNr. des Empfängers und ein Land ungleich DE.
 
 Findet PDF2E weder eine MwSt-Zeile noch einen Hinweis auf Steuerbefreiung, steht das im Protokoll. USt-Satz und Kategorie müssen dann im Blatt „Positionen“ von Hand eingetragen werden.
 
