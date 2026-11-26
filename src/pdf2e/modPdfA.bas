@@ -34,7 +34,7 @@ Private mOffset As Object       ' Objektnummer -> Offset ab 0 (-1 = freies Objek
 Private mGen As Object          ' Objektnummer -> Generation
 Private mEinfuegen As Object    ' Objektnummer -> Array(Einfügeposition ab 1, Text)
 Private mSize As Long           ' /Size des letzten Trailers = Nummer des neuen ICC-Objekts
-Private mRoot As String, mInfo As String, mId As String
+Private mRoot As String, mInfo As String, mTrailerId As String
 Private mDateiNr As Integer     ' offene Datei (für die Fehlerbehandlung)
 
 Public Sub PdfANachbearbeiten(ByVal pfad As String)
@@ -186,7 +186,7 @@ Private Function XrefTabelleLesen(ByVal xrefPos As Long, ByRef hinweis As String
             mSize = CLng(Val(TrailerWert(tr, "/Size")))
             mRoot = TrailerWert(tr, "/Root")
             mInfo = TrailerWert(tr, "/Info")
-            mId = TrailerWert(tr, "/ID")
+            mTrailerId = TrailerWert(tr, "/ID")
             If mSize <= 0 Or Len(mRoot) = 0 Then hinweis = "Trailer unvollständig": Exit Function
             erster = False
         End If
@@ -345,7 +345,7 @@ Private Sub Speichern(ByVal pfad As String, ByVal xrefAlt As Long, ByVal mitCmyk
                               Format$(gen, "00000") & " n" & vbCrLf
         Next i
         Schreiben f, pos, "trailer" & vbCrLf & "<< /Size " & (mSize + 1) & " /Root " & mRoot & _
-                          IIf(Len(mInfo) > 0, " /Info " & mInfo, "") & IIf(Len(mId) > 0, " /ID " & mId, "") & _
+                          IIf(Len(mInfo) > 0, " /Info " & mInfo, "") & IIf(Len(mTrailerId) > 0, " /ID " & mTrailerId, "") & _
                           " /Prev " & xrefAlt & " >>" & vbCrLf & "startxref" & vbCrLf & xrefNeu & vbCrLf & "%%EOF" & vbCrLf
     End If
     Close #f

@@ -1,4 +1,4 @@
-# PDF2E 1.14.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.14.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -78,7 +78,7 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
 
-## Update auf 1.14.0 (PDF/A-Korrektur, Registerangaben)
+## Update auf 1.14.x (PDF/A-Korrektur, Registerangaben)
 
 1. VbaSync „Alle importieren“ aus `vba`. **Neu ist das Modul `modPdfA.bas`**, es wird dabei mit importiert (ohne VbaSync: *Datei > Datei importieren*). Kompilieren.
 2. Blatt „Brauerei“: Die Zeilen **Registernummer** und **Geschäftsführer** müssen gefüllt sein (bei Krug: „HRB 1273, Amtsgericht Bayreuth“ und „Konrad Krug“). Daraus entsteht der Text der Registerangaben. Optional zwei neue Zeilen, die du nur anlegst, wenn nötig: **Sitz** (wenn der Sitz nicht der Ort der Anschrift ist) und **Registerangaben** (ersetzt den ganzen Text). Fehlen beide Zeilen, ist das kein Fehler.
