@@ -1,4 +1,4 @@
-# PDF2E 1.11.7 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.12.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -76,6 +76,12 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 **Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
+
+## Update auf 1.12.0 (GLN je Lieferort)
+
+1. **Vorher an allen Plätzen PDF2E schließen.** Beim ersten Start stellt die neue Version das Backend auf Schema-Version 3 um (neue Tabelle Lieferorte), mit Sicherung vorher.
+2. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
+3. Blatt „Brauerei“, Zeile **GLN**: eigene GLN der Brauerei eintragen, falls vorhanden. Das Blatt **Lieferorte** legt das Programm selbst an.
 
 ## Update auf 1.11.x (Rückware, Bruttobeträge)
 
@@ -175,6 +181,15 @@ Umsetzung:
 - Im Blatt „Einstellungen“ die **G5 Lieferantennummer** eintragen. Die Einstellung **G5 E-Mail** enthält die zentrale Adresse; der E-Mail-Entwurf geht bei G5-Empfängern immer dorthin, auch wenn beim Empfänger eine andere Adresse steht.
 - Die Prüfung meldet einen Fehler, wenn eine der beiden Nummern fehlt oder falsch aufgebaut ist.
 - Nicht umgesetzt: Hinweis auf Entgeltminderung (AAK mit Code EGM), Skonto im Format `#SKONTO#…#` und Gutschriften (Rechnungsart 381). Das ist erst nötig, wenn die Brauerei mit der G5 Rabatte/Boni oder Skonto vereinbart hat bzw. eigene Gutschriftsbelege erzeugt.
+
+## GLN von Brauerei und Lieferort (ab 1.12.0)
+
+Händler mit automatischer Verarbeitung (z. B. Getränke Hoffmann, REWE) ordnen die E-Rechnung über GLNs zu:
+
+- **Lieferanten-GLN** (eigene GLN der Brauerei): Blatt „Brauerei“, Zeile **GLN**. Geht als BT-29 mit Schema 0088 in die E-Rechnung. Einmal eintragen, gilt für alle Rechnungen.
+- **Warenempfänger-GLN** (GLN des Lieferorts, z. B. der Filiale): steht nicht auf der BSI-Rechnung. Beim Einlesen legt PDF2E jeden Lieferort ohne GLN im Blatt **Lieferorte** an, Schlüssel `Kundennr. / PLZ Ort, Straße`. Dort einmal die GLN eintragen, dann „Prüfen“ (oder neu einlesen); sie geht als BT-71 mit Schema 0088 in die E-Rechnung. Steht eine GLN schon im Rechnungstext („GLN:“, „Wir lieferten an:“), gilt diese.
+- Als Lieferort gelten „Wir lieferten an:“ und, seit 1.12.0, die Zeile „+ Lieferfiliale: PLZ Ort, Straße“ unter dem Nettowert.
+- Die Prüfung warnt, wenn ein Lieferort keine GLN hat oder die Brauerei-GLN fehlt.
 
 ## Versionsnummern
 

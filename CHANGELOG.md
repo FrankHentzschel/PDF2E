@@ -3,6 +3,17 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.12.0 und XL2E 1.4.0 – 26.11.2026
+
+Anlass: Getränke Hoffmann (Test-Rechnung 2604302) kann die E-Rechnung nicht automatisch verarbeiten, weil Warenempfänger-GLN und Lieferanten-GLN fehlen.
+
+- **Neue Funktion:** Die Zeile `+ Lieferfiliale: 95233 Helmbrechts, Frankenstr. 13 *` unter dem Nettowert wird als Lieferort gelesen (bisher nur protokolliert). Name des Lieferorts = Name des Rechnungsempfängers.
+- **Neue Funktion:** Blatt **Lieferorte** (Lieferort, Name, GLN, Bemerkung). Jeder Lieferort ohne GLN auf der Rechnung wird dort beim Einlesen angelegt (Schlüssel `Kundennr. / PLZ Ort, Straße`). Die GLN trägt der Anwender einmal ein; sie geht als Lieferort-GLN (BT-71, Schema 0088) in die E-Rechnung. „Prüfen“ übernimmt eine nachträglich eingetragene GLN.
+- **Prüfung:** Warnung bei Lieferort ohne GLN und bei Lieferort-GLN ohne eigene GLN der Brauerei (Blatt „Brauerei“, Zeile „GLN“ → BT-29 mit Schema 0088, schon seit 1.5.0 vorhanden).
+- **Backend:** Schema-Version 3 (Tabelle Lieferorte). Umstellung automatisch beim ersten Start, dabei dürfen keine anderen Plätze geöffnet sein.
+- Testfall `tests/pdftotext/Rechnung_2604302.txt`.
+- XL2E 1.4.0: dieselben gemeinsamen Module. Die Nummer 1.3.0 ist übersprungen (ein kurz bereitgestelltes ZIP 1.3.0 beruhte auf einem veralteten Stand und wurde zurückgezogen).
+
 ## PDF2E 1.11.7 und XL2E 1.2.3 – 25.11.2026
 
 - **Fehlerbehebung:** Wurde nach dem Einlesen die USt-IdNr. (oder E-Mail, Konto, Kondition) im Blatt „Empfaenger“ nachgetragen, meldete „Prüfen“ weiter „REWE: USt-IdNr. fehlt“, weil die Prüfung das Blatt „Rechnung“ liest. Jetzt übernimmt „Prüfen“ solche Angaben in leere Felder des Blatts „Rechnung“. Von Hand im Blatt „Rechnung“ Eingetragenes bleibt unverändert.
