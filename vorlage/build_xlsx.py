@@ -141,10 +141,10 @@ ws=wb.create_sheet("Brauerei")
 header(ws,["Angabe","Wert","Hinweis"],[22,45,45])
 data=[("Name","Privatbrauerei Fiedler GmbH","BT-27"),("Straße","Hauptstraße 28","BT-35"),("PLZ","09481","BT-38"),("Ort","Scheibenberg/Oberscheibe","BT-37"),("Land","DE","BT-40"),
 ("USt-IdNr","DE123456789","BT-31, PLATZHALTER"),("Steuernummer","123/456/78901","BT-32, PLATZHALTER"),("Registernummer","HRB 12345, Amtsgericht Chemnitz","BT-30, PLATZHALTER"),
-("Geschäftsführer","Thomas Fiedler",""),("Kontakt Name","","BT-41"),("Telefon","037349 8249","BT-42"),("E-Mail","info@brauerei-fiedler.de","BT-43"),
+("Geschäftsführer","Thomas Fiedler","für Registerangaben (BT-22, Code REG)"),("Sitz","","Sitz der Gesellschaft, leer = Ort"),("Registerangaben","","optional: ganzer Text für BT-22 REG, leer = aus Name, Sitz, Registernummer, Geschäftsführer"),("Kontakt Name","","BT-41"),("Telefon","037349 8249","BT-42"),("E-Mail","info@brauerei-fiedler.de","BT-43"),
 ("Internet","www.brauerei-fiedler.de","nur Briefkopf"),("GLN","","BT-29, Schema 0088; leer = keine")] if XL else [("Name","Konrad Krug Brauerei und Tanzsaal GmbH","BT-27"),("Straße","Breitenlesau 1b","BT-35"),("PLZ","91344","BT-38"),("Ort","Waischenfeld","BT-37"),("Land","DE","BT-40"),
 ("USt-IdNr","DE132316559","BT-31, von Frank bestätigt"),("Steuernummer","208/130/70031","BT-32"),("Registernummer","HRB 1273, Amtsgericht Bayreuth","BT-30"),
-("Geschäftsführer","Konrad Krug",""),("GLN","","BT-29, Schema 0088; eigene GLN der Brauerei (von REWE und Getränke Hoffmann verlangt), leer = keine"),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
+("Geschäftsführer","Konrad Krug","für Registerangaben (BT-22, Code REG)"),("Sitz","","Sitz der Gesellschaft, leer = Ort"),("Registerangaben","","optional: ganzer Text für BT-22 REG, leer = aus Name, Sitz, Registernummer, Geschäftsführer"),("GLN","","BT-29, Schema 0088; eigene GLN der Brauerei (von REWE und Getränke Hoffmann verlangt), leer = keine"),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
 for i,(a,b,c) in enumerate(data,2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; x.number_format='@'; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 
@@ -194,6 +194,7 @@ EINST=[("pdftotext-Pfad",r"C:\Tools\xpdf\pdftotext.exe","Xpdf command line tools
 ("Pfandart","RETURNABLE","Kennzeichnung der Pfandpositionen: RETURNABLE (Mehrweg) oder DISPOSABLE (Einweg)"),
 ("Profil","EN16931","ZUGFeRD-Profil (derzeit nur EN16931)"),
 ("Prüfbericht anzeigen","Ja","Ja = bei Regelverletzungen den Prüfbericht von Smart Tools anzeigen"),
+("PDF/A-Korrektur","Ja","Ja = nach dem Speichern CMYK-Farben und Überdrucken aus dem Quell-PDF PDF/A-konform machen (modPdfA), Nein = aus"),
 ("G5 Lieferantennummer","","Eigene Lieferantennummer der Brauerei bei der G5 (7 Ziffern, beginnt mit 27, endet auf 0). Pflicht für Empfänger mit Vorgaben = G5 (BT-29)"),
 ("G5 E-Mail","g5.e-invoice@documents.sgh-net.de","Zentrale Adresse der G5-Zentralregulierung (SGH Service) für alle Empfänger mit Vorgaben = G5"),
 ("REWE Hinweis AAK","Bezüglich der Entgeltminderungen verweisen wir auf die aktuellen Zahlungs- und Konditionsvereinbarungen","Pflichttext für Empfänger mit Vorgaben = REWE (BT-22, Code AAK)"),
