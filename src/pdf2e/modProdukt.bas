@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.10.0"
+Public Const TOOL_VERSION As String = "1.11.7"
 Public Const TOOL_STAND As String = "25.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -56,6 +56,14 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.11.7", "25.11.2026", "Fehlerbehebung", "Prüfung übernimmt Angaben, die nach dem Einlesen im Blatt Empfaenger nachgetragen wurden (USt-IdNr., E-Mail, Konto, Kondition), in leere Felder des Blatts Rechnung; bisher war neues Einlesen nötig")
+    c.Add Array("1.11.6", "25.11.2026", "Fehlerbehebung", "RE 2604315 (Barverkauf): Position mit negativer Menge und * (59 Rabatt 1- 15,00-*) erkannt; bei Bruttobeträgen werden nur echte Rundungsdifferenzen (max. 1 Cent je Position) verteilt, größere Differenzen bleiben als Fehler sichtbar")
+    c.Add Array("1.11.5", "25.11.2026", "Fehlerbehebung", "RE 2604314 (Italien): Hinweis „Steuerfreie Lieferung nach Italien ab Brauereihof“ und „UST - ID:“ erkannt (bisher nur „Steuerfreie innergemeinschaftliche Lieferung“ / „USt-ID:“); Kategorie K nur bei EU-Land, sonst klare Meldung")
+    c.Add Array("1.11.4", "25.11.2026", "Fehlerbehebung", "Bruttobeträge: Rundungsdifferenz wird centweise auf Positionen verteilt, damit Nettosumme, MwSt und Zahlbetrag genau der Rechnung entsprechen; Rundungsbetrag BT-114 nur noch als Rückfall")
+    c.Add Array("1.11.3", "25.11.2026", "Fehlerbehebung", "RE 2603531 (Barverkauf ab Rampe): Summenzeile RECHNUNGSBETRAG (incl. ... Pfand) EUR ... mit Klammer erkannt; Telefonnummer im Anschriftenblock nicht mehr als Teil des Namens")
+    c.Add Array("1.11.2", "25.11.2026", "Fehlerbehebung", "Bruttobeträge: Nettopreis wurde in Excel auf 2 Stellen gerundet (11,76 statt 11,7647), dadurch Fehler Menge x Preis; Preis jetzt mit 4 Stellen")
+    c.Add Array("1.11.1", "25.11.2026", "Fehlerbehebung", "Einlesen nach Import neuer Module ohne Neustart der Mappe brach mit „Element in dieser Auflistung nicht gefunden“ ab (Backend noch auf altem Schema, Spalte ZRNummer fehlte). Schema-Prüfung/Migration und neue Einstellungen jetzt auch vor jedem Laden der Stammdaten")
+    c.Add Array("1.11.0", "25.11.2026", "Neue Funktion", "Minus-Rechnung mit Rückware und Bruttobeträgen (ENTHALTENE MWSt., RE 2603475): Summenblock MINUS-RECHNUNGSBETRAG erkannt, Rückware mit negativer Menge, Preise und Pfand in netto umgerechnet, Rundungsdifferenz als Rundungsbetrag (BT-114); Leergutrückgabe-Zeilen ohne Meldung; Rechnungsbetrag im Verarbeitungsprotokoll mit Cent")
     c.Add Array("1.10.0", "25.11.2026", "Neue Funktion", "G5-Zentralregulierung (SGH Service): Vorgabe G5 je Empfänger, ZR-Nummer des Händlers als Käuferreferenz (BT-10, neue Spalte ZR-Nummer im Blatt Empfaenger), G5-Lieferantennummer der Brauerei als Verkäuferkennung (BT-29, Einstellung G5 Lieferantennummer), E-Mail an die zentrale Adresse (Einstellung G5 E-Mail), Prüfung beider Nummern; Backend Schema-Version 2")
     c.Add Array("1.9.1", "23.11.2026", "Fehlerbehebung", "Positionen ohne Hl./Fl.-Angabe und mit * am Zeilenende (z. B. EURO-Palette) wurden nicht übernommen; Ort ohne Zusatz (Deutschland)")
     c.Add Array("1.9.0", "23.11.2026", "Neue Funktion", "Steuerfreie innergemeinschaftliche Lieferung: USt-IdNr. des Empfängers aus der Rechnung, USt-Kategorie K mit 0 % und Befreiungsgrund VATEX-EU-IC, Lieferland aus der Empfängeranschrift; ausländische Anschriften mit Länderkennzeichen vor der PLZ (z. B. I- 39012 Meran); WARENWERT ohne Betrag (reine Leergutrückgabe); klare Meldung, wenn weder MwSt noch Steuerbefreiung erkannt wird")

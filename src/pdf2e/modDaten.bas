@@ -145,16 +145,7 @@ Public Sub DatenStart()
     If Len(Dir$(pfad)) = 0 Then
         BackendAnlegen
     Else
-        Set db = DbOeffnen()
-        ver = CLng(Val(SysWert(db, "SchemaVersion")))
-        db.Close
-        Set db = Nothing
-        If ver > SCHEMA_VERSION Then
-            Err.Raise vbObjectError + 62, , "Das Backend hat die Schema-Version " & ver & ", dieses Programm kennt nur " & _
-                      SCHEMA_VERSION & ". Bitte PDF2E über die Starter-Mappe neu starten, damit die aktuelle Version geladen wird."
-        ElseIf ver < SCHEMA_VERSION Then
-            BackendMigrieren ver
-        End If
+        SchemaSicherstellen
     End If
 
     NachUpdateErgaenzen
@@ -169,6 +160,24 @@ Fehler:
     Protokoll "Fehler", "Backend: " & Err.Description
     MsgBox "Problem mit dem Backend:" & vbLf & Err.Description & vbLf & vbLf & _
            "Backend: " & pfad, vbExclamation, TOOL_NAME
+End Sub
+
+' Schema-Version des Backends prüfen und bei Bedarf migrieren. Läuft beim Start
+' und vor jedem Laden der Stammdaten: Wurden neue Module importiert, ohne die
+' Mappe neu zu öffnen, fehlt sonst z. B. die Spalte ZRNummer (DAO-Fehler 3265
+' "Element in dieser Auflistung nicht gefunden").
+Private Sub SchemaSicherstellen()
+    Dim db As Object, ver As Long
+    Set db = DbOeffnen()
+    ver = CLng(Val(SysWert(db, "SchemaVersion")))
+    db.Close
+    Set db = Nothing
+    If ver > SCHEMA_VERSION Then
+        Err.Raise vbObjectError + 62, , "Das Backend hat die Schema-Version " & ver & ", dieses Programm kennt nur " & _
+                  SCHEMA_VERSION & ". Bitte PDF2E über die Starter-Mappe neu starten, damit die aktuelle Version geladen wird."
+    ElseIf ver < SCHEMA_VERSION Then
+        BackendMigrieren ver
+    End If
 End Sub
 
 Private Sub BackendAnlegen()
@@ -371,6 +380,8 @@ End Sub
 Public Sub StammdatenLaden()
     Dim t As Variant
     If Not DatenAktiv() Then Exit Sub
+    SchemaSicherstellen                 ' z. B. nach Modulimport ohne Neustart
+    NachUpdateErgaenzen                 ' neue Einstellungen der Programmversion ins Backend
     For Each t In Tabellen()
         BlattLaden CStr(t)
     Next t

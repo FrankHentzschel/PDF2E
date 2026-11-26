@@ -1,0 +1,41 @@
+     Moni Geburstag
+     Barverkauf - Barzahler
+     ab Rampe
+
+                                          LIEFERSCHEIN/RECHNUNG
+     91344 Waischenfeld
+
+                                                 10026    2604315     24.11.2026
+
+
+
+   ARTNR BEZEICHNUNG                    Ka/Fa     Hl./Fl.        PREIS   BETRAG EUR
+  ──────────────────────────────────────────────────────────────────────────────────
+  150450 Lieferschein:    5421 vom 24.11.2026      8
+       1 Lagerbier 0,5 / P11                1         20        14,000        14,00
+      15 Breitenlesauer Hell 0,5 / P11      1         20        15,000        15,00
+       6 Cola Mix 0,5                       2         40         9,000        18,00
+     300 Kirsch Gaas-Seidla 0,5 l           1         20        16,000        16,00
+       5 Bernstein Radler 0,5 / P 5         1         20        14,000        14,00
+       7 Limo Orang. 0,5                    1         20         8,000         8,00
+       8 Tafelwasser 0,5                    2         40         5,500        11,00
+      10 Krug Cola 0,5                      1         20         9,000         9,00
+         Leergutrückgabe:
+   99001 Euro 0,5                          10        200
+      59 Rabatt                             1-                  15,000        15,00-*
+  ──────────────────────────────────────────────────────────────────────────────────
+         WARENWERT:                                                           90,00
+
+  ──────────────────────────────────────────────────────────────────────────────────
+  LEERGUT-KONTO:            ALTER     MENGE  MENGE NEUER MENGE  PFAND         PFAND
+                            SALDO LIEFERUNG ZURÜCK SALDO  DIFF.  SATZ        BETRAG
+99001 Euro 0,5                535    10     10    535          3,10
+  ──────────────────────────────────────────────────────────────────────────────────
+                          RECHNUNGSBETRAG (incl.       0,00 Pfand) EUR        90,00
+                         ═══════════════════════════════════════════════════════════
+
+
+
+  ENTHALTENE MWSt. 19,00 % (aus        90,00 )              14,37
+  ────────────────────────────────────────────────────────────────
+

@@ -305,7 +305,8 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
         .NetAmount = positionen - nachlaesse                            ' BT-109
         .VatAmount = ustSumme                                           ' BT-110
         .GrossAmount = positionen - nachlaesse + ustSumme               ' BT-112
-        .PayableAmount = positionen - nachlaesse + ustSumme             ' BT-115
+        If Rundung() <> 0 Then .RoundingAmount = Rundung()              ' BT-114 (Bruttobeträge)
+        .PayableAmount = positionen - nachlaesse + ustSumme + Rundung() ' BT-115
     End With
 End Sub
 

@@ -3,6 +3,51 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.7 und XL2E 1.2.3 – 25.11.2026
+
+- **Fehlerbehebung:** Wurde nach dem Einlesen die USt-IdNr. (oder E-Mail, Konto, Kondition) im Blatt „Empfaenger“ nachgetragen, meldete „Prüfen“ weiter „REWE: USt-IdNr. fehlt“, weil die Prüfung das Blatt „Rechnung“ liest. Jetzt übernimmt „Prüfen“ solche Angaben in leere Felder des Blatts „Rechnung“. Von Hand im Blatt „Rechnung“ Eingetragenes bleibt unverändert.
+- XL2E 1.2.3: dieselben gemeinsamen Module.
+
+## PDF2E 1.11.6 – 25.11.2026
+
+- **Fehlerbehebung:** RE 2604315 (Barverkauf, Kd. 10026): Die Position `59 Rabatt  1-  15,000  15,00-*` (negative Menge, `*` direkt am Betrag) wurde nicht übernommen; Warenwert 104,87 statt 90,00. Jetzt Position mit Menge −1.
+- **Fehlerbehebung:** Bei Bruttobeträgen verteilte 1.11.4 auch eine große Differenz (hier −14,87) teilweise auf die Preise. Jetzt werden nur echte Rundungsdifferenzen verteilt (höchstens 1 Cent je Position); eine größere Differenz bleibt stehen, wird gewarnt und von der Prüfung als Fehler gemeldet.
+- Testfall `tests/pdftotext/Rechnung_2604315.txt`. XL2E unverändert.
+
+## PDF2E 1.11.5 – 25.11.2026
+
+- **Fehlerbehebung:** RE 2604314 (Verona Birre, Italien) schreibt den Hinweis anders als RE 2604264: `** Steuerfreie Lieferung nach Italien ab Brauereihof **` und `UST - ID: IT04962160232`. Beides wurde nicht erkannt, daher „Kein MwSt-Satz“. Jetzt reichen „Steuerfreie Lieferung“ bzw. „Steuerfreie innergemeinschaftliche Lieferung“ und USt-ID mit beliebigen Leerzeichen/Bindestrichen. Kategorie K wird nur gesetzt, wenn das Land des Empfängers ein anderes EU-Land ist; sonst (z. B. Schweiz, Ausfuhr) eine klare Fehlermeldung.
+- Testfall `tests/pdftotext/Rechnung_2604314.txt`. XL2E unverändert.
+
+## PDF2E 1.11.4 – 25.11.2026
+
+- **Änderung (Vorgabe Frank):** Bei Bruttobeträgen sollen die Beträge der E-Rechnung denen der Rechnung entsprechen. Die Rundungsdifferenz zur Nettosumme laut Rechnung (Rechnungsbetrag − enthaltene MwSt) wird jetzt centweise auf die Positionen mit dem größten Rundungsrest verteilt, deren Nettopreis passend neu berechnet. Nettosumme, MwSt und Zahlbetrag stimmen damit genau (RE 2603475: −649,16 / −123,34 / −772,50; RE 2603531: 205,38 / 39,02 / 244,40). Der Rundungsbetrag BT-114 bleibt nur als Rückfall, wenn sich ein Cent nicht verteilen lässt.
+- XL2E unverändert.
+
+## PDF2E 1.11.3 – 25.11.2026
+
+- **Fehlerbehebung:** RE 2603531 (Barverkauf ab Rampe, Bruttobeträge, positiver Betrag): Die Summenzeile `RECHNUNGSBETRAG (incl. 43,40 Pfand) EUR 244,40` mit Klammer wurde nicht erkannt; Pfand, Nettosumme und Rechnungsbetrag fehlten.
+- **Fehlerbehebung:** Eine Telefonnummer im Anschriftenblock (`0170-4383514`) wurde Teil des Empfängernamens. Sie wird jetzt übergangen und im Protokoll genannt.
+- Testfall `tests/pdftotext/Rechnung_2603531.txt`. XL2E unverändert.
+
+## PDF2E 1.11.2 – 25.11.2026
+
+- **Fehlerbehebung:** Bei Bruttobeträgen (RE 2603475) stand der Nettopreis in Excel nur mit 2 Stellen im Blatt Positionen (11,76 statt 11,7647). Die Prüfung meldete deshalb „Menge x Preis“ bei 5 Zeilen. Der Preis wird jetzt als Double mit Zahlenformat `#,##0.0000` geschrieben. XL2E unverändert (nur `modParserBSI` und `modProdukt` geändert).
+
+## PDF2E 1.11.1 und XL2E 1.2.2 – 25.11.2026
+
+- **Fehlerbehebung:** Nach dem Import neuer Module in eine geöffnete ältere Mappe (ohne Neustart) brach „PDF einlesen“ mit „Element in dieser Auflistung nicht gefunden“ ab (DAO-Fehler 3265). Die Migration des Backends auf Schema-Version 2 (Spalte ZRNummer) läuft nur beim Öffnen der Mappe; beim Einlesen fehlte die Spalte. Jetzt werden Schema-Version und neue Einstellungen auch vor jedem Laden der Stammdaten geprüft und bei Bedarf nachgeholt.
+
+## PDF2E 1.11.0 und XL2E 1.2.1 – 25.11.2026
+
+- **Neue Funktion:** Minus-Rechnung mit Rückware und Bruttobeträgen (RE 2603475, J & J Festbedarf): Summenblock `MINUS-RECHNUNGSBETRAG incl. … Pfand) EUR …` und `ENTHALTENE MWSt. … (aus …)` werden gelesen. Bisher brach die Prüfung mit 26 Fehlern ab (kein MwSt-Satz, Menge × Preis bei jeder Rückware-Zeile, Pfand/Netto/Rechnungsbetrag fehlten).
+  - Rückware (negativer Betrag) bekommt eine negative Menge.
+  - Bruttobeträge: Preise auf 4 Stellen netto umgerechnet, Betrag = Menge × Nettopreis; Rundungsdifferenz als Rundungsbetrag BT-114 (neues Feld `f_Rundung`, wird in älteren Mappen angehängt), Zahlbetrag BT-115 = Rechnungsbetrag laut PDF.
+  - Prüfung bei Bruttobeträgen: Warenwert und Pfand brutto, Netto und MwSt mit Toleranz 1 Cent je Position.
+  - Zeilen unter „Leergutrückgabe:“ im Positionsteil erscheinen nicht mehr als „Nicht übernommen“.
+- **Fehlerbehebung:** Der Rechnungsbetrag im Verarbeitungsprotokoll (Backend) wurde mit `Val()` gelesen und verlor bei deutschen Ländereinstellungen vermutlich die Nachkommastellen. Jetzt Zahlbetrag als Currency, ebenso `{Betrag}` in der E-Mail.
+- Testfall `tests/pdftotext/Rechnung_2603475.txt`. XL2E 1.2.1: dieselben gemeinsamen Module.
+
 ## PDF2E 1.10.0 und XL2E 1.2.0 – 25.11.2026
 
 - **Neue Funktion:** Vorgaben der G5-Zentralregulierung (SGH Service GmbH, Merkblatt 11/2026 und E-Rechnung-Guideline EN 16931 V1.1, gültig ab 01.12.2026). Gilt nur für Empfänger mit `G5` in der Spalte „Vorgaben“ (von Hand eintragen), REWE, EDEKA und alle anderen Empfänger bleiben unverändert.
