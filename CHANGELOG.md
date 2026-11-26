@@ -3,6 +3,16 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.10.0 und XL2E 1.2.0 – 25.11.2026
+
+- **Neue Funktion:** Vorgaben der G5-Zentralregulierung (SGH Service GmbH, Merkblatt 11/2026 und E-Rechnung-Guideline EN 16931 V1.1, gültig ab 01.12.2026). Gilt nur für Empfänger mit `G5` in der Spalte „Vorgaben“ (von Hand eintragen), REWE, EDEKA und alle anderen Empfänger bleiben unverändert.
+  - ZR-Nummer des Händlers (7 Ziffern, beginnt mit 27) aus der neuen Spalte „ZR-Nummer“ im Blatt „Empfaenger“ als Käuferreferenz BT-10 (`ram:BuyerReference`).
+  - G5-Lieferantennummer der Brauerei (7 Ziffern, 27…0) aus der neuen Einstellung „G5 Lieferantennummer“ als Verkäuferkennung BT-29 ohne Schema (`ram:SellerTradeParty/ram:ID`), zusätzlich zur GLN.
+  - E-Mail-Entwurf an die zentrale Adresse aus der Einstellung „G5 E-Mail“ (Vorgabe `g5.e-invoice@documents.sgh-net.de`).
+  - Prüfung: beide Nummern Pflicht und im richtigen Aufbau.
+- **Backend:** Schema-Version 2 (Spalte `ZRNummer` in der Tabelle Empfaenger). Die Umstellung läuft beim ersten Start der neuen Version automatisch, mit Sicherung vorher; dabei dürfen keine anderen Plätze PDF2E geöffnet haben. Ältere Mappen bekommen die Spalte vor den Verwaltungsspalten eingefügt; die Übernahme aus einer älteren Mappe liest nur deren Datenspalten.
+- XL2E 1.2.0: dieselben gemeinsamen Module.
+
 ## PDF2E 1.9.1 – 23.11.2026
 
 - **Fehlerbehebung:** Positionen ohne Angabe in der Spalte Hl./Fl. und mit `*` am Zeilenende (RE 2604307: `136 EURO-Palette  29  12,000  348,00 *`) wurden nicht übernommen; Netto fehlte um 348,00. Der Ort „Hamburg (Deutschland)“ wird ohne Zusatz übernommen.

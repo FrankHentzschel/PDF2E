@@ -1,4 +1,4 @@
-# PDF2E 1.9.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.10.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -77,6 +77,12 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
 
+## Update auf 1.10.0 (G5-Zentralregulierung)
+
+1. **Vorher an allen Plätzen PDF2E schließen.** Die neue Version stellt das Backend beim ersten Start auf Schema-Version 2 um (neue Spalte ZR-Nummer). Das geht nur, wenn kein anderer Platz das Backend offen hat; vorher legt das Programm eine Sicherung an. Plätze mit der alten Version melden danach, dass sie über die Starter-Mappe neu starten sollen.
+2. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
+3. Im Blatt „Einstellungen“ die **G5 Lieferantennummer** der Brauerei eintragen (siehe „G5-Empfänger“ unten). Die Zeilen „G5 Lieferantennummer“ und „G5 E-Mail“ übernimmt das Programm beim ersten Start selbst ins Backend.
+
 ## Update von 1.7.x auf 1.8.x und 1.9.0
 
 1. VbaSync „Alle importieren“ aus `vba`. Kompilieren.
@@ -149,6 +155,21 @@ Umsetzung:
 - Beim Einlesen wird ein Empfänger, dessen Name „EDEKA“ enthält, im Blatt „Empfaenger“ in der Spalte **Vorgaben** mit `EDEKA` markiert. Andere Händler, die über EDEKA abrechnen, dort von Hand markieren.
 - Das Blatt **Pfandartikel** sammelt alle Leergut-Nummern aus den Rechnungen automatisch. Die GTIN trägt der Anwender einmal ein; sie steht nicht auf der BSI-Rechnung. Fehlt sie bei einem EDEKA-Empfänger, meldet die Prüfung einen Fehler.
 - Weitere Vorgaben, etwa die EDEKA-Bestellnummer (BT-13), sind nicht umgesetzt: Sie stehen nicht auf der BSI-Rechnung.
+
+## G5-Empfänger (ab 1.10.0)
+
+Die G5 Getränkefachhandels-Kooperation lässt ihre Zentralregulierung von der SGH Service GmbH abwickeln. Laut Merkblatt (Stand 11/2026) und E-Rechnung-Guideline EN 16931 V1.1 gilt ab 01.12.2026:
+
+- E-Rechnungen (ZUGFeRD ab EN16931) gehen ohne Onboarding an **g5.e-invoice@documents.sgh-net.de**, jeder Beleg nur einmal. Reine PDF-Belege dürfen noch an eine bestehende individuelle Adresse gehen.
+- Pflicht im XML: **ZR-Nummer** des Händlers als Käuferreferenz (BT-10, 7 Ziffern, beginnt mit 27) und die **G5-Lieferantennummer** der Brauerei als Verkäuferkennung (BT-29, 7 Ziffern, beginnt mit 27, endet auf 0). Eine Angabe nur im PDF reicht nicht.
+- Nicht konforme Belege lehnt das System automatisch ab, die Meldung geht an die Absenderadresse der Mail.
+
+Umsetzung:
+
+- Im Blatt „Empfaenger“ bei jedem G5-Anschlusshaus in der Spalte **Vorgaben** `G5` und in der Spalte **ZR-Nummer** dessen ZR-Nummer eintragen. Automatisch erkannt wird ein G5-Kunde nicht, weil das nicht auf der BSI-Rechnung steht.
+- Im Blatt „Einstellungen“ die **G5 Lieferantennummer** eintragen. Die Einstellung **G5 E-Mail** enthält die zentrale Adresse; der E-Mail-Entwurf geht bei G5-Empfängern immer dorthin, auch wenn beim Empfänger eine andere Adresse steht.
+- Die Prüfung meldet einen Fehler, wenn eine der beiden Nummern fehlt oder falsch aufgebaut ist.
+- Nicht umgesetzt: Hinweis auf Entgeltminderung (AAK mit Code EGM), Skonto im Format `#SKONTO#…#` und Gutschriften (Rechnungsart 381). Das ist erst nötig, wenn die Brauerei mit der G5 Rabatte/Boni oder Skonto vereinbart hat bzw. eigene Gutschriftsbelege erzeugt.
 
 ## Versionsnummern
 

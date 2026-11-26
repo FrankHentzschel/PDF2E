@@ -1,4 +1,4 @@
-# XL2E 1.1.7 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
+# XL2E 1.2.0 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Stand 17.11.2026. XL2E ist das Gegenstück zu PDF2E für Brauereien, deren BSI-Software die Rechnung als Excel-Datei ausgibt (Blatt `PA400_00`). Erster Kunde ist die Privatbrauerei Fiedler. Der Ablauf ist derselbe wie bei PDF2E: Rechnung einlesen, prüfen, E-Rechnung erzeugen, E-Mail-Entwurf.
 
@@ -93,6 +93,10 @@ Vorschlag für den ersten Test in Excel: Adapter `STUB`, Muster 2602271 einlesen
 - Der VBA-Code von XL2E ist noch nicht in Excel gelaufen. Gegengeprüft ist nur die Einleselogik, mit dem Python-Nachbau.
 - Das Aussehen des Briefkopfs ist ungeprüft: Länge der Kopf- und Fußzeilentexte (Excel erlaubt rund 255 Zeichen je Abschnitt), Logogröße, Abstand zum Rechnungsinhalt.
 - Ein `&` in Name oder Bankbezeichnung wird in Kopf- und Fußzeile als Steuerzeichen gelesen. Falls nötig, in den Stammdaten `&&` schreiben.
+
+## G5-Empfänger (ab 1.2.0)
+
+Wie in PDF2E (siehe dort „G5-Empfänger“): `G5` in der Spalte Vorgaben, ZR-Nummer in der Spalte ZR-Nummer des Blatts „Empfaenger“, G5-Lieferantennummer im Blatt „Einstellungen“. Beim ersten Start stellt das Programm das Backend auf Schema-Version 2 um; dabei dürfen keine anderen Plätze geöffnet sein.
 
 ## Bekannte Grenzen
 

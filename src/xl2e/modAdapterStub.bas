@@ -31,6 +31,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-72", "Leistungsdatum", DatumXml(Feld("f_LSDatum").Value)
     Wert grp, "BT-9", "Faelligkeitsdatum", DatumXml(FaelligAm())
     If Len(Zahlungsbedingung()) > 0 Then Wert grp, "BT-20", "Zahlungsbedingungen", Zahlungsbedingung()
+    If EmpfaengerVorgabe() = "G5" Then Wert grp, "BT-10", "ZRNummer", EmpfaengerZRNummer()
 
     Set grp = Gruppe(root, "Verkaeufer")
     Wert grp, "BT-27", "Name", Stamm("Name")
@@ -44,6 +45,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-41", "Kontakt", Stamm("Kontakt Name")
     Wert grp, "BT-42", "Telefon", Stamm("Telefon")
     Wert grp, "BT-43", "EMail", Stamm("E-Mail")
+    If EmpfaengerVorgabe() = "G5" Then Wert grp, "BT-29", "G5Lieferantennummer", EinstellungOderLeer("G5 Lieferantennummer")
 
     Set grp = Gruppe(root, "Kaeufer")
     Wert grp, "BT-44", "Name", Feld("f_KName").Value
