@@ -12,8 +12,6 @@ Public Const SP_E_VORGABEN As Long = 8
 Public Const SP_E_ZRNR As Long = 9
 Private Const G5_EMAIL_STANDARD As String = "g5.e-invoice@documents.sgh-net.de"
 Public Const BLATT_PFANDARTIKEL As String = "Pfandartikel"
-' GLN je Lieferort (Warenempfänger), Schlüssel = Kunde / PLZ Ort, Straße
-Public Const BLATT_LIEFERORTE As String = "Lieferorte"
 
 ' Eingabefelder, die vor jedem Einlesen geleert werden (Formelfelder fehlen bewusst)
 Private Const FELDER_LEEREN As String = _
@@ -206,7 +204,6 @@ Private Sub VorgabenSetzen()
     EdekaErkennen
     G5VorgabenSetzen
     PfandartikelAnlegen
-    LieferortGlnSetzen
 End Sub
 
 ' Neuen Rechnungsempfänger mit den aktuellen Vorgaben ins Blatt "Empfaenger"
@@ -364,70 +361,6 @@ Public Sub PfandartikelSicherstellen()
     ws.Columns(4).ColumnWidth = 50
     If Not vorher Is Nothing Then vorher.Activate
     Protokoll "Info", "Blatt '" & BLATT_PFANDARTIKEL & "' angelegt."
-End Sub
-
-' Warenempfänger-GLN (BT-71) aus dem Blatt "Lieferorte", wenn die Rechnung einen
-' Lieferort ohne GLN hat (z. B. "Lieferfiliale" bei Getränke Hoffmann). Unbekannte
-' Lieferorte werden dort angelegt; der Anwender trägt die GLN einmal ein.
-Private Sub LieferortGlnSetzen()
-    Dim wsL As Worksheet, z As Long, schluessel As String, gln As String
-    If Len(Trim$(CStr(Feld("f_LGLN").Value))) > 0 Then Exit Sub
-    If Len(Trim$(CStr(Feld("f_LOrt").Value))) = 0 Then Exit Sub
-    LieferorteSicherstellen
-    Set wsL = ThisWorkbook.Worksheets(BLATT_LIEFERORTE)
-    schluessel = LieferortSchluessel()
-    z = TabellenZeile(BLATT_LIEFERORTE, schluessel)
-    If z > 0 Then
-        gln = Replace(Trim$(CStr(wsL.Cells(z, 3).Value)), " ", "")
-        If Len(gln) > 0 Then
-            Feld("f_LGLN").Value = "'" & gln
-            Protokoll "Info", "GLN des Lieferorts aus dem Blatt '" & BLATT_LIEFERORTE & "': " & gln
-        End If
-        Exit Sub
-    End If
-    z = wsL.Cells(wsL.Rows.Count, 1).End(xlUp).Row + 1
-    wsL.Cells(z, 1).NumberFormat = "@"
-    wsL.Cells(z, 1).Value = schluessel
-    wsL.Cells(z, 2).Value = Feld("f_LName").Value
-    wsL.Cells(z, 3).NumberFormat = "@"
-    wsL.Cells(z, 4).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & " aus RE " & Feld("f_RechNr").Value
-    wsL.Range(wsL.Cells(z, 1), wsL.Cells(z, 4)).Interior.Color = RGB(255, 248, 225)
-    ZeileSpeichern BLATT_LIEFERORTE, z
-    Protokoll "Info", "Lieferort " & schluessel & " im Blatt '" & BLATT_LIEFERORTE & "' angelegt. GLN dort eintragen, falls der Kunde sie verlangt."
-End Sub
-
-' Schlüssel eines Lieferorts: Empfänger / PLZ Ort, Straße
-Public Function LieferortSchluessel() As String
-    LieferortSchluessel = EmpfaengerSchluessel() & " / " & Trim$(CStr(Feld("f_LPLZ").Value)) & " " & _
-                          Trim$(CStr(Feld("f_LOrt").Value)) & ", " & Trim$(CStr(Feld("f_LZeile2").Value))
-End Function
-
-' Legt das Blatt "Lieferorte" an, falls es fehlt.
-Public Sub LieferorteSicherstellen()
-    Dim ws As Worksheet, vorher As Object
-    On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(BLATT_LIEFERORTE)
-    On Error GoTo 0
-    If Not ws Is Nothing Then Exit Sub
-    Set vorher = ActiveSheet
-    Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets("Empfaenger"))
-    ws.Name = BLATT_LIEFERORTE
-    ws.Range("A1:D1").Value = Array("Lieferort", "Name", "GLN", "Bemerkung")
-    With ws.Range("A1:D1")
-        .Font.Bold = True
-        .Font.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Font.Color
-        .Interior.Color = ThisWorkbook.Worksheets("Empfaenger").Cells(1, 1).Interior.Color
-    End With
-    ws.Range("A1").AddComment "Kundennr. / PLZ Ort, Straße des Lieferorts. Wird beim Einlesen automatisch angelegt, nicht ändern."
-    ws.Range("C1").AddComment "GLN des Warenempfängers (13 Ziffern), z. B. der Filiale. Wird als Lieferort-GLN (BT-71) übergeben. " & _
-                               "Steht nicht auf der BSI-Rechnung; beim Kunden erfragen."
-    ws.Columns(1).ColumnWidth = 50
-    ws.Columns(2).ColumnWidth = 36
-    ws.Columns(3).ColumnWidth = 16
-    ws.Columns(3).NumberFormat = "@"
-    ws.Columns(4).ColumnWidth = 45
-    If Not vorher Is Nothing Then vorher.Activate
-    Protokoll "Info", "Blatt '" & BLATT_LIEFERORTE & "' angelegt."
 End Sub
 
 ' GTIN eines Pfandartikels aus dem Blatt "Pfandartikel", leer wenn unbekannt

@@ -33,14 +33,6 @@ Public Function RechnungPruefen() As Boolean
     ' GLN (13 Stellen mit Prüfziffer), sofern angegeben
     GlnPruefen "f_KGLN", "GLN Rechnungsempfänger"
     GlnPruefen "f_LGLN", "GLN Lieferort"
-    If Len(Trim$(CStr(Feld("f_LOrt").Value))) > 0 And Len(Trim$(CStr(Feld("f_LGLN").Value))) = 0 Then
-        Protokoll "Warnung", "Lieferort ohne GLN. Falls der Kunde sie verlangt (z. B. Getränke Hoffmann): im Blatt '" & _
-                             BLATT_LIEFERORTE & "' bei " & LieferortSchluessel() & " eintragen und neu einlesen."
-    End If
-    If Len(Trim$(CStr(Feld("f_LGLN").Value))) > 0 And Len(StammOderLeer("GLN")) = 0 Then
-        Protokoll "Warnung", "Lieferort mit GLN, aber keine eigene GLN der Brauerei (Blatt 'Brauerei', Zeile 'GLN'). " & _
-                             "Händler mit GLN-Verarbeitung verlangen meist auch die Lieferanten-GLN."
-    End If
 
     ' Sondervorgaben des Empfängers (Blatt "Empfaenger", Spalte "Vorgaben")
     If EmpfaengerVorgabe() = "REWE" Then
