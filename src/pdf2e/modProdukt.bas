@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.13.0"
+Public Const TOOL_VERSION As String = "1.14.1"
 Public Const TOOL_STAND As String = "26.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -56,6 +56,8 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.14.1", "26.11.2026", "Fehlerbehebung", "Kompilierfehler „Erwartet: Datenfeld“ in modPdfA: Variable mId verdeckte die VBA-Funktion Mid (umbenannt in mTrailerId); Strukturtest prüft jetzt solche Namenskonflikte")
+    c.Add Array("1.14.0", "26.11.2026", "Neue Funktion", "PDF/A-Korrektur nach dem Speichern (neues Modul modPdfA): Briefpapier der BSI-Rechnung in CMYK mit Überdrucken machte die E-Rechnung zu einem ungültigen PDF/A-3 (Meldung Getränke Ziegler: Überdrucken-Modus OPM 1 bei ICC-basiertem CMYK); Überdrucken-Modus wird auf 0 gesetzt und ein CMYK-Farbprofil als DefaultCMYK eingetragen, abschaltbar mit Einstellung PDF/A-Korrektur = Nein. Registerangaben der Brauerei (Sitz, Handelsregister, Geschäftsführer) als Freitext mit Code REG (BT-22), Hinweis VD-Valitool-71; Text aus dem Blatt Brauerei (optional Zeilen Sitz und Registerangaben)")
     c.Add Array("1.13.0", "26.11.2026", "Neue Funktion", "Warenempfänger-GLN zusätzlich als Standard je Kunde (neue Spalte Warenempfänger-GLN im Blatt Empfaenger), Vorrang hat die GLN im Blatt Lieferorte; GLN nur bei Kunden, die sie verlangen (Vorgaben GLN, REWE, EDEKA oder Warenempfänger-GLN gepflegt): nur für sie werden Lieferorte angelegt und GLN-Hinweise gemeldet; Backend Schema-Version 4")
     c.Add Array("1.12.0", "26.11.2026", "Neue Funktion", "Lieferfiliale unter dem Nettowert (z. B. Getränke Hoffmann) als Lieferort; Warenempfänger-GLN je Lieferort: neues Blatt Lieferorte (wird beim Einlesen automatisch gefüllt, GLN einmal eintragen, Prüfen übernimmt sie auch nachträglich), Lieferort-GLN als BT-71; Hinweis bei fehlender Lieferort-GLN und fehlender eigener GLN der Brauerei (BT-29, Blatt Brauerei); Backend Schema-Version 3")
     c.Add Array("1.11.7", "25.11.2026", "Fehlerbehebung", "Prüfung übernimmt Angaben, die nach dem Einlesen im Blatt Empfaenger nachgetragen wurden (USt-IdNr., E-Mail, Konto, Kondition), in leere Felder des Blatts Rechnung; bisher war neues Einlesen nötig")

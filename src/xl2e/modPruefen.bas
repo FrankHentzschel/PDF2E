@@ -92,6 +92,11 @@ Public Function RechnungPruefen() As Boolean
         If Len(Stamm(CStr(k))) = 0 Then Fehler "Brauerei-Stammdaten: '" & k & "' fehlt."
     Next k
     UStIdPruefen Stamm("USt-IdNr"), "USt-IdNr. der Brauerei: im Blatt 'Brauerei' korrigieren."
+    If Len(Registerangaben()) = 0 Then
+        Protokoll "Warnung", "Keine Registerangaben der Brauerei (Handelsregister, Geschäftsführer). Manche Empfänger " & _
+                             "bemängeln das (BT-22 mit Code REG). Im Blatt 'Brauerei' die Zeilen 'Registernummer' und " & _
+                             "'Geschäftsführer' füllen (bei Einzelunternehmen ohne Registereintrag kann das entfallen)."
+    End If
 
     PlatzhalterPruefen
 

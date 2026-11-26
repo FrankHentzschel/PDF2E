@@ -24,6 +24,7 @@ Private Const LIZENZ_ORDNER As String = "SmartTools\Excel E-Rechnung VBA"
 Private Const ID_GLN As Long = 86             ' 0088 EAN Location Code (GLN)
 Private Const ID_GTIN As Long = 156           ' 0160 Global Trade Item Number (GTIN)
 Private Const TEXT_AAK As Long = 9            ' AAK Preiskonditionen
+Private Const TEXT_REG As Long = 378          ' REG Regulatory information (Registerangaben)
 Private Const WAEHRUNG_EUR As Long = 48
 Private Const BEFREIUNG_EU_IC As Long = 57        ' VatExemptionReasonCode: Intra-community supply
 
@@ -52,6 +53,7 @@ Public Sub SmartToolsEinbetten(ByVal zielPdf As String)
     LieferungSetzen inv
     ZahlungSetzen inv
     PositionenUndSummenSetzen inv
+    RegisterangabenSetzen inv
     If EmpfaengerVorgabe() = "REWE" Then ReweVorgabenSetzen inv
     If EmpfaengerVorgabe() = "G5" Then G5KennungenSetzen inv
 
@@ -68,6 +70,7 @@ Public Sub SmartToolsEinbetten(ByVal zielPdf As String)
 
     inv.Save zielPdf        ' bettet factur-x.xml in die PDF-Kopie ein (PDF/A-3)
     Protokoll "Info", "Smart Tools: Profil EN16931, Prüfung ohne Fehler"
+    PdfANachbearbeiten zielPdf      ' CMYK/Überdrucken aus dem Quell-PDF PDF/A-konform machen (modPdfA)
 End Sub
 
 '------------------------------------------------------------------------------
@@ -311,6 +314,15 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
 End Sub
 
 ' REWE-Zentralregulierung (Startpaket 1.7 RZF): Hinweis auf Entgeltminderungen (AAK)
+' Registerangaben der Brauerei (Sitz, Handelsregister, Geschäftsführer) als Freitext
+' mit Code REG (BT-21/BT-22). Validatoren wie VD-Valitool-71 erwarten das zusätzlich
+' zur Registernummer in BT-30. Text aus dem Blatt "Brauerei", siehe Registerangaben().
+Private Sub RegisterangabenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
+    Dim text As String
+    text = Registerangaben()
+    If Len(text) > 0 Then inv.AddNote NeueNotiz(text, TEXT_REG)        ' BT-21 REG, BT-22
+End Sub
+
 Private Sub ReweVorgabenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
     Dim text As String
     text = EinstellungOderLeer("REWE Hinweis AAK")

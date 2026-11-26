@@ -1,0 +1,596 @@
+Attribute VB_Name = "modPdfA"
+'==============================================================================
+' PDF/A-Nachbearbeitung der E-Rechnung (nach dem Speichern durch Smart Tools)
+'
+' Problem: Briefpapier und Logos im Quell-PDF (z. B. das Overlay der BSI-
+' Rechnung) sind in DeviceCMYK gezeichnet, teils mit Überdrucken (ExtGState
+' /OP true /OPM 1). Die E-Rechnung hat einen sRGB-OutputIntent. Das verletzt
+' PDF/A-3 (ISO 19005-3):
+'   6.2.4.3  DeviceCMYK ohne CMYK-OutputIntent und ohne DefaultCMYK
+'   6.2.4.2  Überdrucken-Modus 1 bei ICC-basiertem CMYK mit Überdrucken
+' Smart Tools übernimmt den Seiteninhalt des Quell-PDFs unverändert. Schon das
+' BSI-Original ist deshalb kein gültiges PDF/A-1b.
+'
+' Korrektur (Seiteninhalt und eingebettetes XML bleiben unverändert):
+'   1. /OPM 1 wird zu /OPM 0 (gleiche Länge, direkt in der Datei).
+'   2. Inkrementelles Update am Dateiende: ein CMYK-ICC-Profil wird als
+'      DefaultCMYK in die Ressourcen eingetragen. DeviceCMYK gilt damit als
+'      geräteunabhängig (ISO 32000-1, 8.6.5.6).
+' Profil: CGATS001Compat-v2-micro.icc (Clinton Ingram, "Compact ICC Profiles",
+' Lizenz CC0 1.0, frei verwendbar), 8464 Byte, unten als Hex-Text.
+' Geprüft mit veraPDF 1.28 (PDF/A-3B) an Smart-Tools-Ausgaben von Krug-Rechnungen.
+'
+' Abschalten: Einstellung "PDF/A-Korrektur" = Nein.
+' Unterstützt nur PDFs mit klassischer Querverweistabelle (so speichert Smart
+' Tools); sonst bleibt es bei Schritt 1 und einer Warnung im Protokoll.
+'==============================================================================
+Option Explicit
+
+Private Const ICC_LAENGE As Long = 8464
+
+Private mB() As Byte            ' Dateiinhalt
+Private mS As String            ' derselbe Inhalt als Byte-String (InStrB/MidB, Positionen ab 1)
+Private mOffset As Object       ' Objektnummer -> Offset ab 0 (-1 = freies Objekt)
+Private mGen As Object          ' Objektnummer -> Generation
+Private mEinfuegen As Object    ' Objektnummer -> Array(Einfügeposition ab 1, Text)
+Private mSize As Long           ' /Size des letzten Trailers = Nummer des neuen ICC-Objekts
+Private mRoot As String, mInfo As String, mTrailerId As String
+Private mDateiNr As Integer     ' offene Datei (für die Fehlerbehandlung)
+
+Public Sub PdfANachbearbeiten(ByVal pfad As String)
+    Dim nOpm As Long, nCmyk As Long, xrefAlt As Long, hinweis As String, txt As String
+
+    If UCase$(EinstellungOderLeer("PDF/A-Korrektur")) = "NEIN" Then Exit Sub
+    On Error GoTo Fehler
+
+    Laden pfad
+    If InStrB(1, mS, A("/Encrypt")) > 0 Then
+        Protokoll "Warnung", "PDF/A-Korrektur übersprungen: Das PDF ist verschlüsselt."
+        Exit Sub
+    End If
+
+    nOpm = OpmKorrigieren()
+    If InStrB(1, mS, A("/DefaultCMYK")) = 0 Then
+        xrefAlt = LetzteXrefPosition()
+        If xrefAlt < 0 Then
+            hinweis = "kein startxref gefunden"
+        ElseIf XrefTabelleLesen(xrefAlt, hinweis) Then
+            nCmyk = DefaultCmykVormerken(hinweis)
+        End If
+    End If
+
+    If nOpm = 0 And nCmyk = 0 Then
+        If Len(hinweis) > 0 Then Protokoll "Warnung", "PDF/A-Korrektur: CMYK-Profil nicht eingetragen (" & hinweis & ")."
+        Exit Sub
+    End If
+
+    Speichern pfad, xrefAlt, (nCmyk > 0)
+    txt = "PDF/A-Korrektur:"
+    If nOpm > 0 Then txt = txt & " Überdrucken-Modus " & nOpm & "x auf 0 gesetzt;"
+    If nCmyk > 0 Then txt = txt & " CMYK-Profil (DefaultCMYK) in " & nCmyk & " Ressourcen eingetragen;"
+    Protokoll "Info", Left$(txt, Len(txt) - 1)
+    If Len(hinweis) > 0 Then Protokoll "Warnung", "PDF/A-Korrektur: CMYK-Profil nicht eingetragen (" & hinweis & ")."
+    Exit Sub
+
+Fehler:
+    txt = Err.Description
+    On Error Resume Next
+    If mDateiNr <> 0 Then Close #mDateiNr
+    mDateiNr = 0
+    If Len(Dir$(pfad & ".tmp")) > 0 Then Kill pfad & ".tmp"
+    On Error GoTo 0
+    Protokoll "Warnung", "PDF/A-Korrektur nicht möglich (" & txt & "). Die E-Rechnung bleibt, wie Smart Tools sie " & _
+                         "gespeichert hat. Die XML-Daten sind davon nicht betroffen, ein Validator meldet aber evtl. PDF/A-Fehler."
+End Sub
+
+'------------------------------------------------------------------------------
+' Datei lesen und Überdrucken-Modus korrigieren
+'------------------------------------------------------------------------------
+Private Sub Laden(ByVal pfad As String)
+    Dim f As Integer, n As Long
+    f = FreeFile
+    Open pfad For Binary Access Read As #f
+    mDateiNr = f
+    n = LOF(f)
+    If n = 0 Then Err.Raise vbObjectError + 301, , "Datei ist leer"
+    ReDim mB(0 To n - 1)
+    Get #f, , mB
+    Close #f
+    mDateiNr = 0
+    mS = mB
+End Sub
+
+' "/OPM 1" -> "/OPM 0" (Wert 1 nach mindestens einem Leerzeichen, danach ein Trennzeichen)
+Private Function OpmKorrigieren() As Long
+    Dim p As Long, q As Long, n As Long
+    n = LenB(mS)
+    p = InStrB(1, mS, A("/OPM"))
+    Do While p > 0
+        q = p + 4
+        Do While q <= n
+            If Not IstLeer(mB(q - 1)) Then Exit Do
+            q = q + 1
+        Loop
+        If q > p + 4 And q < n Then
+            If mB(q - 1) = 49 Then
+                If IstTrenner(mB(q)) Then
+                    mB(q - 1) = 48
+                    MidB$(mS, q, 1) = ChrB$(48)
+                    OpmKorrigieren = OpmKorrigieren + 1
+                End If
+            End If
+        End If
+        p = InStrB(p + 4, mS, A("/OPM"))
+    Loop
+End Function
+
+'------------------------------------------------------------------------------
+' Querverweistabelle (klassisch, mit /Prev-Kette) und Trailer lesen
+'------------------------------------------------------------------------------
+Private Function LetzteXrefPosition() As Long
+    Dim p As Long, letzte As Long, q As Long, t As String
+    LetzteXrefPosition = -1
+    p = InStrB(1, mS, A("startxref"))
+    Do While p > 0
+        letzte = p
+        p = InStrB(p + 9, mS, A("startxref"))
+    Loop
+    If letzte = 0 Then Exit Function
+    q = letzte + 9
+    t = Token(q)
+    If IsNumeric(t) Then LetzteXrefPosition = CLng(t)
+End Function
+
+Private Function XrefTabelleLesen(ByVal xrefPos As Long, ByRef hinweis As String) As Boolean
+    Dim p As Long, t As String, start As Long, anzahl As Long, i As Long
+    Dim o As String, g As String, fl As String, nr As Long, e As Long, tr As String
+    Dim erster As Boolean, prev As String, besucht As Long
+
+    Set mOffset = CreateObject("Scripting.Dictionary")
+    Set mGen = CreateObject("Scripting.Dictionary")
+    erster = True
+    Do
+        besucht = besucht + 1
+        If besucht > 50 Then hinweis = "zu viele Querverweis-Abschnitte": Exit Function
+        p = xrefPos + 1
+        If p < 1 Or p + 3 > LenB(mS) Then hinweis = "Querverweis-Position ungültig": Exit Function
+        If MidB$(mS, p, 4) <> A("xref") Then
+            hinweis = "Querverweise als Stream gespeichert, wird nicht unterstützt"
+            Exit Function
+        End If
+        p = p + 4
+        Do
+            t = Token(p)
+            If t = "trailer" Then Exit Do
+            If Not IsNumeric(t) Then hinweis = "Querverweistabelle nicht lesbar": Exit Function
+            start = CLng(t)
+            anzahl = CLng(Token(p))
+            For i = 0 To anzahl - 1
+                o = Token(p): g = Token(p): fl = Token(p)
+                nr = start + i
+                If Not mOffset.Exists(nr) Then
+                    If fl = "n" Then
+                        mOffset(nr) = CLng(o)
+                        mGen(nr) = CLng(g)
+                    Else
+                        mOffset(nr) = -1
+                    End If
+                End If
+            Next i
+        Loop
+        e = InStrB(p, mS, A("startxref"))
+        If e = 0 Then e = LenB(mS) + 1
+        tr = StrConv(MidB$(mS, p, e - p), vbUnicode)
+        If InStr(tr, "/XRefStm") > 0 Then hinweis = "gemischte Querverweise, wird nicht unterstützt": Exit Function
+        If erster Then
+            mSize = CLng(Val(TrailerWert(tr, "/Size")))
+            mRoot = TrailerWert(tr, "/Root")
+            mInfo = TrailerWert(tr, "/Info")
+            mTrailerId = TrailerWert(tr, "/ID")
+            If mSize <= 0 Or Len(mRoot) = 0 Then hinweis = "Trailer unvollständig": Exit Function
+            erster = False
+        End If
+        prev = TrailerWert(tr, "/Prev")
+        If Len(prev) = 0 Then Exit Do
+        xrefPos = CLng(prev)
+    Loop
+    XrefTabelleLesen = True
+End Function
+
+' Wert eines Trailer-Eintrags: Verweis "n g R", Array "[...]" oder einzelner Wert
+Private Function TrailerWert(ByVal tr As String, ByVal schluessel As String) As String
+    Dim p As Long, q As Long, c As String, teile() As String
+    tr = Replace(Replace(Replace(tr, vbCr, " "), vbLf, " "), vbTab, " ")
+    p = InStr(tr, schluessel)
+    Do While p > 0
+        c = Mid$(tr, p + Len(schluessel), 1)
+        If c = " " Or c = "[" Or c = "<" Or c = "(" Then Exit Do
+        p = InStr(p + 1, tr, schluessel)
+    Loop
+    If p = 0 Then Exit Function
+    tr = LTrim$(Mid$(tr, p + Len(schluessel)))
+    If Left$(tr, 1) = "[" Then
+        q = InStr(tr, "]")
+        If q > 0 Then TrailerWert = Left$(tr, q)
+        Exit Function
+    End If
+    tr = Replace(Replace(tr, "/", " /"), ">", " >")
+    Do While InStr(tr, "  ") > 0
+        tr = Replace(tr, "  ", " ")
+    Loop
+    teile = Split(Trim$(tr), " ")
+    If UBound(teile) >= 2 Then
+        If teile(2) = "R" Then
+            TrailerWert = teile(0) & " " & teile(1) & " R"
+            Exit Function
+        End If
+    End If
+    If UBound(teile) >= 0 Then TrailerWert = teile(0)
+End Function
+
+'------------------------------------------------------------------------------
+' Ressourcen suchen, in die DefaultCMYK eingetragen wird
+'------------------------------------------------------------------------------
+Private Function DefaultCmykVormerken(ByRef hinweis As String) As Long
+    Dim k As Variant, s As Long, e As Long, p As Long, q As Long, r As Long
+    Dim verweise As Object
+
+    Set mEinfuegen = CreateObject("Scripting.Dictionary")
+    Set verweise = CreateObject("Scripting.Dictionary")
+    For Each k In mOffset.Keys
+        If mOffset(k) >= 0 Then
+            s = mOffset(k) + 1
+            If Not KopfPasst(s, CLng(k)) Then
+                hinweis = "Objekt " & k & " steht nicht an der in der Querverweistabelle angegebenen Stelle"
+                mEinfuegen.RemoveAll
+                Exit Function
+            End If
+            e = DictEnde(s)
+            p = InStrB(s, mS, A("/Resources"))
+            If p > 0 And p < e Then
+                q = NachLeer(p + 10)
+                If MidB$(mS, q, 2) = A("<<") Then
+                    ResourcenVormerken CLng(k), q + 2, e
+                Else
+                    r = VerweisLesen(q)
+                    If r >= 0 Then verweise(r) = True
+                End If
+            End If
+        End If
+    Next k
+    For Each k In verweise.Keys
+        If mOffset.Exists(k) Then
+            If mOffset(k) >= 0 Then
+                s = mOffset(k) + 1
+                p = InStrB(s, mS, A("<<"))
+                e = DictEnde(s)
+                If p > 0 And p < e Then ResourcenVormerken CLng(k), p + 2, e
+            End If
+        End If
+    Next k
+    DefaultCmykVormerken = mEinfuegen.Count
+End Function
+
+' Ressourcen-Wörterbuch ab Position "innen" (nach "<<") bis "e": ColorSpace ergänzen
+Private Sub ResourcenVormerken(ByVal nr As Long, ByVal innen As Long, ByVal e As Long)
+    Dim c As Long, q As Long, r As Long, p As Long, e2 As Long
+    If mEinfuegen.Exists(nr) Then Exit Sub
+    c = InStrB(innen, mS, A("/ColorSpace"))
+    If c = 0 Or c > e Then
+        mEinfuegen(nr) = Array(innen, " /ColorSpace << /DefaultCMYK [/ICCBased " & mSize & " 0 R] >> ")
+        Exit Sub
+    End If
+    q = NachLeer(c + 11)
+    If MidB$(mS, q, 2) = A("<<") Then
+        mEinfuegen(nr) = Array(q + 2, " /DefaultCMYK [/ICCBased " & mSize & " 0 R] ")
+    Else
+        r = VerweisLesen(q)                         ' ColorSpace-Wörterbuch als eigenes Objekt
+        If r < 0 Or mEinfuegen.Exists(r) Then Exit Sub
+        If Not mOffset.Exists(r) Then Exit Sub
+        If mOffset(r) < 0 Then Exit Sub
+        p = InStrB(mOffset(r) + 1, mS, A("<<"))
+        e2 = DictEnde(mOffset(r) + 1)
+        If p > 0 And p < e2 Then
+            If InStrB(p, mS, A("/DefaultCMYK")) = 0 Or InStrB(p, mS, A("/DefaultCMYK")) > e2 Then
+                mEinfuegen(r) = Array(p + 2, " /DefaultCMYK [/ICCBased " & mSize & " 0 R] ")
+            End If
+        End If
+    End If
+End Sub
+
+'------------------------------------------------------------------------------
+' Neue Datei schreiben: Original (mit OPM-Korrektur) + inkrementelles Update
+'------------------------------------------------------------------------------
+Private Sub Speichern(ByVal pfad As String, ByVal xrefAlt As Long, ByVal mitCmyk As Boolean)
+    Dim tmp As String, f As Integer, pos As Long, nummern() As Long, neu() As Long
+    Dim i As Long, k As Long, s As Long, e As Long, ein As Variant, icc() As Byte, xrefNeu As Long, gen As Long
+
+    tmp = pfad & ".tmp"
+    If Len(Dir$(tmp)) > 0 Then Kill tmp
+    f = FreeFile
+    Open tmp For Binary Access Write As #f
+    mDateiNr = f
+    Put #f, , mB
+    pos = UBound(mB) + 1
+
+    If mitCmyk Then
+        If mB(UBound(mB)) <> 10 And mB(UBound(mB)) <> 13 Then Schreiben f, pos, vbCrLf
+        nummern = SortierteNummern()
+        ReDim neu(LBound(nummern) To UBound(nummern))
+        For i = LBound(nummern) To UBound(nummern)
+            k = nummern(i)
+            neu(i) = pos
+            If k = mSize Then
+                Schreiben f, pos, k & " 0 obj" & vbCrLf & "<< /N 4 /Length " & ICC_LAENGE & " >>" & vbCrLf & "stream" & vbCrLf
+                icc = IccProfil()
+                Put #f, , icc
+                pos = pos + ICC_LAENGE
+                Schreiben f, pos, vbCrLf & "endstream" & vbCrLf & "endobj" & vbCrLf
+            Else
+                s = mOffset(k) + 1
+                e = ObjektEnde(s)
+                ein = mEinfuegen(k)
+                BytesSchreiben f, pos, s, ein(0) - 1
+                Schreiben f, pos, CStr(ein(1))
+                BytesSchreiben f, pos, ein(0), e - 1
+                Schreiben f, pos, vbCrLf
+            End If
+        Next i
+        xrefNeu = pos
+        Schreiben f, pos, "xref" & vbCrLf
+        For i = LBound(nummern) To UBound(nummern)
+            k = nummern(i)
+            If k = mSize Then gen = 0 Else gen = mGen(k)
+            Schreiben f, pos, k & " 1" & vbCrLf & Format$(neu(i), "0000000000") & " " & _
+                              Format$(gen, "00000") & " n" & vbCrLf
+        Next i
+        Schreiben f, pos, "trailer" & vbCrLf & "<< /Size " & (mSize + 1) & " /Root " & mRoot & _
+                          IIf(Len(mInfo) > 0, " /Info " & mInfo, "") & IIf(Len(mTrailerId) > 0, " /ID " & mTrailerId, "") & _
+                          " /Prev " & xrefAlt & " >>" & vbCrLf & "startxref" & vbCrLf & xrefNeu & vbCrLf & "%%EOF" & vbCrLf
+    End If
+    Close #f
+    mDateiNr = 0
+
+    Kill pfad
+    Name tmp As pfad
+End Sub
+
+' Objektnummern der geänderten Objekte und des ICC-Objekts, aufsteigend
+Private Function SortierteNummern() As Long()
+    Dim n() As Long, i As Long, j As Long, k As Variant, t As Long
+    ReDim n(0 To mEinfuegen.Count)
+    For Each k In mEinfuegen.Keys
+        n(i) = CLng(k): i = i + 1
+    Next k
+    n(i) = mSize
+    For i = 1 To UBound(n)
+        t = n(i): j = i - 1
+        Do While j >= 0
+            If n(j) <= t Then Exit Do
+            n(j + 1) = n(j): j = j - 1
+        Loop
+        n(j + 1) = t
+    Next i
+    SortierteNummern = n
+End Function
+
+Private Sub Schreiben(ByVal f As Integer, ByRef pos As Long, ByVal text As String)
+    Dim b() As Byte
+    If Len(text) = 0 Then Exit Sub
+    b = StrConv(text, vbFromUnicode)
+    Put #f, , b
+    pos = pos + UBound(b) + 1
+End Sub
+
+' Bytes von Position "von" bis "bis" (ab 1, einschließlich) aus der Originaldatei
+Private Sub BytesSchreiben(ByVal f As Integer, ByRef pos As Long, ByVal von As Long, ByVal bis As Long)
+    Dim b() As Byte
+    If bis < von Then Exit Sub
+    b = MidB$(mS, von, bis - von + 1)
+    Put #f, , b
+    pos = pos + bis - von + 1
+End Sub
+
+'------------------------------------------------------------------------------
+' Hilfen zum Lesen der PDF-Struktur (Positionen ab 1 im Byte-String)
+'------------------------------------------------------------------------------
+Private Function A(ByVal s As String) As String
+    A = StrConv(s, vbFromUnicode)
+End Function
+
+Private Function IstLeer(ByVal b As Byte) As Boolean
+    IstLeer = (b = 32 Or b = 13 Or b = 10 Or b = 9 Or b = 12 Or b = 0)
+End Function
+
+Private Function IstTrenner(ByVal b As Byte) As Boolean
+    IstTrenner = IstLeer(b) Or b = 47 Or b = 62 Or b = 93 Or b = 60 Or b = 91 Or b = 40 Or b = 41
+End Function
+
+Private Function NachLeer(ByVal p As Long) As Long
+    Do While p <= LenB(mS)
+        If Not IstLeer(mB(p - 1)) Then Exit Do
+        p = p + 1
+    Loop
+    NachLeer = p
+End Function
+
+' Nächstes PDF-Token ab Position p; p steht danach hinter dem Token
+Private Function Token(ByRef p As Long) As String
+    Dim n As Long, b As Byte, t As String
+    n = LenB(mS)
+    p = NachLeer(p)
+    If p > n Then Exit Function
+    b = mB(p - 1)
+    If b = 60 Or b = 62 Then                        ' << >> oder < >
+        If p < n Then
+            If mB(p) = b Then Token = Chr$(b) & Chr$(b): p = p + 2: Exit Function
+        End If
+        Token = Chr$(b): p = p + 1: Exit Function
+    End If
+    If b = 91 Or b = 93 Or b = 40 Or b = 41 Then Token = Chr$(b): p = p + 1: Exit Function
+    If b = 47 Then t = "/": p = p + 1               ' Name
+    Do While p <= n
+        b = mB(p - 1)
+        If IstTrenner(b) Then Exit Do
+        t = t & Chr$(b)
+        p = p + 1
+    Loop
+    Token = t
+End Function
+
+' Steht an Position s der Objektkopf "nr g obj"?
+Private Function KopfPasst(ByVal s As Long, ByVal nr As Long) As Boolean
+    Dim p As Long, t1 As String, t2 As String, t3 As String
+    p = s
+    t1 = Token(p): t2 = Token(p): t3 = Token(p)
+    KopfPasst = (t1 = CStr(nr) And IsNumeric(t2) And t3 = "obj")
+End Function
+
+' Verweis "n g R" ab Position p: Objektnummer, sonst -1
+Private Function VerweisLesen(ByVal p As Long) As Long
+    Dim t1 As String, t2 As String, t3 As String
+    VerweisLesen = -1
+    t1 = Token(p): t2 = Token(p): t3 = Token(p)
+    If t3 = "R" And IsNumeric(t1) And IsNumeric(t2) Then VerweisLesen = CLng(t1)
+End Function
+
+' Ende des Objekt-Wörterbuchs: Schlüsselwort "stream" oder "endobj"
+Private Function DictEnde(ByVal s As Long) As Long
+    Dim st As Long, en As Long
+    st = InStrB(s, mS, A("stream"))
+    en = InStrB(s, mS, A("endobj"))
+    If st = 0 Or (en > 0 And en < st) Then DictEnde = en Else DictEnde = st
+    If DictEnde = 0 Then DictEnde = LenB(mS) + 1
+End Function
+
+' Position direkt hinter "endobj"; bei Streams wird die direkte /Length genutzt
+Private Function ObjektEnde(ByVal s As Long) As Long
+    Dim st As Long, en As Long, es As Long, laenge As Long
+    st = InStrB(s, mS, A("stream"))
+    en = InStrB(s, mS, A("endobj"))
+    If st > 0 And (en = 0 Or st < en) Then
+        laenge = DirekteLaenge(s, st)
+        es = 0
+        If laenge >= 0 Then
+            es = InStrB(st + 6 + laenge, mS, A("endstream"))
+            If es > st + 6 + laenge + 32 Then es = 0
+        End If
+        If es = 0 Then es = InStrB(st + 6, mS, A("endstream"))
+        If es = 0 Then Err.Raise vbObjectError + 303, , "Stream ohne endstream"
+        en = InStrB(es, mS, A("endobj"))
+    End If
+    If en = 0 Then Err.Raise vbObjectError + 304, , "Objekt ohne endobj"
+    ObjektEnde = en + 6
+End Function
+
+Private Function DirekteLaenge(ByVal s As Long, ByVal st As Long) As Long
+    Dim p As Long, t1 As String, t2 As String, t3 As String
+    DirekteLaenge = -1
+    p = InStrB(s, mS, A("/Length"))
+    If p = 0 Or p > st Then Exit Function
+    p = p + 7
+    If p <= LenB(mS) Then
+        If Not IstTrenner(mB(p - 1)) Then Exit Function    ' z. B. /Length1
+    End If
+    t1 = Token(p): t2 = Token(p): t3 = Token(p)
+    If t3 = "R" Or Not IsNumeric(t1) Then Exit Function
+    DirekteLaenge = CLng(t1)
+End Function
+
+'------------------------------------------------------------------------------
+' CMYK-ICC-Profil CGATS001Compat-v2-micro.icc (CC0 1.0), 8464 Byte
+'------------------------------------------------------------------------------
+Private Function IccProfil() As Byte()
+    Dim h As String, b() As Byte, i As Long
+    h = h & "00002110414442450210000073636E72434D594B4C61622007E6000C000700160010002A616373704D53465400000000736177736374726C0000000000000000000000000000F6D6000100000000D32D68616E64C367D1D11AD969B63E399C3016B3A558"
+    h = h & "000000000000000000000000000000000000000000000000000000000000000464657363000000B40000005F63707274000000D00000000C77747074000000DC0000001441324230000000F00000202064657363000000000000000575434D5900000000"
+    h = h & "000000000000000074657874000000004343300058595A20000000000000F6D6000100000000D32D6D66743200000000040306000001000000000000000000000000000000010000000000000000000000000000000100000030000200000A231000169B"
+    h = h & "1C96230829252F4435533B5A415A474E4D4A533059195EF564BC6A85702B75C17B4F80BB86178B6B90A695CE9AF4A015A51EAA28AF33B440B947BE51C35BC867CD64D255D741DC21E0FCE5BEEA57EEDAF38AF817FC68FFFF000008D60DCE136218811E06"
+    h = h & "234D28A02E00335638C13E2943A549254EA2543359AF5F2E64AD6A0A6F6B74BF79F47F24845289628E6F937F98939D97A2ACA7D3AD0EB258B7BABD34C2C7C85ACDF4D39AD948DF01E492EA13EFD7F584FB07FFFF0000091E0E2C13C818DE1E63239628C8"
+    h = h & "2DF6332338543D8A42D148214D7E52EA58595DD3634A68BE6E2F739478ED7E3B837E88B48DE7931D985A9DA9A312A89EAE4FB429BA27C045C672CCA4D2C7D8C9DEA1E449E9A0EEAAF3F4F8BAFCE1FFFF000008870D391273173C1C7B216A265E2B5C3063"
+    h = h & "356E3A853FA344CA49F44F23544D596D5E8B639E68AA6DB072AC779C7C878170864A8B238FFE94DF99C99EC2A3D1A8FBAE43B3A3B924BECAC491CA7DD085D6A6DCF0E35DEA76F1C1F928FFFFFF0080008000D66E7FB57EFBAD567F967E5883357FBA7E53"
+    h = h & "564E80327EC01F6481FE801CFB787DAB9268D3F77D9B8EA1AB2E7DC28B6A81207E2588DD54397EC486E61CAA803E8663F8677BEDA50BD14C7BF99E94A8D17C4498C07F167CD593DA526E7D8B8F741A497E918C6AF5D37AC9B7FBCED37ACDAECDA6A07B23"
+    h = h & "A6857D2A7BC89F3450D97C8D97F318527D0A9004F3C77A09CB61CCCF79F7BF5FA4CD7A4AB4A97BB37B01AB464F907BC9A39F16C87BBF8F67F22A798CDF84CB327962D07DA34979A9C36C7A737A6BB8564E967B38AE60159E7AC88E9DE3E98EA87D39BFD0"
+    h = h & "8C367CAD9ACC8A1E7C8D7432887C7CF74A5487797DC7142289B17FECE0EF8CAC8DE6BDC18A498AE398F1885B8874725786EE86AB48818612858F122D87CA85A5DE6C8B0D9F08BB5888C899B396C086F594FB708185AD911846F984E58E221061861B89EB"
+    h = h & "DC3A89F5B05DB93987B8A8CB94CC85EFA1EE6ED484AA9BF345A983EB97A90F0984A58A2BDA71892DC22EB78986F2B857933F852BAF5F6D9083F3A7A644A18329A1A60E078387897CD90C8898D4E5B6358663C8A491FA8498BD996C858367B49B43D182A5"
+    h = h & "AA210D4482B788F8C9D59DEB7B2EA979997B7AEA883595757B13650C920E7BC13E0D8FBF7CD6095490CC7FBBC7549C498A6BA7CD97C6880786B993D9862A6396909984F63CA78E62848708718E7E8424C5719ACA99EDA5EB9662957B84F7927791A56204"
+    h = h & "8F528EA73B5D8D2A8C1307B68C9E8537C3A699C1A9E5A432955EA386834291879DD960958E5C991A3A518C33964F07198B2984CCC22A990ABA30A2D694A6B1EC81FD90D2AA7B5F8A8DAFA474398B8B6E9F0D06AE8A158484C0FF987BCB6AA1C69419C12C"
+    h = h & "80F59048B8095EB38D2DB16738EB8AF4A5640659894D844BB125ADF57A0293F3A7A979D175F2A1CE7A1755EB9CB47AE1315896C97C0200EF955C7FC3AF39AC8D87ED92CAA61985B374E0A043844254D29B3C8378305D980B83C100E293608085ADCAAB3A"
+    h = h & "9613914FA4D9924473769F028F1D539A9A058CD92F7C96C98C3600CE91B6808BAC91AA34A4859013A3DB9F0D723A9E059A59528F98F196C62ECA95A894EB00D990558093AB6AA982B3898F20A314AC5571509D3FA2A051CA983EA1F82E4994D49B8B00DB"
+    h = h & "8F488094AA77A901C3548E57A283BA5B70979CB3B2F2513A97BAAE152DEC94529F0D00DE8E8680969A31BEDD794F7FC6B6C379066488AF36794A472AA8927A17242DA5637B0E00008F99800098F9BD7986167F0DB548844B63D3ADA582EB4673A6F4826F"
+    h = h & "23CAA37C82EF00008ED58000982EBC1592FC7E2AB3EE8F9462F0AC408CEF45B6A58F8B5A2376A1E28AEF00008E218000975FBB149CB77D69B2DE98F86235AB2C942C4522A4669177233CA08D8FE400008D96800096BABA41ADC27CEBB1FAA76C61CDAA46"
+    h = h & "A28544D2A3839FD123219F6A964300008D398000960AB9B0BC447C8AB145B428617EA980AE52449FA2C6AA3423269EB397C400008CE6800084B4D09F78F36CBEC6CD786B53CBBDC978903890B5F1793F16F2B29E7A51000089F980008454CEF684D56C66"
+    h = h & "C55082DA5369BC1881A8384BB400815D1749B008820A00008A2580008443CD4E90936C38C3A48D6B5330BA4F8B293834B2238A3A17B4ADC4892900008A4980008423CBFB9C9B6C37C2299838533CB8C495153855B0859404182AABEA909A00008A658000"
+    h = h & "83F0CAF2A8F26C42C100A336536EB78C9F643896AF509DEA189EAA7890A500008A79800083BECA12B5C56C58C00DAE8853B5B68AAA1838FAAE4CA5211926A963910100008A888000EB15785F75ACC68F79677692A09B7A6A779A78F47B7578DA4E3D7C9D"
+    h = h & "7A2E18677E347B2BE7DC759687DEC3F176E685E89E58782E846576F4797C83444C647AC38166160B7BA68260E4F573829A38C12E74EC95979BE8765D917474E877DD8DF84AAE79368AE513FC798587C4E28B7205AC9FBED07370A58C99B174EE9EF772FB"
+    h = h & "76869913492677E79434125E77DC8BF1E0C2710BBF34BD0C7269B5C897F473E0ACD1717F7587A4D347EA76E19E6C112476A88B97DF817078D221BBC371C0C65E96927320BB26704474C8B16646EB761CA8DF103B75CA8AF9D1738687737BB157856574D3"
+    h = h & "8F34848876286AD483ED77A642CB83D2792C0D4485A17AA6CF4A8415842CAF88832682FC8D66826C820F691781F6816F412C81F281030BF2832F80BBCCE6822094FAAD0B814491768B2A80AB8E3C673C80688B8F3FAB8070897B0AA0812685A9CACC80B5"
+    h = h & "A5E5AAFD7FDEA044893B7F509AE0659A7F19961E3E6A7F2792CE09B57F938690C9427FC2B726A96F7EE8AF6D87B07E52A7E7644D7E28A1643D687E289C8A09047E698618C8347F2AC917A8427E48BF41866A7D97B5A063367D6FADC83C987D71A4DD0878"
+    h = h & "7D8F85BAB8AD956A71E49C22923D73627D728F8874DD5C368D4A767F36A18C2D780803EE8B587B31B6FF934881319A899040807B7BE38DA27FF05AC78B7E7FBE35598A5D7FC4038088E4804AB5409175906298A98E848DA97A2E8BF08B37594D89EC8947"
+    h = h & "342F88CC8826031686EA8216B38D9020A00397048D339B7078818AAD971D57E488AC937233258787915202C1855F81DDB2498F3EAFD995B98C53A97B773D89C4A35E56D187C99E653260868499EA0289843B81B6B1668EA7C06E94BB8BBCB84A7630891C"
+    h = h & "B07555EC871EAAD031B485D9A02E025883688196A127A51F70E88768A027725E6BB29BBA73E14D4E97F375822987968D76B1004289AB7E34A000A34E7E3A865A9E5E7DCA6A9F99EB7E444C4C96297E7228BB94967E74003C87DA7FF99EB3A1A38CC384E6"
+    h = h & "9CC28A8B6945985488A14B2894A3876427F292F586E00032864A80229D84A0549AE283AD9B7E9719680D970D93A64A31934891002758917B8F76002E8523801F9C8A9F7CA97682C39AA0A421671796209F33495892619BD026D29064962B0028843E801B"
+    h = h & "9BD39EF2B8A982009A0DB1D9664D957CABA548AF91B8A7AB265F8FB099ED0024839880188B14B5DA70137397AF5371615A5FA95572D13E59A443744E1BDCA2F075140000844C80008A78B43D7D6A7319AD967CFF59D9A76B7C513DE4A23E7C971BCBA06D"
+    h = h & "7D06000083BB800089C0B28889917235ABE987E258FFA5B986903D38A08D85AE1B969E68851700008325800088F7B1419679716AAAA091895832A465908C3CA29F1E8EE51B6E9CAD8C51000082C280008865B058A39770DEA9AE9F2A57A7A3649B693C34"
+    h = h & "9E10996A1B5C9B3C90D00000828C800087E1AFD0B1957082A904ABE1573CA290A72F3BDD9D31A3C71B449A5192700000825A8000762FC7A56F516089BFD67055495DB88471922F25B29C72BC0E72B00C73D70000814280007625C6097B676091BDFC7AE0"
+    h = h & "495FB6537A8C2F4FB01B7AF20F10AD067B95000081418000761AC41986E16051BC0C85134920B44E83DB2F43ADF9837F0F98AA5A830F00008140800075E8C2999280602CBA708FBB48F9B29D8D7C2F48AC228D081011A81F88580000813F800075B4C199"
+    h = h & "9E7F6024B9419AC648FAB15098012F5AAAC597101078A6628B220000813F8000758AC0ECAB06602CB85DA658490CB049A3162F7FA9AF9EB810C9A5298B590000813E8000D73A707D6B62B63072B76E09935174BF70926E4F76A8731245F2786E75631129"
+    h = h & "7A047615D4256D197D3DB3AE6FAF7D13912972067D1B6C6E743A7D52444376117D760F7377647CD3D14C6A638F12B0E86D218C518EBD6FAF89D86A6F721F87D742AD73FC85EC0E0C7541836ACEF06870A0E1AE946B3E9BD88C826DE196FF688F706E92A0"
+    h = h & "414072498E5C0CEE739A882CCD4A671BB2B8ACE969E5AB8A8AD36C84A46467186F219DF9401E70E899000C2072608833CC436655C4B3ABC9690BBB6789866B8BB21365E86E27A9F23F25711DA3020B86719687CABF337DFD69CCA2587E286CCB82F47E75"
+    h = h & "6F7C60E07EE372143AB57FA1745706FA818775E8BD3B7AF37A65A0797B727AED81267BF17B425F467C887BD239577D3D7C6806387EF07CA1BAE778688A939E07790A88D87EF779B487325D777A8085CA37EC7B2C8493057A7D4B81DFB8E576949B069C07"
+    h = h & "774597457D0F77FF937A5BE378DC901036BD797A8DBE04F07BE6834BB77A754EABA09A8C75FFA5E77B9676B4A0125A9E779F9AF835CE781D9736048B7B0B8312B697748CBC9A997C752DB4F97A6975C6AD2A599476AFA6C334F7771B9F5B043A7A4B82DB"
+    h = h & "A80A8C6668988E9D8A816BA7725489176E625305880D70F82EB2883272E80000860177C3A69889A5778E8CFC8815787170BB86C7794451A585D17A2B2D9385C77A6F000083CB7D73A4E4873A865B8B1E85D085666F18849C8457505D83BE83862CA38395"
+    h = h & "82F8000081F28000A3338581959D8987842192DC6D7682F78FF34EFC82258D6D2BA881DE8BFC000080508000A2038453A4DF884582F9A06D6C3481C29BC24DE580F397F22AF280759470000080008000A1428398B4AD8751823BAE9B6B2980E1A83C4D01"
+    h = h & "800AA3B42A4A7F789AAF00008000800091BC9BAC67C17AC298196AAE6122951C6D5A445892B96FCD213A930671030000809E7D1790B29955757579A195F17671600792EB77C94368908078C020A3905A78D0000080537FA08F6497188310782093D18292"
+    h = h & "5EAF90DA820342558E8281BC20018E0A80EB0000800080008E2D956C90C276E292368EAA5D788F3D8C8741758CD28ADE1F888C1289B50000800080008D3E94509ECC75FE911A9B4C5C818E0A97B440928B9E95461F0F8A8D91E30000800080008C9F93A1"
+    h = h & "AD3B75409062A8775BB68D33A3A03FE38AB8A0B81E9B897F94920000800080007CABAC0A66BE677EA727696F500BA2C96BF535399F786E1813A59ED06F140000800080007BF9AA1874E066E6A518758C4F84A080755E34E29CFF765813BB9BC177090000"
+    h = h & "800080007B2AA7E47FFD65EAA2F47F554EA79E5E7F0C34439AD77EEE139F99277F260000800080007A57A6448CB66516A1598B3B4DD19CB7893433B49911885B138796F6867A00008000800079C2A51E98EE6482A02C96494D369B7793C0333A97BD9288"
+    h = h & "138395308B3A0000800080007950A477A63664339F63A2A54CC99A769F2E32DC96A29CC3136293F58D1B000080008000687FBDB56578548EB7FD67C93ECEB2956A042539AF206B8507C9A8B96E670000800080006813BC1171385475B5DC71F93EDDAFFD"
+    h = h & "72EF2596AC14739E0847A5AE760D00008000800067CEB9BF7C80540EB3857C233E92AD917C072598A9737C170895A30A7D030000800080006784B7F387ED53D7B1A086BA3E53AB97859D2597A745859B08D2A0E186180000800080006747B6C193C553CB"
+    h = h & "B03591BA3E41AA0C8FE42596A59D8F7C09049F2F86190000800080006722B6059F7653DAAF2A9CF73E42A8D89AE425A2A45197CF091C9DED8629000080008000C38668276132A58F6B62656485B16E576956636B711A6D173D75734E70690AC57692719B"
+    h = h & "C07863C4729FA325677F7420839F6ADD75A461A16DF7772A3BED7023786C09D073E378C5BD96603883B6A065643C82D4814267E382045FB26B4581503A756D5E80DC08FC72367FB5BB2C5D7495009E1C61A791DC7F1D65778EBF5DF769008BDE39306AF8"
+    h = h & "88E4086272CF850FB9825B96A6319C815FD8A0EF7D8963B29B9F5C98675096E23831691B936C07E772F98558B8845A69B7569B735EA1AFEE7C626265A8835B8C6901A22C3754679B9CFA078F7339851DAD5D74F260309337764A6498765C77B0688C568E"
+    h = h & "791E6C3932327A806F2D02577E6D7256AB5570F0701C915B72C2722374A4746D73FB551C760C75BA311177357700022B7DC3796EA8F06D9680028EE66FA97FE8728171907FBB535C736D7F872FC274627F4A01E27D5E7F20A6E46AFE8FEE8CE96D368DDD"
+    h = h & "70A46F3F8B9C51E57133897D2EB871E9884501BC7D468116A577693A9FE78B766B7E9BEE6F3B6D8D97B750AF6F9094102DE7700A917B01997D4D8114A4996818B0028A726A52AA2A6E236F2AA4104FBA6E4B9F2A2D1D6E979985017B7D7F810097B9829B"
+    h = h & "5F6B809B821A63C8668381FA67AB491982246B3025E083486D6A0000800F772096257EE86DFC7EE97EDE704764EE7EEF725547D37F31743224FE7FE07528000080007D0194597BBF7CD67CFC7BF77D2B63587C317D74469D7C937DAB243D7CF17DA20000"
+    h = h & "8000800092A079548B307B6079AA8A1961B679F8888445507A6486CB23587A878630000080008000916B77AF99D27A24781096FA6084785B93CF444778C8914022BC78AE8EC300008000800090A2785DA8BA79397881A45A5F9078949F9B437578CC9C58"
+    h = h & "2215775394B700008000800082C691635EA26DD18F4D62C1560C8DC4667B3AB88CDD69B018738DC86B1C000080007C4981848E1F6BEB6C928C5C6E4054F08ADA71D339E689E5738A18248A3B72EF000080007F8480168B2879256B0689997AC253A58830"
+    h = h & "7B5238F387467B0C17BD873A7B4B0000800080007EBE88D7873269C587628696527F85F88597384C84F28511178284A184B90000800080007DBE875393E868E285E491FB518384628FD0375A83528E2B171B82AE8CC30000800080007D0E864FA1A2681D"
+    h = h & "84DC9E9150BB83389AFE36AD820C992A16BF813E8F300000800080006E8AA1675D715B409E24613D45629B7364B42B869A1867570BEE9805695A000080007FAE6D859EA469A45A709B676BE344C398816DFC2B3E96DD6F890C1994697143000080008000"
+    h = h & "6C849BC875B3594D98AC76A443D395CF77772AA2941878050C139143795A0000800080006B86998F81DD585C968281AD42EB939A81492A1891B4810F0C008E9D80D70000800080006AD1980B8F1A57B095008DC5423E92038C00298C8FFD8B340C018C8C"
+    h = h & "85D80000800080006A4A97129AC7575393F398D041D690BA9676293D8E84950A0BE98B08880E0000800080005AD9B30A5B9F4892AF235EEF3411ABBF61F21A7AAB87636702939E0469C300008000800059F2B0BC66EA4816AC7A68E933DFA8A36ACA1AD0"
+    h = h & "A7BA6B86030D9A7871790000800080005968ADDE71ED4777A99E72DD3371A5B473B91ACDA47273E1035B9754776500008000800058E1AB887D134710A73F7D2E3310A33A7D1D1ACCA19A7D02039694A67EBC000080008000587FA9FA886446E6A58987D2"
+    h = h & "32E9A16087131ABE9F88873B03C7929B823D0000800080005842A8EF93EB46DDA44392EC32E09FED91CC1ACE9DDD8F8503DE9107829D000080008000B09C5EC35748957362E95CD9786366CD622258B66A68671C35016C9F6B660598768B6DFBAD7858C7"
+    h = h & "682C93005DAD6B3C764E62236E3056F4662A7101339B68247358053E7724757BAA8153DA78E690455942799B74035E257A4F551B62817B0C3248644D7BA404EB77B07CBAA7F44FEF897D8E0855BA883172015AE786DC53905F78855E31326117847A04AB"
+    h = h & "781B8269A61D4CF499F58C775304966370A1586292DF52625D128FD130675E948DDE04807865830BA5014B1BAA498B6F513DA4846FA8569E9F00518D5B569A7D2FB55CB49706045A78A582F19C6A6AC056DC846B6D4C5C7169DF6FCD61944C3F722E664D"
+    h = h & "297173DE69D000857F2070C29A06653466438278687069A868336B5C6CC94AEB6DFD6FA628886F7B719B00797F3477F8977B608875C37FFA64347716661B677C7837493E6A61793E275E6BB679CF00657F557DE795555CD885747DFE60D0852D644E6456"
+    h = h & "83EA47E567588307267B68A082A8005A7F68801593CE5A0D94667C915E3391F562FD61DB8F4B46C764EA8D1225D566288B9C00527F76803792DD584AA3B77B925C7B9F7061FF601C9AF745F1632897902526645E9397004A7F848032885377A4567772F9"
+    h = h & "78985BE05AC879C560CF3F187B0E652F1CE47CEF67B100008000769986567275648671277409680C593775846B3E3DE876E86E0A1C3F78836F6F000080007CAD84536E0D72996F227008745957A671C475D83CC3734577171BB174BE77A3000080008000"
+    h = h & "82776A95810B6D776CCD822356046EB3809E3B867037808F1AF471CA818C000080008000812467F28EB16C336A4F8CB354D66C468B7E3A876DBB8A341A806F8289530000800080008047663E9D0B6B4968A79A1C53EE6A9296C439C46BF194AD19ED6DF4"
+    h = h & "8EB4000080008000746685BC55CE6109854D5AE84AE185475F8F30C585D363640FDF871F6570000080007BA572B7810262985F938111661849AE812C69412FF781996BC90FB182C26D37000080007F4F710E7CE06F775DDC7D40717348497D8773282EF3"
+    h = h & "7DEB746B0F567F6A757E0000800080006F8A79957C585C727A2A7CF147097A807D382E427AB97D630F2A7C9F7DCF0000800080006E5F77178ACA5B7577CF8A0A4613781C89002D5E782687F50EDE7A8C87660000800080006D957959966C5AAA7977949E"
+    h = h & "4554767392572CBE764E91810E8978E1895700008000800060DD957154524F1893DA59083A8592F05D4420EA9405600505DF8E4864F2000080007F4C5F6D913760014DEA8FEA6361399A8EE8665D20838F76681D06078A906CC70000800080005E248D46"
+    h = h & "6BC24C8F8C326DD838888B3F6F9C1FDA8B7F706F05FE873C74340000800080005CED8A1E7A554B71893378923785883979271F5B880E7B6E05F684757B760000800080005BF687AC836F4A8D86E7835436BA85DE82EA1ECA854882D1060B829581880000"
+    h = h & "800080005B4786198FBD4A1E85698EDA366C841D8D601EC083188CAA0608814284140000800080004D54A73451EE3CE1A4E5561D2966A3B259AB0FBBA5F55B1E00008FC066E80000800080004C00A3845CB33BC3A1535FC7288B9FCE62540FB3A0EA6323"
+    h = h & "00008D3A6E5E0000800080004B269F9E676B3AC69D8C697127CA9BF96B040F8B9C506B5300008AED714C0000800080004A4D9C6772563A0A9A777375273498BC741A0F8598557434002188DC788A000080008000499599F27D6D3984981F7DC826D3963C"
+    h = h & "7DB20F5F95407DF0003F87477F92000080008000492A984D88D8393A967D88A826AD946B881E0F72930186AF0050862180360000800080009EFB53D54DD5865258E454A26BD15DC25B2C4E87622F61512CD06411667C017B7D806B199BA34B9C5E2883BA"
+    h = h & "51C162AB69A3577166FC4CBA5C5E6B092B7F5E6D6E5D01947D5572DA9888446E6E6880FB4B7B70A9676851D272D64AFC572174E82A59598476BC01A87D327A5795BB3E5F7F277EC746447F2565974D2D7EDF49B352C27EF7298055817F0201B87D178039"
+    h = h & "939B39908DC37D37422A8BF6646D49938A8E48BC4F51892128EF525B889301C47D0481329233360F9DB47C293F22998663B246E195E948334CBA933028824FF2915D01CD7CF581388CAC5F0D4E00765262C254885DD966615AC542446994607E20DC6C16"
+    h = h & "648300008000702689A657455CCE742B5C03616B5C27604965C140F663C269AD201A667B6C4500008000776786D950636BD6719755EA6E755A125AC170E43F555E7973121F1761B4746C000080007D7084834AAB7AB86F9650CF7B765857561A7C0D3E23"
+    h = h & "59ED7C911E6B5E677D2F000080007FCA82D1462F89816E284CCC886F5721526C87363D24563886551DF85C0A85FC00008000800081B442E797E36D2B49D7951156484FA4922A3C79535D90381D7A5AAD8DD90000800080007A3B6B0D4E0965EF6D805433"
+    h = h & "4F5E6FF85A11354272225F3A14597572623F000080007630777163B75B7D63E06709600A4DBF69FB6447340D6C2C67E813D4706869F5000080007C5875095D2C691D61AF61296BF74C2764866E9632F166AE70C013716CF3721700008000800072F357B4"
+    h = h & "76DF5FEA5C2F78174A815FDA791031C361D979DF12E16A887AE40000800080007178536584935E9B583B843A49575C16838D30CF5DC58323129468AA82E3000080008000707C502F91D65DAF5548902F487B59308E22301C5A8B8D231220677C88F80000"
+    h = h & "80008000674678544D7554E879A1533F400B7B1C58AC26D27CD15CF308E97F4660C8000080007B2264D5718759A75319737E5E183EA77530622425E7767E652C08C17BA1687B000080007F1862C26B50661E51226DCB69173D1D6FBC6BBE24CD709E6D94"
+    h = h & "087778B470AD00008000800060F2660C729C4F8268EC742F3BBF6B00757424126B52764B085B766578A60000800080005F9261CE82434E61650C818D3ABC672E81B6232A671F7F90082874AF7FDC0000800080005EA15E938BB14D8162108AE839F16430"
+    h = h & "89AE228963F1899307E573858473000080008000542587774BC3439B87B25130300D8894560416848B3958CA0199851C61C1000080007EDC520D812F56E541E081F45B2C2EA682C95ED915D2844D60B801A381DA697C00008000800050557B3C62474028"
+    h = h & "7C61654B2D477D4067CC14F87E1968D2019A7F4F6E980000800080004EC5761172773EB4779274EE2C04786A762514537905716A01937DD575B90000800080004D8371CE79643D8C73B37A1E2B0D747E7A7913B7753E7ABB01A47D397EAC000080008000"
+    h = h & "4C9E6E7D85433CD870C485142A997176847B138272568449018E7D60810D0000800080004099994548AB31A9989E4DA81EA099E45173065A9A3C53F7000082D166250000800080003EA3938C52E32F97938B56D71CB694A059A805B793475BCB00008067"
+    h = h & "6DC70000800080003D448DCE5D502E038E1D602C1B618F026207054E8D1D63DF00008000753C0000800080003BF4889268032CBF895069D41A6089EE6ACD052D881E6C98000080007B500000800080003AD8843072E92BBF856E73CB19AE85DA740E04FA"
+    h = h & "8465761E000080007F220000800080003A0D80AA7E272AFD82637E3D193982B67E0A04F181B27ED50000800080000000800080000000FFFF0000FFFF0000FFFF"
+    ReDim b(0 To Len(h) \ 2 - 1)
+    For i = 0 To UBound(b)
+        b(i) = CByte("&H" & Mid$(h, 2 * i + 1, 2))
+    Next i
+    If UBound(b) + 1 <> ICC_LAENGE Then Err.Raise vbObjectError + 305, , "ICC-Profil unvollständig"
+    IccProfil = b
+End Function

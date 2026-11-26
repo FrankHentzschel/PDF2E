@@ -1,4 +1,4 @@
-# XL2E 1.5.0 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
+# XL2E 1.6.1 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Stand 17.11.2026. XL2E ist das Gegenstück zu PDF2E für Brauereien, deren BSI-Software die Rechnung als Excel-Datei ausgibt (Blatt `PA400_00`). Erster Kunde ist die Privatbrauerei Fiedler. Der Ablauf ist derselbe wie bei PDF2E: Rechnung einlesen, prüfen, E-Rechnung erzeugen, E-Mail-Entwurf.
 
@@ -13,6 +13,12 @@ Die Excel-Rechnung hat keinen Briefkopf, weil sie für vorgedrucktes Papier geda
 | `vba/modParserXL.bas` | **nur XL2E:** Einlese-Vorlage für das Blatt `PA400_00` |
 | übrige Dateien in `vba/` | gemeinsame Module, identisch mit PDF2E (Einlesen, Prüfen, Smart Tools, E-Mail, Info-Fenster `frmInfo.frm`/`.frx`, `DieseArbeitsmappe.doccls`) |
 | `logo/` | Logo der Brauerei für den Briefkopf, Entwicklerlogo für das Info-Fenster |
+
+## Update auf 1.6.x (PDF/A-Korrektur, Registerangaben)
+
+1. VbaSync „Alle importieren“ aus `vba`. **Neu ist das Modul `modPdfA.bas`.** Kompilieren.
+2. Blatt „Brauerei“: Zeilen **Registernummer** und **Geschäftsführer** füllen. Optional neue Zeilen **Sitz** (leer = Ort) und **Registerangaben** (ersetzt den ganzen Text). Daraus entsteht der Freitext mit Code REG (BT-22) in der E-Rechnung.
+3. Die PDF/A-Korrektur nach dem Speichern ist automatisch an (Einstellung **PDF/A-Korrektur** = `Nein` schaltet sie ab). Einzelheiten in der PDF2E-Anleitung.
 
 ## Einrichtung (ca. 15 Minuten)
 

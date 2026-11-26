@@ -12,5 +12,6 @@ modEinlesen.bas
 modEntwicklung.bas
 modHilfen.bas
 modMail.bas
+modPdfA.bas
 modPruefen.bas
 modZugferd.bas

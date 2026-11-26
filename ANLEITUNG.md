@@ -1,4 +1,4 @@
-# PDF2E 1.13.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.14.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -21,6 +21,7 @@ PDF2E und XL2E teilen sich seit PDF2E 1.6.0 denselben Kern. Im ZIP liegen alle b
 | `modAdapterStub.bas` | gemeinsam: Testlauf ohne Smart Tools, schreibt `<Ziel>.daten.xml` |
 | `modAdapterSmartTools.bas` | gemeinsam: ZUGFeRD EN16931 erzeugen, prüfen, in die PDF einbetten |
 | `modMail.bas` | gemeinsam: E-Mail-Entwurf in Outlook |
+| `modPdfA.bas` | gemeinsam (ab 1.14.0): PDF/A-Korrektur der fertigen E-Rechnung (CMYK-Farbprofil, Überdrucken-Modus) |
 | `modDaten.bas` | gemeinsam: Backend (Access-Datei) für Einstellungen, Mailvorlage, Stammdaten und Verarbeitungsprotokoll |
 | `modEntwicklung.bas` | gemeinsam, nur Entwicklung: älterer Export ohne VbaSync |
 | `frmInfo.frm` + `frmInfo.frx` | gemeinsam: Splash- und Info-Fenster (UserForm) |
@@ -76,6 +77,24 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 **Starter bearbeiten:** beim Öffnen Strg oder Umschalt gedrückt halten, dann startet nichts automatisch.
 
 **Abweichende Einstellung an einem Platz** (z. B. eigener Eingangsordner): im Blatt „Einstellungen“ dieselbe Einstellung in einer weiteren Zeile eintragen und in Spalte **Arbeitsplatz** den Computernamen des Platzes (steht im Info-Fenster). Leer = gilt für alle Plätze. Ein Platz nimmt seine eigene Zeile, sonst die gemeinsame. Das wird zentral im Backend gespeichert, du kannst es also von jedem Platz aus pflegen. Reihenfolge: Blatt „Arbeitsplatz“ (Starter) vor Zeile mit Computername vor gemeinsamer Zeile.
+
+## Update auf 1.14.x (PDF/A-Korrektur, Registerangaben)
+
+1. VbaSync „Alle importieren“ aus `vba`. **Neu ist das Modul `modPdfA.bas`**, es wird dabei mit importiert (ohne VbaSync: *Datei > Datei importieren*). Kompilieren.
+2. Blatt „Brauerei“: Die Zeilen **Registernummer** und **Geschäftsführer** müssen gefüllt sein (bei Krug: „HRB 1273, Amtsgericht Bayreuth“ und „Konrad Krug“). Daraus entsteht der Text der Registerangaben. Optional zwei neue Zeilen, die du nur anlegst, wenn nötig: **Sitz** (wenn der Sitz nicht der Ort der Anschrift ist) und **Registerangaben** (ersetzt den ganzen Text). Fehlen beide Zeilen, ist das kein Fehler.
+3. Optional Blatt „Einstellungen“: **PDF/A-Korrektur** = `Nein` schaltet die Korrektur ab. Ohne diese Zeile ist sie an.
+
+## PDF/A-Korrektur (ab 1.14.0)
+
+Das Briefpapier der BSI-Rechnung (Logo, Kopf- und Fußbereich) ist in CMYK-Farben mit „Überdrucken“ gespeichert. Schon das BSI-Original ist deshalb kein gültiges PDF/A, und Smart Tools übernimmt den Seiteninhalt unverändert. Validatoren melden dann z. B. „Der Überdrucken-Modus (OPM) wird auf 1 statt auf 0 gesetzt …“ (Getränke Ziegler, 26.11.2026) oder „DeviceCMYK ohne CMYK-OutputIntent“ (veraPDF). Die XML-Daten sind davon nicht betroffen.
+
+Nach dem Speichern durch Smart Tools korrigiert PDF2E die Datei: Überdrucken-Modus auf 0 und ein CMYK-Farbprofil (frei verwendbar, CC0) als Standard für CMYK. Inhalt und Aussehen bleiben gleich, das eingebettete XML auch. Im Protokoll steht „PDF/A-Korrektur: …“. Klappt die Korrektur nicht, steht dort eine Warnung, und die E-Rechnung bleibt so, wie Smart Tools sie gespeichert hat.
+
+Dauerhaft besser wäre, das Briefpapier in BSI als RGB-PDF ohne Überdrucken zu hinterlegen. Dann ist schon das Original PDF/A-konform.
+
+## Registerangaben (ab 1.14.0)
+
+Die E-Rechnung enthält die Registerangaben der Brauerei zusätzlich als Freitext mit Code REG (BT-22), z. B. „Konrad Krug Brauerei und Tanzsaal GmbH; Sitz: Waischenfeld; Handelsregister: HRB 1273, Amtsgericht Bayreuth; Geschäftsführer: Konrad Krug“. Die Registernummer allein (BT-30) reicht manchen Validatoren nicht (Hinweis VD-Valitool-71). Fehlen Registernummer und Geschäftsführer, meldet „Prüfen“ eine Warnung.
 
 ## Update auf 1.12.0 und 1.13.0 (GLN je Lieferort und je Kunde)
 

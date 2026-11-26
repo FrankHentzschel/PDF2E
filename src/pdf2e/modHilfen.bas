@@ -263,6 +263,29 @@ Public Function StammOderLeer(ByVal schluessel As String) As String
     StammOderLeer = Stamm(schluessel)
 End Function
 
+' Registerangaben der Brauerei für die E-Rechnung (BT-22 mit Code REG), z. B.
+' "Konrad Krug Brauerei und Tanzsaal GmbH; Sitz: Waischenfeld; Handelsregister:
+' HRB 1273, Amtsgericht Bayreuth; Geschäftsführer: Konrad Krug".
+' Blatt "Brauerei": Zeile "Registerangaben" (optional) ersetzt den ganzen Text;
+' sonst aus Name, "Sitz" (optional, leer = Ort), "Registernummer" und
+' "Geschäftsführer". Leer, wenn weder Registernummer noch Geschäftsführer da sind.
+Public Function Registerangaben() As String
+    Dim t As String, sitz As String, reg As String, gf As String
+    t = StammOderLeer("Registerangaben")
+    If Len(t) > 0 Then Registerangaben = t: Exit Function
+    reg = StammOderLeer("Registernummer")
+    gf = StammOderLeer("Geschäftsführer")
+    If Len(reg) = 0 And Len(gf) = 0 Then Exit Function
+    sitz = StammOderLeer("Sitz")
+    If Len(sitz) = 0 Then sitz = StammOderLeer("Ort")
+    t = StammOderLeer("Name")
+    If Len(sitz) > 0 Then t = t & "; Sitz: " & sitz
+    If Len(reg) > 0 Then t = t & "; Handelsregister: " & reg
+    If Len(gf) > 0 Then t = t & "; Geschäftsführer: " & gf
+    If Left$(t, 2) = "; " Then t = Mid$(t, 3)
+    Registerangaben = t
+End Function
+
 '------------------------------------------------------------------------------
 ' Positionen (von den Einlese-Vorlagen beider Produkte genutzt)
 '------------------------------------------------------------------------------
