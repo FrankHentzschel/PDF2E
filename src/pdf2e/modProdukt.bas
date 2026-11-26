@@ -8,8 +8,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.11.7"
-Public Const TOOL_STAND As String = "25.11.2026"
+Public Const TOOL_VERSION As String = "1.13.0"
+Public Const TOOL_STAND As String = "26.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
 
@@ -56,6 +56,8 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.13.0", "26.11.2026", "Neue Funktion", "Warenempfänger-GLN zusätzlich als Standard je Kunde (neue Spalte Warenempfänger-GLN im Blatt Empfaenger), Vorrang hat die GLN im Blatt Lieferorte; GLN nur bei Kunden, die sie verlangen (Vorgaben GLN, REWE, EDEKA oder Warenempfänger-GLN gepflegt): nur für sie werden Lieferorte angelegt und GLN-Hinweise gemeldet; Backend Schema-Version 4")
+    c.Add Array("1.12.0", "26.11.2026", "Neue Funktion", "Lieferfiliale unter dem Nettowert (z. B. Getränke Hoffmann) als Lieferort; Warenempfänger-GLN je Lieferort: neues Blatt Lieferorte (wird beim Einlesen automatisch gefüllt, GLN einmal eintragen, Prüfen übernimmt sie auch nachträglich), Lieferort-GLN als BT-71; Hinweis bei fehlender Lieferort-GLN und fehlender eigener GLN der Brauerei (BT-29, Blatt Brauerei); Backend Schema-Version 3")
     c.Add Array("1.11.7", "25.11.2026", "Fehlerbehebung", "Prüfung übernimmt Angaben, die nach dem Einlesen im Blatt Empfaenger nachgetragen wurden (USt-IdNr., E-Mail, Konto, Kondition), in leere Felder des Blatts Rechnung; bisher war neues Einlesen nötig")
     c.Add Array("1.11.6", "25.11.2026", "Fehlerbehebung", "RE 2604315 (Barverkauf): Position mit negativer Menge und * (59 Rabatt 1- 15,00-*) erkannt; bei Bruttobeträgen werden nur echte Rundungsdifferenzen (max. 1 Cent je Position) verteilt, größere Differenzen bleiben als Fehler sichtbar")
     c.Add Array("1.11.5", "25.11.2026", "Fehlerbehebung", "RE 2604314 (Italien): Hinweis „Steuerfreie Lieferung nach Italien ab Brauereihof“ und „UST - ID:“ erkannt (bisher nur „Steuerfreie innergemeinschaftliche Lieferung“ / „USt-ID:“); Kategorie K nur bei EU-Land, sonst klare Meldung")

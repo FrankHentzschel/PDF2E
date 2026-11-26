@@ -28,7 +28,8 @@ Attribute VB_Name = "modDaten"
 '==============================================================================
 Option Explicit
 
-Public Const SCHEMA_VERSION As Long = 2                ' 2 = Empfaenger.ZRNummer (ab PDF2E 1.10.0)
+Public Const SCHEMA_VERSION As Long = 4                ' 2 = Empfaenger.ZRNummer (1.10.0), 3 = Tabelle Lieferorte (1.12.0),
+                                                       ' 4 = Empfaenger.WEGLN (1.13.0)
 Private Const DB_SPRACHE As String = ";LANGID=0x0409;CP=1252;COUNTRY=0"   ' dbLangGeneral
 Private Const DB_VERSION120 As Long = 128                                ' dbVersion120 (.accdb)
 Private Const DB_OPEN_DYNASET As Long = 2
@@ -44,7 +45,8 @@ Private mIntern As Boolean              ' True = Blatt wird vom Programm geschri
 '        A = Arbeitsplatz (Computername; leer im Blatt = "*" im Backend = alle Plätze)
 '------------------------------------------------------------------------------
 Private Function Tabellen() As Variant
-    Tabellen = Array("Einstellungen", "Mailvorlage", "Brauerei", "Bankkonten", "Zahlungskonditionen", "Empfaenger", "Pfandartikel")
+    Tabellen = Array("Einstellungen", "Mailvorlage", "Brauerei", "Bankkonten", "Zahlungskonditionen", "Empfaenger", "Pfandartikel", _
+                     BLATT_LIEFERORTE)
 End Function
 
 Private Function Felder(ByVal tabelle As String) As Variant
@@ -55,8 +57,9 @@ Private Function Felder(ByVal tabelle As String) As Variant
         Case "Bankkonten":          Felder = Array("Bezeichnung:T", "Kontoinhaber:T", "IBAN:T", "BIC:T", "Standard:T")
         Case "Zahlungskonditionen": Felder = Array("Bezeichnung:T", "Zahlungstext:M", "ZielTage:N", "Standard:T")
         Case "Empfaenger":          Felder = Array("Schluessel:T", "Kundenname:T", "EMail:T", "UStId:T", "Konto:T", _
-                                                   "Kondition:T", "Bemerkung:M", "Vorgaben:T", "ZRNummer:T")
+                                                   "Kondition:T", "Bemerkung:M", "Vorgaben:T", "ZRNummer:T", "WEGLN:T")
         Case "Pfandartikel":        Felder = Array("LeergutNr:T", "Bezeichnung:T", "GTIN:T", "Bemerkung:M")
+        Case BLATT_LIEFERORTE:      Felder = Array("Lieferort:T", "Name:T", "GLN:T", "Bemerkung:M")
         Case Else:                  Felder = Empty
     End Select
 End Function
@@ -267,7 +270,13 @@ Private Sub SchemaSchritt(ByVal db As Object, ByVal v As Long)
             db.Execute "CREATE UNIQUE INDEX ux_Verarbeitung ON Verarbeitung (RechNr)", DB_FAIL_ON_ERROR
         Case 2                                  ' ZR-Nummer des Händlers (G5-Zentralregulierung, BT-10)
             db.Execute "ALTER TABLE [Empfaenger] ADD COLUMN [ZRNummer] TEXT(255)", DB_FAIL_ON_ERROR
-        ' Case 3: künftige Änderungen nur anhängen
+        Case 3                                  ' GLN je Lieferort (Warenempfänger-GLN, BT-71)
+            db.Execute TabelleDDL(BLATT_LIEFERORTE), DB_FAIL_ON_ERROR
+            db.Execute "CREATE UNIQUE INDEX ux_" & BLATT_LIEFERORTE & " ON [" & BLATT_LIEFERORTE & "] (" & _
+                       IndexFelder(BLATT_LIEFERORTE) & ")", DB_FAIL_ON_ERROR
+        Case 4                                  ' Standard-Warenempfänger-GLN je Empfänger (BT-71)
+            db.Execute "ALTER TABLE [Empfaenger] ADD COLUMN [WEGLN] TEXT(255)", DB_FAIL_ON_ERROR
+        ' Case 5: künftige Änderungen nur anhängen
     End Select
 End Sub
 
@@ -421,8 +430,14 @@ Public Sub BlattLaden(ByVal blatt As String)
     Application.EnableEvents = False
     mIntern = True
     On Error GoTo Ende
-    ' Ältere Mappen: neue Datenspalte vor den Verwaltungsspalten einfügen (z. B. ZR-Nummer ab Schema 2)
-    If CStr(ws.Cells(1, n).Value) = "Geändert am" Then ws.Columns(n).Insert
+    ' Ältere Mappen: neue Datenspalten vor den Verwaltungsspalten einfügen (z. B. ZR-Nummer ab Schema 2,
+    ' Warenempfänger-GLN ab Schema 4); auch mehrere auf einmal, wenn Versionen übersprungen wurden
+    For s = 2 To n
+        If CStr(ws.Cells(1, s).Value) = "Geändert am" Then
+            ws.Range(ws.Cells(1, s), ws.Cells(1, n)).EntireColumn.Insert
+            Exit For
+        End If
+    Next s
     VerwaltungsspaltenSicherstellen ws, m
     For s = 2 To n                              ' ältere Mappen: fehlende Spaltenüberschrift ergänzen
         If Len(CStr(ws.Cells(1, s).Value)) = 0 Then
@@ -824,7 +839,7 @@ Public Sub StammdatenAusMappeUebernehmen()
     Application.EnableEvents = False
     Set wb = Workbooks.Open(CStr(pfad), UpdateLinks:=0, ReadOnly:=True)
     Application.EnableEvents = ereignisse
-    ImportAusMappe wb, False, Array("Brauerei", "Bankkonten", "Zahlungskonditionen", "Empfaenger", "Pfandartikel")
+    ImportAusMappe wb, False, Array("Brauerei", "Bankkonten", "Zahlungskonditionen", "Empfaenger", "Pfandartikel", BLATT_LIEFERORTE)
     wb.Close False
     StammdatenLaden
     MsgBox "Übernahme abgeschlossen. Einzelheiten im Blatt 'Protokoll'.", vbInformation, TOOL_NAME
@@ -903,6 +918,10 @@ Private Function DatenBlatt(ByVal name As String) As Worksheet
     If DatenBlatt Is Nothing And name = BLATT_PFANDARTIKEL Then
         On Error GoTo 0
         PfandartikelSicherstellen
+        Set DatenBlatt = ThisWorkbook.Worksheets(name)
+    ElseIf DatenBlatt Is Nothing And name = BLATT_LIEFERORTE Then
+        On Error GoTo 0
+        LieferorteSicherstellen
         Set DatenBlatt = ThisWorkbook.Worksheets(name)
     End If
 End Function

@@ -144,7 +144,7 @@ data=[("Name","Privatbrauerei Fiedler GmbH","BT-27"),("Straße","Hauptstraße 28
 ("Geschäftsführer","Thomas Fiedler",""),("Kontakt Name","","BT-41"),("Telefon","037349 8249","BT-42"),("E-Mail","info@brauerei-fiedler.de","BT-43"),
 ("Internet","www.brauerei-fiedler.de","nur Briefkopf"),("GLN","","BT-29, Schema 0088; leer = keine")] if XL else [("Name","Konrad Krug Brauerei und Tanzsaal GmbH","BT-27"),("Straße","Breitenlesau 1b","BT-35"),("PLZ","91344","BT-38"),("Ort","Waischenfeld","BT-37"),("Land","DE","BT-40"),
 ("USt-IdNr","DE132316559","BT-31, von Frank bestätigt"),("Steuernummer","208/130/70031","BT-32"),("Registernummer","HRB 1273, Amtsgericht Bayreuth","BT-30"),
-("Geschäftsführer","Konrad Krug",""),("GLN","","BT-29, Schema 0088; eigene GLN der Brauerei (von REWE gewünscht), leer = keine"),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
+("Geschäftsführer","Konrad Krug",""),("GLN","","BT-29, Schema 0088; eigene GLN der Brauerei (von REWE und Getränke Hoffmann verlangt), leer = keine"),("Kontakt Name","","BT-41, bitte ergänzen"),("Telefon","09202/535","BT-42"),("E-Mail","info@krug-braeu.de","BT-43")]
 for i,(a,b,c) in enumerate(data,2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; x.number_format='@'; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 
@@ -166,10 +166,11 @@ for i,row in enumerate([("Sofort","Zahlbar sofort ohne Abzug.",0,"x"),("14 Tage 
 # Empfaenger
 from openpyxl.comments import Comment
 ws=wb.create_sheet("Empfaenger")
-header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben","ZR-Nummer"],[11,36,30,16,26,26,30,14,12])
-for i in range(2,501): ws[f"I{i}"].number_format='@'
-ws["H1"].comment=Comment("Sondervorgaben des Empfängers: REWE, EDEKA oder G5 (G5-Zentralregulierung: ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse).","PDF2E")
+header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben","ZR-Nummer","Warenempfänger-GLN"],[11,36,30,16,26,26,30,14,12,18])
+for i in range(2,501): ws[f"I{i}"].number_format='@'; ws[f"J{i}"].number_format='@'
+ws["H1"].comment=Comment("Sondervorgaben des Empfängers: REWE, EDEKA, G5 (G5-Zentralregulierung: ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse) oder GLN (Kunde verlangt GLNs, z. B. Getränke Hoffmann: Lieferorte werden angelegt, Hinweise bei fehlender GLN).","PDF2E")
 ws["I1"].comment=Comment("Nur bei Vorgaben = G5: ZR-Nummer (Mitgliedsnummer) des Händlers bei der G5, 7 Ziffern, beginnt mit 27. Wird als Käuferreferenz (BT-10) übergeben.","PDF2E")
+ws["J1"].comment=Comment("Optional: GLN des Warenempfängers für alle Lieferungen an diesen Kunden (BT-71). Eine GLN im Blatt 'Lieferorte' für den einzelnen Lieferort hat Vorrang.","PDF2E")
 for j,v in enumerate([] if XL else ["11770","Markgrafen Getränkevertrieb GmbH","gam406@markgrafen.com","","","","Beispiel aus Muster RE 2603976; E-Mail bitte bestätigen"],1):
     c=ws.cell(2,j,v); c.fill=INP
 ws["A2"].number_format='@'

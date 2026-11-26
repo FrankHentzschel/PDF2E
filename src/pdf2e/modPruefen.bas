@@ -35,6 +35,22 @@ Public Function RechnungPruefen() As Boolean
     ' GLN (13 Stellen mit Prüfziffer), sofern angegeben
     GlnPruefen "f_KGLN", "GLN Rechnungsempfänger"
     GlnPruefen "f_LGLN", "GLN Lieferort"
+    ' GLN-Hinweise nur bei Kunden, die GLNs verlangen (Vorgaben GLN/REWE/EDEKA oder Warenempfänger-GLN gepflegt)
+    If GlnKunde() Then
+        If Len(Trim$(CStr(Feld("f_LGLN").Value))) = 0 Then
+            If Len(Trim$(CStr(Feld("f_LOrt").Value))) > 0 Then
+                Protokoll "Warnung", "Keine Warenempfänger-GLN: im Blatt '" & BLATT_LIEFERORTE & "' bei " & LieferortSchluessel() & _
+                                     " eintragen oder als Standard für alle Lieferungen im Blatt 'Empfaenger' (Spalte Warenempfänger-GLN), dann erneut prüfen."
+            Else
+                Protokoll "Warnung", "Keine Warenempfänger-GLN: im Blatt 'Empfaenger' beim Kunden " & EmpfaengerSchluessel() & _
+                                     " (Spalte Warenempfänger-GLN) eintragen, dann erneut prüfen."
+            End If
+        End If
+        If Len(StammOderLeer("GLN")) = 0 Then
+            Protokoll "Warnung", "Keine eigene GLN der Brauerei (Blatt 'Brauerei', Zeile 'GLN'). Dieser Kunde verarbeitet GLNs " & _
+                                 "und verlangt meist auch die Lieferanten-GLN."
+        End If
+    End If
 
     ' Sondervorgaben des Empfängers (Blatt "Empfaenger", Spalte "Vorgaben")
     If EmpfaengerVorgabe() = "REWE" Then
