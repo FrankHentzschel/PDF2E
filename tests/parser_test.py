@@ -29,6 +29,7 @@ RE_USTID = re.compile(r"^\s*USt-?ID(?:-?Nr\.?)?:?\s+([A-Za-z]{2}[\w .-]*\w)\s*$"
 RE_NW = re.compile(r"NETTOWERT:\s+([\d.,]+-?)")
 RE_SEPA_BETRAG = re.compile(r"Forderung von\s+([\d.,]+)\s+ziehen wir mit einer SEPA-Lastschrift")
 RE_SEPA_MANDAT = re.compile(r"^\s*(\S+)\s+und mit der Gl(?:ae|ä)ubiger-ID\s+(\S+)\s+am\s+(\d{1,2}\.\d{1,2}\.\d{4})\s+ein")
+RE_FILIALE = re.compile(r"Lieferfiliale:\s*(\d{5})\s+([^,]+?)\s*,\s*(.+?)(?:\s*\*)?\s*$")   # PLZ, Ort, Straße
 RE_ARTNR = re.compile(r"^\d{5}\s")
 RE_LGREST = re.compile(r"\d+,\d{2}\s+[\d.]*\d,\d{2}-?\s*$")
 RE_LG0 = re.compile(r"^\s*(\d{5})\s+(\S+(?: \S+)*)\s{2,}(.*\S)\s+(\d+,\d{2})\s*$")   # ohne Pfandbetrag
@@ -259,6 +260,14 @@ def pruefe(pfad):
         print(f"        Nachlass {art} {proz:.2f} % auf {basis:.2f}: -{betrag:.2f}")
     if r.get("ig"):
         print(f"        Innergemeinschaftliche Lieferung (K, 0 %), USt-IdNr. {r.get('ustid')}")
+    for z in open(pfad, encoding="utf-8").read().split("\n"):
+        m = RE_FILIALE.search(z)
+        if m:
+            print(f"        Lieferfiliale: PLZ {m[1]}, Ort {m[2]}, Straße {m[3]}")
+    if os.path.basename(pfad) == "Rechnung_2604302.txt" and not any(
+            (m := RE_FILIALE.search(z)) and m.groups() == ("95233", "Helmbrechts", "Frankenstr. 13")
+            for z in open(pfad, encoding="utf-8").read().split("\n")):
+        fehler.append("Lieferfiliale nicht erkannt")
     if "sepa" in r:
         print("        SEPA-Lastschrift: Mandat %s, Gläubiger-ID %s, Einzug %s" % r["sepa"])
     for f in fehler:

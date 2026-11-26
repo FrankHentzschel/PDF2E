@@ -3,6 +3,16 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.11.0 und XL2E 1.3.0 – 26.11.2026
+
+Anlass: Getränke Hoffmann (Test-Rechnung 2604302) kann die E-Rechnung nicht automatisch verarbeiten, weil Warenempfänger-GLN und Lieferanten-GLN fehlen.
+
+- **Neue Funktion:** Die Zeile `+ Lieferfiliale: 95233 Helmbrechts, Frankenstr. 13 *` unter dem Nettowert wird als Lieferort gelesen (bisher nur protokolliert). Name des Lieferorts = Name des Rechnungsempfängers.
+- **Neue Funktion:** Blatt **Lieferorte** (Lieferort, Name, GLN, Bemerkung). Jeder Lieferort ohne GLN auf der Rechnung wird dort beim Einlesen angelegt (Schlüssel `Kundennr. / PLZ Ort, Straße`). Die GLN trägt der Anwender einmal ein; danach geht sie als Lieferort-GLN (BT-71, Schema 0088) in die E-Rechnung.
+- **Prüfung:** Warnung bei Lieferort ohne GLN und bei Lieferort-GLN ohne eigene GLN der Brauerei (Blatt „Brauerei“, Zeile „GLN“ → BT-29 mit Schema 0088, schon seit 1.5.0 vorhanden).
+- **Backend:** Schema-Version 3 (Tabelle Lieferorte). Umstellung automatisch beim ersten Start, dabei dürfen keine anderen Plätze geöffnet sein.
+- Testfall `tests/pdftotext/Rechnung_2604302.txt`.
+
 ## PDF2E 1.10.0 und XL2E 1.2.0 – 25.11.2026
 
 - **Neue Funktion:** Vorgaben der G5-Zentralregulierung (SGH Service GmbH, Merkblatt 11/2026 und E-Rechnung-Guideline EN 16931 V1.1, gültig ab 01.12.2026). Gilt nur für Empfänger mit `G5` in der Spalte „Vorgaben“ (von Hand eintragen), REWE, EDEKA und alle anderen Empfänger bleiben unverändert.

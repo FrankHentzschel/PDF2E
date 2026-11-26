@@ -30,7 +30,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reWW As Object, reZS As Object, reSt As Object, reRB As Object
     Dim reMarkt As Object, reILN As Object, reMail As Object, rePLZ As Object, reREGLN As Object
     Dim reNachlass As Object, reNW As Object, reSepaBetrag As Object, reSepaMandat As Object, reSepaHinweis As Object
-    Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean
+    Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean, reFiliale As Object
     Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     ' Position: ArtNr, Bezeichnung, Ka/Fa, Hl./Fl. (fehlt z. B. bei Paletten), Preis, Betrag,
@@ -57,6 +57,9 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Set reSepaHinweis = NeuesRegex("^\s*F(?:ae|" & ChrW(228) & ")llt der Termin auf ein Wochenende")
     Set reMarkt = NeuesRegex("Marktnummer:\s*(\d+)")
     Set reILN = NeuesRegex("(?:ILN|GLN):\s*(\d{13})")
+    ' Abweichende Lieferanschrift unter dem Nettowert, z. B.
+    ' "+ Lieferfiliale: 95233 Helmbrechts, Frankenstr. 13 *"   Gruppen: 0 PLZ, 1 Ort, 2 Straße
+    Set reFiliale = NeuesRegex("Lieferfiliale:\s*(\d{5})\s+([^,]+?)\s*,\s*(.+?)(?:\s*\*)?\s*$")
     Set reREGLN = NeuesRegex("^RE-GLN:\s*([\d ]+)$")
     Set reMail = NeuesRegex("([\w.+-]+@[\w-]+(?:\.[\w-]+)+)")
     ' "96450 Coburg" oder mit Länderkennzeichen "I- 39012 Meran", "A-6020 Innsbruck"
@@ -230,6 +233,16 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
                 ' Alles andere: Zusatzangaben auswerten, sonst als Hinweis protokollieren
                 Set m = Treffer(reMarkt, l)
                 If Not m Is Nothing Then Feld("f_Marktnr").Value = m.SubMatches(0): GoTo weiter
+                Set m = Treffer(reFiliale, l)
+                If Not m Is Nothing Then
+                    If Len(Feld("f_LName").Value) = 0 Then Feld("f_LName").Value = Feld("f_KName").Value
+                    Feld("f_LZeile2").Value = Trim$(m.SubMatches(2))
+                    Feld("f_LPLZ").Value = "'" & m.SubMatches(0)
+                    Feld("f_LOrt").Value = Trim$(m.SubMatches(1))
+                    Protokoll "Info", "Lieferfiliale als Lieferort übernommen: " & m.SubMatches(0) & " " & _
+                                      Trim$(m.SubMatches(1)) & ", " & Trim$(m.SubMatches(2))
+                    GoTo weiter
+                End If
                 Set m = Treffer(reILN, l)
                 If Not m Is Nothing Then
                     If Len(Feld("f_LGLN").Value) = 0 Then
