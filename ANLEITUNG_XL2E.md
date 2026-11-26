@@ -1,4 +1,4 @@
-# XL2E 1.4.0 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
+# XL2E 1.5.0 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Stand 17.11.2026. XL2E ist das Gegenstück zu PDF2E für Brauereien, deren BSI-Software die Rechnung als Excel-Datei ausgibt (Blatt `PA400_00`). Erster Kunde ist die Privatbrauerei Fiedler. Der Ablauf ist derselbe wie bei PDF2E: Rechnung einlesen, prüfen, E-Rechnung erzeugen, E-Mail-Entwurf.
 
@@ -100,7 +100,7 @@ Wie in PDF2E (siehe dort „G5-Empfänger“): `G5` in der Spalte Vorgaben, ZR-N
 
 ## GLN von Brauerei und Lieferort (ab 1.4.0)
 
-Wie in PDF2E: eigene GLN im Blatt „Brauerei“ (Zeile GLN), GLN je Lieferort im Blatt „Lieferorte“, das beim Einlesen automatisch gefüllt wird. Backend Schema-Version 3.
+Wie in PDF2E: eigene GLN im Blatt „Brauerei“ (Zeile GLN), GLN je Lieferort im Blatt „Lieferorte“, das beim Einlesen automatisch gefüllt wird. Ab 1.5.0 zusätzlich eine Standard-Warenempfänger-GLN je Kunde im Blatt „Empfaenger“ (Spalte Warenempfänger-GLN); die GLN im Blatt „Lieferorte“ hat Vorrang. Backend Schema-Version 4.
 
 ## Bekannte Grenzen
 

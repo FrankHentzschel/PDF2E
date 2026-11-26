@@ -13,7 +13,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.4.0"
+Public Const TOOL_VERSION As String = "1.5.0"
 Public Const TOOL_STAND As String = "26.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
@@ -163,6 +163,7 @@ End Function
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.5.0", "26.11.2026", "Neue Funktion", "Gemeinsame Module aus PDF2E 1.13.0: Warenempfänger-GLN zusätzlich als Standard je Kunde (neue Spalte Warenempfänger-GLN im Blatt Empfaenger), Vorrang hat die GLN im Blatt Lieferorte; GLN nur bei Kunden, die sie verlangen (Vorgaben GLN, REWE, EDEKA oder Warenempfänger-GLN gepflegt): nur für sie werden Lieferorte angelegt und GLN-Hinweise gemeldet; Backend Schema-Version 4")
     c.Add Array("1.4.0", "26.11.2026", "Neue Funktion", "Gemeinsame Module aus PDF2E 1.12.0: Warenempfänger-GLN je Lieferort: neues Blatt Lieferorte (wird beim Einlesen automatisch gefüllt, GLN einmal eintragen, Prüfen übernimmt sie auch nachträglich), Lieferort-GLN als BT-71; Hinweis bei fehlender Lieferort-GLN und fehlender eigener GLN der Brauerei (BT-29, Blatt Brauerei); Backend Schema-Version 3. (Nummer 1.3.0 übersprungen: ein am 26.11. kurz bereitgestelltes ZIP 1.3.0 beruhte auf einem veralteten Stand und wurde zurückgezogen.)")
     c.Add Array("1.2.3", "25.11.2026", "Fehlerbehebung", "Gemeinsame Module aus PDF2E 1.11.7: Prüfung übernimmt Angaben, die nach dem Einlesen im Blatt Empfaenger nachgetragen wurden (USt-IdNr., E-Mail, Konto, Kondition), in leere Felder des Blatts Rechnung; bisher war neues Einlesen nötig")
     c.Add Array("1.2.2", "25.11.2026", "Fehlerbehebung", "Gemeinsame Module aus PDF2E 1.11.1: Einlesen nach Import neuer Module ohne Neustart der Mappe brach mit „Element in dieser Auflistung nicht gefunden“ ab (Backend noch auf altem Schema, Spalte ZRNummer fehlte). Schema-Prüfung/Migration und neue Einstellungen jetzt auch vor jedem Laden der Stammdaten")

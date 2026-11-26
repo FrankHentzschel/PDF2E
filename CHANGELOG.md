@@ -3,6 +3,13 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.13.0 und XL2E 1.5.0 – 26.11.2026
+
+- **Neue Funktion:** Warenempfänger-GLN auch als **Standard je Kunde**: neue Spalte „Warenempfänger-GLN“ im Blatt „Empfaenger“. Reihenfolge für BT-71: GLN aus dem Rechnungstext, dann GLN des Lieferorts im Blatt „Lieferorte“, dann der Standard des Kunden. Gilt auch, wenn die Rechnung keinen eigenen Lieferort hat (Lieferort-Name = Rechnungsempfänger). Anlass: bei Getränke Hoffmann ist noch offen, ob eine GLN für alle Filialen gilt.
+- **GLN nur für Kunden, die sie verlangen:** Neuer Wert `GLN` in der Spalte „Vorgaben“ (z. B. Getränke Hoffmann). Als GLN-Kunde gilt ein Empfänger mit Vorgaben `GLN`, `REWE` oder `EDEKA` oder mit gepflegter Warenempfänger-GLN. Nur für diese Kunden legt das Programm Lieferorte im Blatt „Lieferorte“ an und meldet fehlende Warenempfänger-GLN oder Brauerei-GLN. Gastronomie und kleine Kunden brauchen keine Pflege und bekommen keine Hinweise. Die Brauerei-GLN wird immer mitgeschickt, wenn sie eingetragen ist.
+- **Prüfung:** „Prüfen“ übernimmt Lieferort- und Kunden-GLN auch nachträglich.
+- **Backend:** Schema-Version 4 (Spalte `WEGLN` in der Tabelle Empfaenger). Ältere Blätter bekommen fehlende Spalten vor den Verwaltungsspalten eingefügt, auch mehrere auf einmal.
+
 ## PDF2E 1.12.0 und XL2E 1.4.0 – 26.11.2026
 
 Anlass: Getränke Hoffmann (Test-Rechnung 2604302) kann die E-Rechnung nicht automatisch verarbeiten, weil Warenempfänger-GLN und Lieferanten-GLN fehlen.

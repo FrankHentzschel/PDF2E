@@ -166,10 +166,11 @@ for i,row in enumerate([("Sofort","Zahlbar sofort ohne Abzug.",0,"x"),("14 Tage 
 # Empfaenger
 from openpyxl.comments import Comment
 ws=wb.create_sheet("Empfaenger")
-header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben","ZR-Nummer"],[11,36,30,16,26,26,30,14,12])
-for i in range(2,501): ws[f"I{i}"].number_format='@'
-ws["H1"].comment=Comment("Sondervorgaben des Empfängers: REWE, EDEKA oder G5 (G5-Zentralregulierung: ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse).","PDF2E")
+header(ws,["Kundennr.","Name","E-Mail Rechnung","USt-IdNr.","Vorgabe Bankkonto","Vorgabe Zahlungskondition","Bemerkung","Vorgaben","ZR-Nummer","Warenempfänger-GLN"],[11,36,30,16,26,26,30,14,12,18])
+for i in range(2,501): ws[f"I{i}"].number_format='@'; ws[f"J{i}"].number_format='@'
+ws["H1"].comment=Comment("Sondervorgaben des Empfängers: REWE, EDEKA, G5 (G5-Zentralregulierung: ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse) oder GLN (Kunde verlangt GLNs, z. B. Getränke Hoffmann: Lieferorte werden angelegt, Hinweise bei fehlender GLN).","PDF2E")
 ws["I1"].comment=Comment("Nur bei Vorgaben = G5: ZR-Nummer (Mitgliedsnummer) des Händlers bei der G5, 7 Ziffern, beginnt mit 27. Wird als Käuferreferenz (BT-10) übergeben.","PDF2E")
+ws["J1"].comment=Comment("Optional: GLN des Warenempfängers für alle Lieferungen an diesen Kunden (BT-71). Eine GLN im Blatt 'Lieferorte' für den einzelnen Lieferort hat Vorrang.","PDF2E")
 for j,v in enumerate([] if XL else ["11770","Markgrafen Getränkevertrieb GmbH","gam406@markgrafen.com","","","","Beispiel aus Muster RE 2603976; E-Mail bitte bestätigen"],1):
     c=ws.cell(2,j,v); c.fill=INP
 ws["A2"].number_format='@'

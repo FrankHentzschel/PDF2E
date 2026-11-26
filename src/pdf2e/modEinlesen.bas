@@ -10,6 +10,9 @@ Option Explicit
 Public Const SP_E_VORGABEN As Long = 8
 ' Spalte "ZR-Nummer" im Blatt "Empfaenger" (G5-Zentralregulierung, BT-10)
 Public Const SP_E_ZRNR As Long = 9
+' Spalte "Warenempfänger-GLN" im Blatt "Empfaenger": Standard-GLN, wenn im Blatt
+' "Lieferorte" für den Lieferort keine GLN steht (BT-71)
+Public Const SP_E_WEGLN As Long = 10
 Private Const G5_EMAIL_STANDARD As String = "g5.e-invoice@documents.sgh-net.de"
 Public Const BLATT_PFANDARTIKEL As String = "Pfandartikel"
 ' GLN je Lieferort (Warenempfänger), Schlüssel = Kunde / PLZ Ort, Straße
@@ -248,14 +251,19 @@ End Sub
 ' GLN, die erst nach dem Einlesen im Blatt "Lieferorte" eingetragen wurde
 Private Sub LieferortGlnNachtragen()
     Dim z As Long, gln As String
-    If Len(Trim$(CStr(Feld("f_LGLN").Value))) > 0 Or Len(Trim$(CStr(Feld("f_LOrt").Value))) = 0 Then Exit Sub
-    On Error Resume Next
-    z = TabellenZeile(BLATT_LIEFERORTE, LieferortSchluessel())
-    If z > 0 Then gln = Replace(Trim$(CStr(ThisWorkbook.Worksheets(BLATT_LIEFERORTE).Cells(z, 3).Value)), " ", "")
-    On Error GoTo 0
-    If Len(gln) = 0 Then Exit Sub
-    Feld("f_LGLN").Value = "'" & gln
-    Protokoll "Info", "GLN des Lieferorts aus dem Blatt '" & BLATT_LIEFERORTE & "' übernommen: " & gln
+    If Len(Trim$(CStr(Feld("f_LGLN").Value))) > 0 Then Exit Sub
+    If Len(Trim$(CStr(Feld("f_LOrt").Value))) > 0 Then
+        On Error Resume Next
+        z = TabellenZeile(BLATT_LIEFERORTE, LieferortSchluessel())
+        If z > 0 Then gln = Replace(Trim$(CStr(ThisWorkbook.Worksheets(BLATT_LIEFERORTE).Cells(z, 3).Value)), " ", "")
+        On Error GoTo 0
+        If Len(gln) > 0 Then
+            Feld("f_LGLN").Value = "'" & gln
+            Protokoll "Info", "GLN des Lieferorts aus dem Blatt '" & BLATT_LIEFERORTE & "' übernommen: " & gln
+            Exit Sub
+        End If
+    End If
+    StandardWEGLNSetzen
 End Sub
 
 ' Neuen Rechnungsempfänger mit den aktuellen Vorgaben ins Blatt "Empfaenger"
@@ -343,7 +351,7 @@ End Function
 Private Sub ZRSpalteSicherstellen()
     Dim wsE As Worksheet
     Set wsE = ThisWorkbook.Worksheets("Empfaenger")
-    If CStr(wsE.Cells(1, SP_E_ZRNR).Value) = "ZR-Nummer" Then Exit Sub
+    If CStr(wsE.Cells(1, SP_E_ZRNR).Value) = "ZR-Nummer" Then WEGLNSpalteSicherstellen: Exit Sub
     If CStr(wsE.Cells(1, SP_E_ZRNR).Value) = "Geändert am" Then wsE.Columns(SP_E_ZRNR).Insert
     wsE.Columns(SP_E_ZRNR).NumberFormat = "@"
     wsE.Columns(SP_E_ZRNR).ColumnWidth = 12
@@ -357,7 +365,50 @@ Private Sub ZRSpalteSicherstellen()
                         "7 Ziffern, beginnt mit 27. Wird als Käuferreferenz (BT-10) übergeben."
         End If
     End With
+    WEGLNSpalteSicherstellen
 End Sub
+
+' Ältere Arbeitsmappen: Spalte "Warenempfänger-GLN" ergänzen (vor den Verwaltungsspalten)
+Private Sub WEGLNSpalteSicherstellen()
+    Dim wsE As Worksheet
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    Select Case CStr(wsE.Cells(1, SP_E_WEGLN).Value)
+        Case "Warenempfänger-GLN": Exit Sub
+        Case "Geändert am": wsE.Columns(SP_E_WEGLN).Insert        ' ältere Mappe mit Verwaltungsspalten
+        Case "", "WEGLN"                                          ' leer oder Feldname aus BlattLaden
+        Case Else: Exit Sub                                       ' unbekannte Überschrift: nichts überschreiben
+    End Select
+    wsE.Columns(SP_E_WEGLN).NumberFormat = "@"
+    wsE.Columns(SP_E_WEGLN).ColumnWidth = 18
+    With wsE.Cells(1, SP_E_WEGLN)
+        .Value = "Warenempfänger-GLN"
+        .Font.Bold = True
+        .Interior.Color = wsE.Cells(1, 1).Interior.Color
+        .Font.Color = wsE.Cells(1, 1).Font.Color
+        If .Comment Is Nothing Then
+            .AddComment "Optional: GLN des Warenempfängers für alle Lieferungen an diesen Kunden (BT-71). " & _
+                        "Eine GLN im Blatt 'Lieferorte' für den einzelnen Lieferort hat Vorrang."
+        End If
+    End With
+End Sub
+
+' Verlangt der aktuelle Empfänger GLNs? Ja bei Vorgaben GLN, REWE oder EDEKA
+' (Blatt "Empfaenger", Spalte "Vorgaben") oder wenn eine Warenempfänger-GLN gepflegt ist.
+' Nur dann werden Lieferorte angelegt und GLN-Hinweise gemeldet.
+Public Function GlnKunde() As Boolean
+    Select Case EmpfaengerVorgabe()
+        Case "GLN", "REWE", "EDEKA": GlnKunde = True
+        Case Else: GlnKunde = Len(EmpfaengerWEGLN()) > 0
+    End Select
+End Function
+
+' Standard-Warenempfänger-GLN des aktuellen Empfängers (Blatt "Empfaenger"), leer = keine
+Public Function EmpfaengerWEGLN() As String
+    Dim z As Long
+    On Error Resume Next
+    z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
+    If z > 0 Then EmpfaengerWEGLN = Replace(Trim$(CStr(ThisWorkbook.Worksheets("Empfaenger").Cells(z, SP_E_WEGLN).Value)), " ", "")
+End Function
 
 ' Pfandartikel der Rechnung, die noch nicht im Blatt "Pfandartikel" stehen,
 ' dort anlegen. Der Anwender trägt nur noch die GTIN des Pfandartikels ein
@@ -421,7 +472,7 @@ End Sub
 Private Sub LieferortGlnSetzen()
     Dim wsL As Worksheet, z As Long, schluessel As String, gln As String
     If Len(Trim$(CStr(Feld("f_LGLN").Value))) > 0 Then Exit Sub
-    If Len(Trim$(CStr(Feld("f_LOrt").Value))) = 0 Then Exit Sub
+    If Len(Trim$(CStr(Feld("f_LOrt").Value))) = 0 Then StandardWEGLNSetzen: Exit Sub
     LieferorteSicherstellen
     Set wsL = ThisWorkbook.Worksheets(BLATT_LIEFERORTE)
     schluessel = LieferortSchluessel()
@@ -431,9 +482,12 @@ Private Sub LieferortGlnSetzen()
         If Len(gln) > 0 Then
             Feld("f_LGLN").Value = "'" & gln
             Protokoll "Info", "GLN des Lieferorts aus dem Blatt '" & BLATT_LIEFERORTE & "': " & gln
+        Else
+            StandardWEGLNSetzen
         End If
         Exit Sub
     End If
+    If Not GlnKunde() Then Exit Sub         ' Gastronomie, kleine Kunden: keine Pflege nötig
     z = wsL.Cells(wsL.Rows.Count, 1).End(xlUp).Row + 1
     wsL.Cells(z, 1).NumberFormat = "@"
     wsL.Cells(z, 1).Value = schluessel
@@ -443,6 +497,19 @@ Private Sub LieferortGlnSetzen()
     wsL.Range(wsL.Cells(z, 1), wsL.Cells(z, 4)).Interior.Color = RGB(255, 248, 225)
     ZeileSpeichern BLATT_LIEFERORTE, z
     Protokoll "Info", "Lieferort " & schluessel & " im Blatt '" & BLATT_LIEFERORTE & "' angelegt. GLN dort eintragen, falls der Kunde sie verlangt."
+    StandardWEGLNSetzen
+End Sub
+
+' Keine GLN für den Lieferort: Standard-Warenempfänger-GLN des Empfängers (Blatt
+' "Empfaenger", Spalte "Warenempfänger-GLN"), sofern eingetragen
+Private Sub StandardWEGLNSetzen()
+    Dim gln As String
+    If Len(Trim$(CStr(Feld("f_LGLN").Value))) > 0 Then Exit Sub
+    gln = EmpfaengerWEGLN()
+    If Len(gln) = 0 Then Exit Sub
+    Feld("f_LGLN").Value = "'" & gln
+    If Len(Trim$(CStr(Feld("f_LName").Value))) = 0 Then Feld("f_LName").Value = Feld("f_KName").Value
+    Protokoll "Info", "Warenempfänger-GLN aus dem Blatt 'Empfaenger' (Standard des Kunden): " & gln
 End Sub
 
 ' Schlüssel eines Lieferorts: Empfänger / PLZ Ort, Straße
@@ -506,7 +573,8 @@ Private Sub VorgabenSpalteSicherstellen()
             .AddComment "Sondervorgaben des Empfängers: REWE = Vorgaben der REWE-Zentralregulierung " & _
                         "(Hinweis Entgeltminderungen, Pflicht: RE-GLN, Lieferort-GLN, USt-IdNr.); " & _
                         "EDEKA = Pfand getrennt, GTIN je Pfandartikel Pflicht; " & _
-                        "G5 = G5-Zentralregulierung (ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse)"
+                        "G5 = G5-Zentralregulierung (ZR-Nummer, G5-Lieferantennummer, zentrale E-Mail-Adresse); " & _
+                        "GLN = Kunde verlangt GLNs (Lieferort-GLN, Lieferanten-GLN), z. B. Getränke Hoffmann"
             .ColumnWidth = 14
         End If
     End With
