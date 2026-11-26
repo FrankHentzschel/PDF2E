@@ -14,7 +14,8 @@ Public Const BLATT_PFANDARTIKEL As String = "Pfandartikel"
 Private Const FELDER_LEEREN As String = _
     "f_Quelldatei,f_RechNr,f_RechDatum,f_LSNr,f_LSDatum,f_KundenNr,f_KGLN,f_KName,f_KStrasse,f_KPLZ,f_KOrt," & _
     "f_KEmail,f_KUstId,f_LName,f_LZeile2,f_LPLZ,f_LOrt,f_LGLN,f_Marktnr,f_Kondition,f_Konto," & _
-    "f_PDF_Warenwert,f_PDF_Pfand,f_PDF_Netto,f_PDF_MwSt,f_PDF_Brutto,f_Status,f_Ausgabedatei"
+    "f_PDF_Warenwert,f_PDF_Pfand,f_PDF_Netto,f_PDF_MwSt,f_PDF_Brutto,f_Status,f_Ausgabedatei," & _
+    "f_Mandat,f_GlaeubigerId,f_Einzug"
 
 Public Sub RechnungEinlesen()
     Dim pfad As String
@@ -26,6 +27,8 @@ Public Sub RechnungEinlesen()
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
 
+    LastschriftFelderSicherstellen
+    FeldnamenPruefen
     ArbeitsblaetterLeeren
     Feld("f_Quelldatei").Value = pfad
     Protokoll "Info", "Einlesen: " & pfad
@@ -84,16 +87,102 @@ Private Sub ArbeitsblaetterLeeren()
     If ws.Cells(ws.Rows.Count, 1).End(xlUp).Row > 1 Then ws.Range("A2:C" & ws.Rows.Count).ClearContents
 End Sub
 
+' Felder für die SEPA-Lastschrift (ab PDF2E 1.8.0). Fehlen sie in einer älteren
+' Mappe, werden sie unten im Blatt "Rechnung" angehängt.
+Private Sub LastschriftFelderSicherstellen()
+    Dim ws As Worksheet, z As Long, i As Long, namen As Variant, texte As Variant, hinweise As Variant
+
+    namen = Array("f_Mandat", "f_GlaeubigerId", "f_Einzug")
+    If NameVorhanden(namen(0)) And NameVorhanden(namen(1)) And NameVorhanden(namen(2)) Then Exit Sub
+    texte = Array("Mandatsreferenz", "Gläubiger-ID", "Einzugsdatum")
+    hinweise = Array("BT-89, aus der Rechnung", "BT-90, aus der Rechnung", "BT-9 bei Lastschrift (statt Fälligkeitsdatum)")
+
+    Set ws = ThisWorkbook.Worksheets(BLATT_RECHNUNG)
+    z = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 2
+    ws.Cells(z, 1).Value = "SEPA-Lastschrift"
+    ws.Cells(z, 1).Font.Bold = True
+    For i = 0 To 2
+        z = z + 1
+        If Not NameVorhanden(CStr(namen(i))) Then
+            ws.Cells(z, 1).Value = texte(i)
+            ws.Cells(z, 2).Interior.Color = RGB(238, 238, 238)
+            ws.Cells(z, 2).NumberFormat = IIf(i = 2, "DD.MM.YYYY", "@")
+            ws.Cells(z, 3).Value = hinweise(i)
+            ws.Cells(z, 3).Font.Italic = True
+            ws.Cells(z, 3).Font.Color = RGB(119, 119, 119)
+            ThisWorkbook.Names.Add name:=CStr(namen(i)), RefersTo:="='" & ws.name & "'!$B$" & z
+        End If
+    Next i
+End Sub
+
+' Jeder Feldname (f_...) muss auf eine eigene Zelle zeigen. Zeigen zwei Namen auf
+' dieselbe Zelle (z. B. nach Umbau der Mappe), landen Werte im falschen Feld,
+' etwa der Kundenname in der USt-IdNr. Dann lieber mit klarer Meldung abbrechen.
+Private Sub FeldnamenPruefen()
+    Dim n As Variant, r As Range, adr As Object, meldung As String, k As String
+    Set adr = CreateObject("Scripting.Dictionary")
+    For Each n In Split(FELDER_LEEREN & ",f_RechArt,f_Waehrung,f_KLand,f_LLand,f_Faellig,f_Netto,f_MwSt,f_Brutto", ",")
+        Set r = Nothing
+        On Error Resume Next
+        Set r = ThisWorkbook.Names(CStr(n)).RefersToRange
+        On Error GoTo 0
+        If r Is Nothing Then
+            meldung = meldung & vbLf & n & ": fehlt oder zeigt ins Leere (#BEZUG!)"
+        Else
+            k = r.Worksheet.Name & "!" & r.Address(False, False)
+            If adr.Exists(k) Then
+                meldung = meldung & vbLf & n & " und " & adr(k) & " zeigen beide auf " & k
+            Else
+                adr.Add k, CStr(n)
+            End If
+        End If
+    Next n
+    If Len(meldung) > 0 Then
+        Err.Raise vbObjectError + 30, , "Die Feldnamen im Blatt 'Rechnung' sind fehlerhaft (Formeln > Namens-Manager):" & _
+                  meldung & vbLf & "Bitte die Mappe aus PDF2E.xlsx im ZIP neu aufbauen."
+    End If
+End Sub
+
+' Blatt "Empfaenger": USt-IdNr. in Spalte D bereinigen. Steht dort der
+' Kundenname (Spalte B), wird das Feld geleert; andere ungültige Werte werden
+' gemeldet (die Prüfung verhindert dann das Erzeugen für diesen Kunden).
+Private Sub EmpfaengerUStIdBereinigen()
+    Dim wsE As Worksheet, z As Long, roh As String, neu As String, meldung As String
+    Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    For z = 2 To wsE.Cells(wsE.Rows.Count, 1).End(xlUp).Row
+        If Not IsError(wsE.Cells(z, 4).Value) Then
+            roh = CStr(wsE.Cells(z, 4).Value)
+            If Len(Trim$(roh)) > 0 Then
+                neu = UStIdBereinigt(roh)
+                meldung = UStIdFehler(neu)
+                If Len(meldung) > 0 And neu = UStIdBereinigt(wsE.Cells(z, 2).Value) Then
+                    wsE.Cells(z, 4).ClearContents
+                    ZeileSpeichern "Empfaenger", z
+                    Protokoll "Warnung", "Empfänger " & wsE.Cells(z, 1).Value & ": In der Spalte USt-IdNr. stand der Kundenname '" & _
+                                         roh & "'. Feld geleert, bei Bedarf die richtige USt-IdNr. eintragen."
+                ElseIf Len(meldung) > 0 Then
+                    Protokoll "Warnung", "Empfänger " & wsE.Cells(z, 1).Value & ", USt-IdNr.: " & meldung
+                ElseIf neu <> roh Then
+                    wsE.Cells(z, 4).NumberFormat = "@"
+                    wsE.Cells(z, 4).Value = neu
+                    ZeileSpeichern "Empfaenger", z
+                End If
+            End If
+        End If
+    Next z
+End Sub
+
 ' Bankkonto, Zahlungskondition und E-Mail aus dem Blatt "Empfaenger",
 ' sonst die mit "x" markierten Standard-Einträge
 Private Sub VorgabenSetzen()
     Dim wsE As Worksheet, z As Long
     Set wsE = ThisWorkbook.Worksheets("Empfaenger")
+    EmpfaengerUStIdBereinigen
     z = TabellenZeile("Empfaenger", EmpfaengerSchluessel())
 
     If z > 0 Then
         If Len(wsE.Cells(z, 3).Value) > 0 Then Feld("f_KEmail").Value = wsE.Cells(z, 3).Value
-        If Len(wsE.Cells(z, 4).Value) > 0 Then Feld("f_KUstId").Value = wsE.Cells(z, 4).Value
+        If Len(wsE.Cells(z, 4).Value) > 0 Then Feld("f_KUstId").Value = "'" & UStIdBereinigt(wsE.Cells(z, 4).Value)
         Feld("f_Konto").Value = wsE.Cells(z, 5).Value
         Feld("f_Kondition").Value = wsE.Cells(z, 6).Value
     End If
@@ -125,7 +214,11 @@ Private Sub EmpfaengerAnlegen()
     wsE.Cells(z, 1).Value = EmpfaengerSchluessel()
     wsE.Cells(z, 2).Value = Feld("f_KName").Value
     wsE.Cells(z, 3).Value = Feld("f_KEmail").Value
-    wsE.Cells(z, 4).Value = Feld("f_KUstId").Value
+    ' USt-IdNr. nur, wenn sie wie eine aussieht (nie Name o. Ä. aus einem falsch verknüpften Feld)
+    If Len(UStIdFehler(UStIdBereinigt(Feld("f_KUstId").Value))) = 0 Then
+        wsE.Cells(z, 4).NumberFormat = "@"
+        wsE.Cells(z, 4).Value = UStIdBereinigt(Feld("f_KUstId").Value)
+    End If
     ' Konto und Kondition bleiben leer = es gilt der jeweilige Standard-Eintrag
     wsE.Cells(z, 7).Value = "Automatisch angelegt am " & Format$(Date, "dd.mm.yyyy") & _
                             " aus RE " & Feld("f_RechNr").Value & " - Konto/Kondition leer = Standard"

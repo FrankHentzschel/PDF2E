@@ -22,6 +22,10 @@ Public Function RechnungPruefen() As Boolean
     Pflicht "f_KOrt", "Ort Rechnungsempfänger"
     Pflicht "f_Kondition", "Zahlungskondition"
     Pflicht "f_Konto", "Bankkonto"
+    If IstLastschrift() Then
+        If Not IsDate(Feld("f_Einzug").Value) Then Fehler "SEPA-Lastschrift: Einzugsdatum fehlt."
+        Pflicht "f_GlaeubigerId", "SEPA-Lastschrift: Gläubiger-ID"
+    End If
     If Len(Feld("f_Konto").Value) > 0 And TabellenZeile("Bankkonten", CStr(Feld("f_Konto").Value)) = 0 Then
         Fehler "Bankkonto '" & Feld("f_Konto").Value & "' gibt es im Blatt 'Bankkonten' nicht."
     End If
@@ -49,11 +53,26 @@ Public Function RechnungPruefen() As Boolean
     End If
     PfandGtinPruefen EmpfaengerVorgabe() = "EDEKA"
 
+    ' Innergemeinschaftliche Lieferung (USt-Kategorie K, EN 16931 BR-IC)
+    If KategorieVorhanden("K") Then
+        If Len(UStIdBereinigt(Feld("f_KUstId").Value)) = 0 Then
+            Fehler "Innergemeinschaftliche Lieferung: USt-IdNr. des Empfängers fehlt (Pflicht). Bitte im Blatt 'Empfaenger' beim Kunden " & _
+                   EmpfaengerSchluessel() & " eintragen."
+        End If
+        If UCase$(Trim$(CStr(Feld("f_KLand").Value))) = "DE" Then
+            Fehler "Innergemeinschaftliche Lieferung, aber Land des Empfängers ist DE. Bitte Feld 'Land' im Blatt 'Rechnung' prüfen."
+        End If
+        If Len(Trim$(CStr(Feld("f_LLand").Value))) = 0 Then Fehler "Innergemeinschaftliche Lieferung: Lieferland fehlt."
+    End If
+    UStIdPruefen Feld("f_KUstId").Value, "USt-IdNr. des Rechnungsempfängers: im Blatt 'Empfaenger' beim Kunden " & _
+                 EmpfaengerSchluessel() & " (Spalte USt-IdNr.) korrigieren oder leeren und neu einlesen."
+
     ' Pflichtangaben Brauerei
     Dim k As Variant
     For Each k In Array("Name", "Straße", "PLZ", "Ort", "Land", "USt-IdNr")
         If Len(Stamm(CStr(k))) = 0 Then Fehler "Brauerei-Stammdaten: '" & k & "' fehlt."
     Next k
+    UStIdPruefen Stamm("USt-IdNr"), "USt-IdNr. der Brauerei: im Blatt 'Brauerei' korrigieren."
 
     PlatzhalterPruefen
 
@@ -75,7 +94,7 @@ Public Function RechnungPruefen() As Boolean
     Next z
 
     ' Summenabgleich mit den Werten aus der Quellrechnung (Felder f_PDF_*)
-    Abgleich "Warenwert (Ware - Aktionen)", ware, Feld("f_PDF_Warenwert").Value
+    Abgleich "Warenwert (Ware - Nachlässe)", ware, Feld("f_PDF_Warenwert").Value
     Abgleich "Pfand", pfand, Feld("f_PDF_Pfand").Value
     Abgleich "Nettosumme", Feld("f_Netto").Value, Feld("f_PDF_Netto").Value
     Abgleich "MwSt", Feld("f_MwSt").Value, Feld("f_PDF_MwSt").Value
@@ -85,6 +104,13 @@ Public Function RechnungPruefen() As Boolean
     Feld("f_Status").Value = IIf(mFehler = 0, "OK - bereit zum Erzeugen", mFehler & " Fehler - siehe Protokoll")
     Protokoll "Prüfung", "---- Ergebnis: " & Feld("f_Status").Value & " ----"
 End Function
+
+' USt-IdNr. mit Länderkennzeichen (EN 16931, BR-CO-09), sonst Fehler mit Hinweis, wo korrigieren
+Private Sub UStIdPruefen(ByVal ustId As Variant, ByVal wo As String)
+    Dim meldung As String
+    meldung = UStIdFehler(UStIdBereinigt(ustId))
+    If Len(meldung) > 0 Then Fehler meldung & " " & wo
+End Sub
 
 Private Sub Pflicht(ByVal feldName As String, ByVal bezeichnung As String)
     If Len(Trim$(CStr(Feld(feldName).Value))) = 0 Then Fehler bezeichnung & " fehlt."

@@ -3,6 +3,39 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.9.1 – 23.11.2026
+
+- **Fehlerbehebung:** Positionen ohne Angabe in der Spalte Hl./Fl. und mit `*` am Zeilenende (RE 2604307: `136 EURO-Palette  29  12,000  348,00 *`) wurden nicht übernommen; Netto fehlte um 348,00. Der Ort „Hamburg (Deutschland)“ wird ohne Zusatz übernommen.
+- Testfall `tests/pdftotext/Rechnung_2604307.txt`. XL2E unverändert (nur `modParserBSI` und `modProdukt` von PDF2E geändert).
+
+## PDF2E 1.9.0 und XL2E 1.1.7 – 23.11.2026
+
+- **Neue Funktion:** Steuerfreie innergemeinschaftliche Lieferung (RE 2604264, Empfänger in Italien): Hinweistext erkannt, USt-Kategorie K mit 0 %, Befreiungsgrund VATEX-EU-IC (BT-120/121), USt-IdNr. des Empfängers aus der Zeile „USt-ID:“, Lieferort/Lieferland aus der Empfängeranschrift, wenn kein Lieferort angegeben ist. Prüfung: USt-IdNr. Pflicht, Land ungleich DE, Lieferland vorhanden.
+- **Neue Funktion:** Anschriften mit Länderkennzeichen vor der PLZ (`I- 39012 Meran`), weitere Ländercodes im Smart-Tools-Adapter.
+- **Fehlerbehebung:** WARENWERT ohne Betrag (reine Leergutrückgabe) wird als 0 gelesen. Ohne MwSt-Zeile und ohne Steuerbefreiung gibt es eine klare Meldung statt „USt-Satz fehlt“ je Zeile.
+- Testfall `tests/pdftotext/Rechnung_2604264.txt`.
+
+## PDF2E 1.8.3 und XL2E 1.1.6 – 23.11.2026
+
+- **Fehlerbehebung:** Kompilierfehler in `modHilfen`: Die Konstante `UST_PRAEFIXE` stand zwischen den Prozeduren statt im Deklarationsteil (von Frank gemeldet und lokal korrigiert).
+- **Neu:** `tests/vba_struktur_test.py` prüft alle VBA-Dateien darauf, dass Const/Dim/Declare/Type/Enum auf Modulebene vor der ersten Prozedur stehen.
+
+## PDF2E 1.8.2 und XL2E 1.1.5 – 23.11.2026
+
+- **Fehlerbehebung:** Beim Kunden stand im Blatt „Empfaenger“ der Kundenname in der Spalte USt-IdNr. Beim Einlesen wird das jetzt erkannt, das Feld geleert und im Protokoll gemeldet; andere ungültige USt-IdNr. werden gemeldet. Neue Empfänger bekommen nur eine gültige USt-IdNr.
+- **Neu:** Prüfung der Feldnamen im Blatt „Rechnung“ vor dem Einlesen (fehlende Namen, zwei Namen auf derselben Zelle) mit klarer Meldung. Die Ursache beim Kunden ist noch nicht bestätigt; ein falsch verknüpfter Name `f_KUstId` würde genau dieses Bild ergeben.
+
+## PDF2E 1.8.1 und XL2E 1.1.4 – 23.11.2026
+
+- **Fehlerbehebung:** USt-IdNr. ohne Länderkennzeichen fiel erst im Smart-Tools-Validierungsbericht auf (BR-CO-09, RE 2604306). Jetzt wird die USt-IdNr. von Brauerei und Rechnungsempfänger bereinigt (Leerzeichen, Punkte, Bindestriche, Schrägstriche, Großbuchstaben) und beim Prüfen auf Länderkennzeichen und Form geprüft, mit Hinweis auf Blatt und Kundennummer. Bei der Eingabe im Blatt „Empfaenger“ wird sie sofort bereinigt und geprüft.
+
+## PDF2E 1.8.0 und XL2E 1.1.3 – 23.11.2026
+
+- **Neue Funktion:** Skonto- bzw. Nachlasszeile zwischen WARENWERT und NETTOWERT (z. B. `Skonto  Gesamtes Vergütung  299,75 EU  3,00  8,99-`) wird als Nachlass übernommen und in der E-Rechnung als Abschlag auf Belegebene (BG-20) übergeben. Der Warenwert-Abgleich nutzt den NETTOWERT. Auslöser: RE 2604304 (Prüffehler Netto 333,95 statt 324,96).
+- **Neue Funktion:** SEPA-Lastschrift aus dem Rechnungstext: Mandatsreferenz, Gläubiger-ID und Einzugsdatum werden gelesen (neue Felder im Blatt „Rechnung“, in älteren Mappen automatisch angelegt). E-Rechnung mit Zahlungsart 59, BT-89, BT-90, Einzugsdatum als BT-9 und Einzugshinweis als BT-20; ebenso im Stub und in der E-Mail.
+- Testfall `tests/pdftotext/Rechnung_2604304.txt`.
+- XL2E 1.1.3: nur die gemeinsamen Module aktualisiert, keine Änderung im Ablauf.
+
 ## PDF2E 1.7.2 und XL2E 1.1.2 – 19.11.2026
 
 - **Fehlerbehebung:** Das Blatt „Versionshistorie“ wird beim Start aus dem Programm nachgeführt (Funktion `Versionen` in `modProdukt`). Bisher befüllte es nur die Vorlage, deshalb fehlten in bestehenden Mappen die Versionen ab 1.5.0. Das Datum steht jetzt als echtes Datum statt als Text.

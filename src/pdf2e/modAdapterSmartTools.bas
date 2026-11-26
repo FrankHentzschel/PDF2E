@@ -25,6 +25,7 @@ Private Const ID_GLN As Long = 86             ' 0088 EAN Location Code (GLN)
 Private Const ID_GTIN As Long = 156           ' 0160 Global Trade Item Number (GTIN)
 Private Const TEXT_AAK As Long = 9            ' AAK Preiskonditionen
 Private Const WAEHRUNG_EUR As Long = 48
+Private Const BEFREIUNG_EU_IC As Long = 57        ' VatExemptionReasonCode: Intra-community supply
 
 Private Const REWE_AAK_STANDARD As String = _
     "Bezüglich der Entgeltminderungen verweisen wir auf die aktuellen Zahlungs- und Konditionsvereinbarungen"
@@ -140,7 +141,7 @@ Private Sub VerkaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_Z
         .PostalAddress.PostCode = Stamm("PLZ")                  ' BT-38
         .PostalAddress.City = Stamm("Ort")                      ' BT-37
         .PostalAddress.CountryCode = LandCode(Stamm("Land"))    ' BT-40
-        .VatId = Stamm("USt-IdNr")                              ' BT-31
+        .VatId = UStIdBereinigt(Stamm("USt-IdNr"))              ' BT-31
         If Len(Stamm("Steuernummer")) > 0 Then .TaxRegistrationId = Stamm("Steuernummer")   ' BT-32
         If Len(Stamm("Registernummer")) > 0 Then .LegalId.Value = Stamm("Registernummer")   ' BT-30
         If Len(Stamm("E-Mail")) > 0 Then
@@ -168,7 +169,7 @@ Private Sub KaeuferSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGF
         ElseIf Len(Feld("f_KundenNr").Value) > 0 Then           ' sonst Kundennummer ohne Schema
             .ID.Value = CStr(Feld("f_KundenNr").Value)
         End If
-        If Len(Feld("f_KUstId").Value) > 0 Then .VatId = CStr(Feld("f_KUstId").Value)        ' BT-48
+        If Len(Feld("f_KUstId").Value) > 0 Then .VatId = UStIdBereinigt(Feld("f_KUstId").Value)   ' BT-48
         If Len(Feld("f_KEmail").Value) > 0 Then
             .ElectronicAddress.Value = CStr(Feld("f_KEmail").Value)   ' BT-49
             .ElectronicAddress.SchemeCode = ElectronicAddressCode_EM
@@ -198,11 +199,22 @@ End Sub
 
 Private Sub ZahlungSetzen(ByVal inv As SmartTools_Invoicing_EN16931_ZUGFeRD_ZUGFeRDEN16931Invoice)
     Dim konto As SmartTools_Invoicing_EN16931_ZUGFeRD_EN16931_CreditTransfer
-    Dim kz As Long, bz As Long
+    Dim bz As Long, text As String
 
-    kz = TabellenZeile("Zahlungskonditionen", CStr(Feld("f_Kondition").Value))
-    If kz > 0 Then inv.PaymentTerms.Description = ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(kz, 2).Value   ' BT-20
-    If IsDate(Feld("f_Faellig").Value) Then inv.PaymentTerms.DueDate = Feld("f_Faellig").Value                       ' BT-9
+    text = Zahlungsbedingung()
+    If Len(text) > 0 Then inv.PaymentTerms.Description = text           ' BT-20
+    If IsDate(FaelligAm()) Then inv.PaymentTerms.DueDate = FaelligAm()  ' BT-9 (bei Lastschrift Einzugsdatum)
+
+    ' SEPA-Lastschrift laut Rechnung: Zahlungsart 59 mit Mandat und Gläubiger-ID, keine Überweisungsdaten
+    If IstLastschrift() Then
+        If inv.Payment.DirectDebit Is Nothing Then
+            Err.Raise vbObjectError + 111, , "Smart Tools: Objekt für die SEPA-Lastschrift (Payment.DirectDebit) fehlt."
+        End If
+        inv.Payment.PaymentMeansCode = PaymentMeansCode_SEPA_direct_debit                       ' BT-81 = 59
+        inv.Payment.DirectDebit.MandateReferenceId = Trim$(CStr(Feld("f_Mandat").Value))        ' BT-89
+        inv.Payment.DirectDebit.CreditorId = Trim$(CStr(Feld("f_GlaeubigerId").Value))          ' BT-90
+        Exit Sub
+    End If
 
     bz = TabellenZeile("Bankkonten", CStr(Feld("f_Konto").Value))
     If bz = 0 Then Err.Raise vbObjectError + 106, , "Bankkonto '" & Feld("f_Konto").Value & "' fehlt im Blatt 'Bankkonten'."
@@ -234,7 +246,7 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
         satzKey = UCase$(Trim$(CStr(ws.Cells(z, SP_USTKAT).Value))) & "|" & CStr(ws.Cells(z, SP_USTSATZ).Value)
         basis(satzKey) = basis(satzKey) + CCur(ws.Cells(z, SP_BETRAG).Value)
 
-        If typ = "Nachlass" Then
+        If typ = "Nachlass" Then                ' Aktion, Skonto: Abschlag auf Belegebene (BG-20)
             nachlaesse = nachlaesse - CCur(ws.Cells(z, SP_BETRAG).Value)
             inv.AddAllowance NeuerAbschlag(Abs(CCur(ws.Cells(z, SP_BETRAG).Value)), CStr(ws.Cells(z, SP_BEZ).Value), _
                                            CStr(ws.Cells(z, SP_USTKAT).Value), ws.Cells(z, SP_USTSATZ).Value)
@@ -273,6 +285,10 @@ Private Sub PositionenUndSummenSetzen(ByVal inv As SmartTools_Invoicing_EN16931_
             .Rate = CCur(Split(k, "|")(1))                              ' BT-119
             .CategoryCode = KategorieCode(CStr(Split(k, "|")(0)))       ' BT-118
             .Amount = ustBetrag                                         ' BT-117
+            If UCase$(Split(k, "|")(0)) = "K" Then                      ' innergemeinschaftliche Lieferung
+                .ExemptionReasonCode = BEFREIUNG_EU_IC                    ' BT-121
+                .ExemptionReason = "Steuerfreie innergemeinschaftliche Lieferung"   ' BT-120
+            End If
         End With
         inv.AddVat ust
         ustSumme = ustSumme + ustBetrag
@@ -371,7 +387,23 @@ End Function
 Private Function LandCode(ByVal land As String) As Long
     Select Case UCase$(Trim$(land))
         Case "DE", "": LandCode = CountryCode_DE
-        Case "AT": LandCode = 11
+        Case "AT": LandCode = 11            ' Werte aus Codelisten.xlsx, Blatt CountryCode
+        Case "IT": LandCode = 109
+        Case "CH": LandCode = 42
+        Case "FR": LandCode = 74
+        Case "BE": LandCode = 19
+        Case "NL": LandCode = 165
+        Case "LU": LandCode = 133
+        Case "DK": LandCode = 58
+        Case "SE": LandCode = 196
+        Case "CZ": LandCode = 55
+        Case "PL": LandCode = 178
+        Case "HU": LandCode = 99
+        Case "SI": LandCode = 199
+        Case "ES": LandCode = 67
+        Case "PT": LandCode = 183
+        Case "LI": LandCode = 128
+        Case "GB": LandCode = 76
         Case Else: Err.Raise vbObjectError + 110, , "Ländercode '" & land & "' ist im Adapter nicht hinterlegt (modAdapterSmartTools, LandCode)."
     End Select
 End Function

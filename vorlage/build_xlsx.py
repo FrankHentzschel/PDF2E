@@ -96,6 +96,10 @@ rows=[
 (f"Zwischensumme {LAUT}","f_PDF_Netto","pdf",""),
 (f"MwSt {LAUT}","f_PDF_MwSt","pdf",""),
 (f"Rechnungsbetrag {LAUT}","f_PDF_Brutto","pdf",""),
+("SEPA-Lastschrift",None),
+("Mandatsreferenz","f_Mandat","pdf","BT-89, aus der Rechnung"),
+("Gläubiger-ID","f_GlaeubigerId","pdf","BT-90, aus der Rechnung"),
+("Einzugsdatum","f_Einzug","pdf","BT-9 bei Lastschrift (statt Fälligkeitsdatum)"),
 ]
 r=1; cells={}
 for row in rows:
@@ -106,10 +110,10 @@ for row in rows:
     ws.cell(r,1,lab); c=ws.cell(r,2); ws.cell(r,3,hint).font=Font(italic=True,color="777777")
     c.fill={"inp":INP,"calc":CALC,"pdf":PDF}[kind]
     name(nm,f"Rechnung!$B${r}"); cells[nm]=f"B{r}"; r+=1
-for nm in ["f_RechDatum","f_LSDatum","f_Faellig"]: ws[cells[nm]].number_format="DD.MM.YYYY"
+for nm in ["f_RechDatum","f_LSDatum","f_Faellig","f_Einzug"]: ws[cells[nm]].number_format="DD.MM.YYYY"
 for nm in ["f_Netto","f_MwSt","f_Brutto","f_PDF_Warenwert","f_PDF_Pfand","f_PDF_Netto","f_PDF_MwSt","f_PDF_Brutto"]:
     ws[cells[nm]].number_format='#,##0.00'
-for nm in ["f_RechNr","f_KundenNr","f_KGLN","f_KPLZ","f_LPLZ","f_LGLN","f_Marktnr","f_LSNr","f_RechArt"]: ws[cells[nm]].number_format='@'
+for nm in ["f_RechNr","f_KundenNr","f_KGLN","f_KPLZ","f_LPLZ","f_LGLN","f_Marktnr","f_LSNr","f_RechArt","f_Mandat","f_GlaeubigerId"]: ws[cells[nm]].number_format='@'
 ws[cells["f_RechArt"]]="380"; ws[cells["f_Waehrung"]]="EUR"; ws[cells["f_KLand"]]="DE"; ws[cells["f_LLand"]]="DE"
 ws[cells["f_Faellig"]]='=IF(f_RechDatum="","",f_RechDatum+IFERROR(VLOOKUP(f_Kondition,Zahlungskonditionen!$A$2:$C$50,3,FALSE),0))'
 ws[cells["f_Netto"]]="=SUM(Positionen!$G$2:$G$1000)"

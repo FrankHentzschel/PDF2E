@@ -489,6 +489,7 @@ End Sub
 Public Sub DatenBlattGeaendert(ByVal sh As Object, ByVal target As Range)
     Dim n As Long, bereich As Range, z As Variant, zeilen As Collection, r As Range, a As Range
     If mIntern Then Exit Sub
+    UStIdEingabePruefen sh, target              ' Blatt Empfaenger: USt-IdNr. bereinigen und prüfen
     If Not IstDatenblatt(sh.Name) Then Exit Sub
     If Not DatenAktiv() Then Exit Sub
     n = UBound(Felder(sh.Name)) + 1

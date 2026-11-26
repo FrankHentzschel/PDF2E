@@ -13,8 +13,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.1.2"
-Public Const TOOL_STAND As String = "19.11.2026"
+Public Const TOOL_VERSION As String = "1.1.7"
+Public Const TOOL_STAND As String = "23.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
 
@@ -163,6 +163,11 @@ End Function
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.1.7", "23.11.2026", "Wartung", "Gemeinsame Module aus PDF2E 1.9.0 (USt-Kategorie K mit Befreiungsgrund, weitere Ländercodes, Prüfung innergemeinschaftliche Lieferung)")
+    c.Add Array("1.1.6", "23.11.2026", "Fehlerbehebung", "Kompilierfehler: Konstante UST_PRAEFIXE in modHilfen in den Deklarationsteil verschoben (wie PDF2E 1.8.3)")
+    c.Add Array("1.1.5", "23.11.2026", "Fehlerbehebung", "Wie PDF2E 1.8.2: Kundenname in der Spalte USt-IdNr. wird erkannt und geleert; Prüfung der Feldnamen im Blatt Rechnung")
+    c.Add Array("1.1.4", "23.11.2026", "Fehlerbehebung", "USt-IdNr. wird bereinigt und auf Länderkennzeichen geprüft (wie PDF2E 1.8.1), auch bei der Eingabe im Blatt Empfaenger")
+    c.Add Array("1.1.3", "23.11.2026", "Wartung", "Gemeinsame Module aus PDF2E 1.8.0 (SEPA-Lastschrift, Nachlass auf Belegebene); für XL2E keine Änderung im Ablauf")
     c.Add Array("1.1.2", "19.11.2026", "Fehlerbehebung", "Blatt Versionshistorie wird beim Start aus dem Programm nachgeführt (wie PDF2E 1.7.2)")
     c.Add Array("1.1.1", "19.11.2026", "Fehlerbehebung", "Speichern geänderter Zeilen (wie PDF2E 1.7.1)")
     c.Add Array("1.1.0", "19.11.2026", "Neue Funktion", "Mehrplatzbetrieb wie PDF2E 1.7.0 (gemeinsame Module, in XL2E noch nicht getestet)")

@@ -21,6 +21,9 @@ Public Const SP_USTSATZ As Long = 8
 Public Const SP_USTKAT As Long = 9
 Public Const SP_INFO As Long = 10
 
+' Länderkennzeichen für USt-IdNr. (UStIdFehler)
+Private Const UST_PRAEFIXE As String = " AT BE BG CY CZ DE DK EE EL ES FI FR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK XI CH GB NO LI "
+
 ' Liest eine Einstellung. Reihenfolge:
 '   1. Blatt "Arbeitsplatz" (von der Starter-Mappe gesetzt, z. B. Backend-Pfad)
 '   2. Blatt "Einstellungen", Zeile mit Spalte D (Arbeitsplatz) = Computername
@@ -75,6 +78,99 @@ End Function
 ' Zelle eines benannten Feldes im Blatt "Rechnung" (Namen beginnen mit f_)
 Public Function Feld(ByVal name As String) As Range
     Set Feld = ThisWorkbook.Names(name).RefersToRange
+End Function
+
+' Gibt es den Namen (Feld) in der Mappe? Ältere Mappen haben neuere Felder evtl. noch nicht.
+Public Function NameVorhanden(ByVal name As String) As Boolean
+    Dim n As Object
+    On Error Resume Next
+    Set n = ThisWorkbook.Names(name)
+    NameVorhanden = (Err.Number = 0)
+    On Error GoTo 0
+End Function
+
+'------------------------------------------------------------------------------
+' USt-IdNr. (BT-31, BT-48): EN 16931 verlangt ein Länderkennzeichen (BR-CO-09)
+'------------------------------------------------------------------------------
+
+' Leerzeichen, Punkte, Bindestriche und Schrägstriche entfernen, Großbuchstaben
+Public Function UStIdBereinigt(ByVal ustId As Variant) As String
+    Dim s As String, z As Variant
+    If IsError(ustId) Or IsNull(ustId) Then Exit Function
+    s = UCase$(CStr(ustId))
+    For Each z In Array(" ", ".", "-", "/", Chr$(160), vbTab)
+        s = Replace(s, CStr(z), "")
+    Next z
+    UStIdBereinigt = s
+End Function
+
+' Leer = in Ordnung (oder keine USt-IdNr.), sonst verständliche Fehlermeldung.
+' Erwartet die bereinigte Form (UStIdBereinigt).
+Public Function UStIdFehler(ByVal ustId As String) As String
+    If Len(ustId) = 0 Then Exit Function
+    If Not ustId Like "[A-Z][A-Z]*" Then
+        UStIdFehler = "'" & ustId & "' hat kein Länderkennzeichen. Eine USt-IdNr. beginnt mit dem Land, z. B. DE123456789. " & _
+                      "Eine Steuernummer gehört nicht in dieses Feld. Ist keine USt-IdNr. bekannt, das Feld leer lassen."
+    ElseIf InStr(UST_PRAEFIXE, " " & Left$(ustId, 2) & " ") = 0 Then
+        UStIdFehler = "'" & ustId & "': Länderkennzeichen '" & Left$(ustId, 2) & "' ist unbekannt (Griechenland: EL statt GR)."
+    ElseIf Left$(ustId, 2) = "DE" And Not ustId Like "DE#########" Then
+        UStIdFehler = "'" & ustId & "': Eine deutsche USt-IdNr. besteht aus DE und 9 Ziffern."
+    ElseIf Len(ustId) < 4 Or Len(ustId) > 14 Then
+        UStIdFehler = "'" & ustId & "' hat nicht die Länge einer USt-IdNr."
+    End If
+End Function
+
+' Eingabe im Blatt "Empfaenger", Spalte D (USt-IdNr.): sofort bereinigen und prüfen
+Public Sub UStIdEingabePruefen(ByVal sh As Object, ByVal target As Range)
+    Dim bereich As Range, c As Range, neu As String, meldung As String
+    If sh.Name <> "Empfaenger" Then Exit Sub
+    Set bereich = Intersect(target, sh.Range(sh.Cells(2, 4), sh.Cells(sh.Rows.Count, 4)))
+    If bereich Is Nothing Then Exit Sub
+    If bereich.Cells.Count > 50 Then Exit Sub            ' großes Einfügen: Prüfung beim Einlesen
+    For Each c In bereich.Cells
+        If Not IsError(c.Value) Then
+            neu = UStIdBereinigt(c.Value)
+            If neu <> CStr(c.Value) Then
+                Application.EnableEvents = False
+                c.NumberFormat = "@"
+                c.Value = neu
+                Application.EnableEvents = True
+            End If
+            meldung = UStIdFehler(neu)
+            If Len(meldung) > 0 Then
+                MsgBox "Empfänger " & sh.Cells(c.Row, 1).Value & " (Zeile " & c.Row & "), USt-IdNr.:" & vbLf & meldung, _
+                       vbExclamation, TOOL_NAME
+            End If
+        End If
+    Next c
+End Sub
+
+' SEPA-Lastschrift laut Quellrechnung (Felder f_Mandat, f_GlaeubigerId, f_Einzug)
+Public Function IstLastschrift() As Boolean
+    If NameVorhanden("f_Mandat") Then IstLastschrift = Len(Trim$(CStr(Feld("f_Mandat").Value))) > 0
+End Function
+
+' Fälligkeit (BT-9): bei Lastschrift das Einzugsdatum, sonst Rechnungsdatum + Zahlungsziel
+Public Function FaelligAm() As Variant
+    FaelligAm = Feld("f_Faellig").Value
+    If IstLastschrift() Then
+        If IsDate(Feld("f_Einzug").Value) Then FaelligAm = Feld("f_Einzug").Value
+    End If
+End Function
+
+' Zahlungsbedingung (BT-20): bei Lastschrift der Einzugshinweis, sonst der Text
+' der Zahlungskondition aus dem Blatt "Zahlungskonditionen"
+Public Function Zahlungsbedingung() As String
+    Dim kz As Long, einzug As String
+    If IstLastschrift() Then
+        If IsDate(Feld("f_Einzug").Value) Then einzug = " am " & Format$(Feld("f_Einzug").Value, "dd.mm.yyyy")
+        Zahlungsbedingung = "Der Betrag wird per SEPA-Lastschrift" & einzug & " eingezogen (Mandatsreferenz " & _
+            Trim$(CStr(Feld("f_Mandat").Value)) & ", Gläubiger-ID " & Trim$(CStr(Feld("f_GlaeubigerId").Value)) & _
+            "). Fällt der Termin auf ein Wochenende oder einen Feiertag, wird am nächstmöglichen Termin eingezogen."
+        Exit Function
+    End If
+    kz = TabellenZeile("Zahlungskonditionen", CStr(Feld("f_Kondition").Value))
+    If kz > 0 Then Zahlungsbedingung = CStr(ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(kz, 2).Value)
 End Function
 
 ' Deutsche Zahl in Currency umwandeln: "1.029,53" -> 1029,53 / "25,00-" -> -25
@@ -170,6 +266,25 @@ Public Sub PositionAnhaengen(ByVal typ As String, ByVal artNr As String, ByVal b
     ws.Cells(z, SP_BETRAG).Value = betrag
     ws.Cells(z, SP_INFO).Value = "'" & info
 End Sub
+
+' Steuerbefreite Rechnung (z. B. K = innergemeinschaftliche Lieferung): 0 % für alle Zeilen
+Public Sub SteuerfreiSetzen(ByVal kategorie As String)
+    Dim ws As Worksheet, z As Long
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    For z = 2 To ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+        ws.Cells(z, SP_USTSATZ).Value = 0
+        ws.Cells(z, SP_USTKAT).Value = kategorie
+    Next z
+End Sub
+
+' Kommt in den Positionen die USt-Kategorie vor (z. B. "K")?
+Public Function KategorieVorhanden(ByVal kategorie As String) As Boolean
+    Dim ws As Worksheet, z As Long
+    Set ws = ThisWorkbook.Worksheets(BLATT_POSITIONEN)
+    For z = 2 To ws.Cells(ws.Rows.Count, SP_TYP).End(xlUp).Row
+        If UCase$(Trim$(CStr(ws.Cells(z, SP_USTKAT).Value))) = UCase$(kategorie) Then KategorieVorhanden = True: Exit Function
+    Next z
+End Function
 
 ' Bei genau einem MwSt-Satz gilt er für alle Zeilen. Bei mehreren muss der Anwender zuordnen.
 Public Sub SteuersatzSetzen(saetze As Collection)

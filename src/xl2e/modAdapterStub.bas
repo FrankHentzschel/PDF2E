@@ -29,9 +29,8 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-5", "Waehrung", Feld("f_Waehrung").Value
     Wert grp, "BT-16", "Lieferschein", Feld("f_LSNr").Value
     Wert grp, "BT-72", "Leistungsdatum", DatumXml(Feld("f_LSDatum").Value)
-    Wert grp, "BT-9", "Faelligkeitsdatum", DatumXml(Feld("f_Faellig").Value)
-    kz = TabellenZeile("Zahlungskonditionen", CStr(Feld("f_Kondition").Value))
-    If kz > 0 Then Wert grp, "BT-20", "Zahlungsbedingungen", ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(kz, 2).Value
+    Wert grp, "BT-9", "Faelligkeitsdatum", DatumXml(FaelligAm())
+    If Len(Zahlungsbedingung()) > 0 Then Wert grp, "BT-20", "Zahlungsbedingungen", Zahlungsbedingung()
 
     Set grp = Gruppe(root, "Verkaeufer")
     Wert grp, "BT-27", "Name", Stamm("Name")
@@ -39,7 +38,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-38", "PLZ", Stamm("PLZ")
     Wert grp, "BT-37", "Ort", Stamm("Ort")
     Wert grp, "BT-40", "Land", Stamm("Land")
-    Wert grp, "BT-31", "UStIdNr", Stamm("USt-IdNr")
+    Wert grp, "BT-31", "UStIdNr", UStIdBereinigt(Stamm("USt-IdNr"))
     Wert grp, "BT-32", "Steuernummer", Stamm("Steuernummer")
     Wert grp, "BT-30", "Registernummer", Stamm("Registernummer")
     Wert grp, "BT-41", "Kontakt", Stamm("Kontakt Name")
@@ -50,7 +49,7 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-44", "Name", Feld("f_KName").Value
     Wert grp, "BT-46", "Kundennummer", Feld("f_KundenNr").Value
     Wert grp, "BT-46", "GLN", Feld("f_KGLN").Value
-    Wert grp, "BT-48", "UStIdNr", Feld("f_KUstId").Value
+    Wert grp, "BT-48", "UStIdNr", UStIdBereinigt(Feld("f_KUstId").Value)
     Wert grp, "BT-49", "EMail", Feld("f_KEmail").Value
     Wert grp, "BT-50", "Strasse", Feld("f_KStrasse").Value
     Wert grp, "BT-53", "PLZ", Feld("f_KPLZ").Value
@@ -66,9 +65,15 @@ Public Sub StubEinbetten(ByVal zielPdf As String)
     Wert grp, "BT-80", "Land", Feld("f_LLand").Value
 
     Set grp = Gruppe(root, "Zahlung")
-    Wert grp, "BT-81", "Zahlungsart", "58"
+    If IstLastschrift() Then
+        Wert grp, "BT-81", "Zahlungsart", "59"
+        Wert grp, "BT-89", "Mandatsreferenz", Feld("f_Mandat").Value
+        Wert grp, "BT-90", "GlaeubigerID", Feld("f_GlaeubigerId").Value
+    Else
+        Wert grp, "BT-81", "Zahlungsart", "58"
+    End If
     bz = TabellenZeile("Bankkonten", CStr(Feld("f_Konto").Value))
-    If bz > 0 Then
+    If bz > 0 And Not IstLastschrift() Then
         With ThisWorkbook.Worksheets("Bankkonten")
             Wert grp, "BT-84", "IBAN", .Cells(bz, 3).Value
             Wert grp, "BT-85", "Kontoinhaber", .Cells(bz, 2).Value

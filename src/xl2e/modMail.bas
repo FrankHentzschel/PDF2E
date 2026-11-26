@@ -165,14 +165,13 @@ Private Function VorlageWert(ByVal schluessel As String) As String
 End Function
 
 Private Function PlatzhalterErsetzen(ByVal s As String) As String
-    Dim kz As Long, bedingung As String
-    kz = TabellenZeile("Zahlungskonditionen", CStr(Feld("f_Kondition").Value))
-    If kz > 0 Then bedingung = CStr(ThisWorkbook.Worksheets("Zahlungskonditionen").Cells(kz, 2).Value)
+    Dim bedingung As String
+    bedingung = Zahlungsbedingung()         ' bei Lastschrift der Einzugshinweis
 
     s = Replace(s, "{Rechnungsnummer}", CStr(Feld("f_RechNr").Value))
     s = Replace(s, "{Rechnungsdatum}", DatumText(Feld("f_RechDatum").Value))
     s = Replace(s, "{Betrag}", Format$(Feld("f_Brutto").Value, "#,##0.00"))
-    s = Replace(s, "{Faellig}", DatumText(Feld("f_Faellig").Value))
+    s = Replace(s, "{Faellig}", DatumText(FaelligAm()))
     s = Replace(s, "{Zahlungsbedingung}", bedingung)
     s = Replace(s, "{Kundennummer}", CStr(Feld("f_KundenNr").Value))
     s = Replace(s, "{Kunde}", CStr(Feld("f_KName").Value))

@@ -11,7 +11,7 @@ Das Tool liest die PDF ein, zeigt die Daten zur Kontrolle an und ergänzt sie au
 
 **XL2E** liest die Excel-Rechnung der BSI-Software (Blatt `PA400_00`), erzeugt daraus ein PDF mit Briefkopf aus den Stammdaten und bettet die E-Rechnung ein.
 
-Aktueller Stand: **PDF2E 1.6.0** und **XL2E 1.0.0**, beide mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [CHANGELOG.md](CHANGELOG.md).
+Aktueller Stand: **PDF2E 1.9.1** und **XL2E 1.1.7**, beide mit Smart-Tools-Anbindung (ZUGFeRD EN16931). Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Aufbau
 
@@ -35,7 +35,7 @@ Aktueller Stand: **PDF2E 1.6.0** und **XL2E 1.0.0**, beide mit Smart-Tools-Anbin
 - **Änderungen in Excel:** Mit [VbaSync](https://github.com/FrankHentzschel/VbaSync) „Alle exportieren“ in einen lokalen Ordner je Mappe (z. B. `C:\Work\PDF2E\src` und `C:\Work\XL2E\src`); im Repository landet der Inhalt in `src/pdf2e` bzw. `src/xl2e`. Danach `python tools/abgleich.py --von <produkt>` und committen. Einmalig dafür im Trust Center den „Zugriff auf das VBA-Projektobjektmodell“ erlauben.
 - **Kodierung:** Im Arbeitsverzeichnis Windows-1252 mit CRLF, wie es der VBA-Editor braucht. Im Repository liegt UTF-8. Das regelt `.gitattributes` automatisch.
 - **Versionen:** `TOOL_VERSION` in `src/<produkt>/modProdukt.bas`, Eintrag in `CHANGELOG.md` und im Blatt „Versionshistorie“ (`vorlage/build_xlsx.py`), dazu ein Git-Tag `vX.Y.Z`.
-- **Vor jedem Release:** `python tests/parser_test.py` und `python tests/xl_parser_test.py` müssen für alle Muster `OK` melden. Pakete: `python vorlage/pakete.py <Zielordner> [<Logo-Ordner>]`.
+- **Vor jedem Release:** `python tests/vba_struktur_test.py` (Deklarationen nur im Kopf der Module), `python tests/parser_test.py` und `python tests/xl_parser_test.py` müssen für alle Muster `OK` melden. Pakete: `python vorlage/pakete.py <Zielordner> [<Logo-Ordner>]`.
 
 ## Voraussetzungen
 
