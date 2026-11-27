@@ -3,6 +3,14 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.15.3 – 27.11.2026
+
+Anlass: Bei RE 2604142 (Getränke Hoffmann) fehlten Rechnungsnummer, Rechnungsdatum und Kundennummer, die Summen stimmten.
+
+- **Fehlerbehebung:** Die Kopfzeile „Kunden-Nr. RE-Nr. Datum“ wurde nur mit zweistelligem Tag und Monat erkannt. BSI druckt Tage unter 10 ohne führende Null („8.11.2026“). Jetzt sind ein- und zweistellige Tage und Monate erlaubt (beide Layouts). Keine Folge der Layout-Erkennung aus 1.15.0: Der Fehler bestand schon vorher und fiel nur bei Rechnungen vom 1. bis 9. eines Monats auf.
+- Test: Kopf wird in allen Mustern geprüft, neues Muster RE 2604142 (Linux und Windows).
+- XL2E bleibt 1.6.7 (keine gemeinsamen Module geändert).
+
 ## PDF2E 1.15.2 und XL2E 1.6.7 – 27.11.2026
 
 Anlass: Test bei Krug mit 1.15.1. Dieselbe Rechnung (2604315) ließ sich erst nach einem Neustart von Excel neu erzeugen (Fehler 75). Die alte Datei war noch offen, nach Franks Test vermutlich durch Excel/Smart Tools selbst, und nach dem Löschen nur zum Löschen vorgemerkt.

@@ -41,7 +41,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean, reFiliale As Object
     Dim reMinusRB As Object, reEnthalten As Object, reRueckware As Object, reTelefon As Object
     Dim bruttoBetraege As Boolean, lgRueckgabe As Boolean, menge As Double, betrag As Currency
-    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
+    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     ' Position: ArtNr, Bezeichnung, Ka/Fa, Hl./Fl. (fehlt z. B. bei Paletten), Preis, Betrag,
     ' am Ende optional ein "*" (z. B. "136 EURO-Palette  29  12,000  348,00 *")
@@ -699,7 +699,7 @@ Public Sub ParseBSITabelle(ByVal text As String)
 
     eur = ChrW(&H20AC)
     betragT = "(-?[\d.]*\d,\d{2}-?)\s*" & eur
-    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
+    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*$")
     Set reKopfzeile = NeuesRegex("^Pos\.\s+ArtNr\.\s+Bezeichnung")
     ' Beginn einer Position: "1 1", "4 100 Palette(n) 1 0"
     Set rePosStart = NeuesRegex("^(\d+)\s+(\d+)(?:\s+(.*))?$")

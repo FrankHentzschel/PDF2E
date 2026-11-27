@@ -13,6 +13,7 @@ import os
 import re
 import sys
 
+RE_KOPF = re.compile(r"(\d+)\s+(\d{5,})\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*$")   # Kunde, RE-Nr., Datum (auch "8.11.2026")
 RE_LS = re.compile(r"^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
 RE_POS = re.compile(r"^\s*(\d+)\s+(.+?)\s+(\d+-?)\s+(?:([\d.,]+)\s+)?([\d.,]+)\s+([\d.,]+-?)(?:\s*\*)?\s*$")
 RE_AKT = re.compile(r"^\s*Aktion\s+(.+?)\s+(\d+)\s+Ka/F\s+([\d.,]+)\s+([\d.,]+)-\s*$")
@@ -337,7 +338,7 @@ def parse_tabelle(text):
     # Kopf und Empfänger
     links = []
     for l in z[:kopf]:
-        m = re.search(r"(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$", l)
+        m = re.search(r"(\d+)\s+(\d{5,})\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*$", l)
         if m:
             r["kunde"], r["renr"], r["datum"] = m.groups()
             continue
@@ -614,10 +615,24 @@ def test_tabelle_grenzfaelle():
     return ok
 
 
+def test_kopf():
+    """Kundennummer, Rechnungsnummer und Datum in jeder Musterdatei (RE 2604142: Datum "8.11.2026")."""
+    ok = True
+    for pfad in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "pdftotext*", "*.txt"))):
+        nr = re.search(r"Rechnung_(\d+)", os.path.basename(pfad))[1]
+        treffer = [m for z in open(pfad, encoding="utf-8").read().split("\n") if (m := RE_KOPF.search(z))]
+        if not treffer or treffer[0][2] != nr:
+            print(f"FEHLER  Kopf nicht erkannt: {os.path.basename(pfad)}")
+            ok = False
+    print(("OK    " if ok else "FEHLER") + "  Kopf (Kundennummer, Rechnungsnummer, Datum) in allen Mustern")
+    return ok
+
+
 if __name__ == "__main__":
     dateien = sys.argv[1:] or sorted(glob.glob(os.path.join(os.path.dirname(__file__), "pdftotext", "*.txt")))
     ergebnisse = [pruefe(d) for d in dateien]
     if not sys.argv[1:]:
         ergebnisse.append(test_differenz_null())
         ergebnisse.append(test_tabelle_grenzfaelle())
+        ergebnisse.append(test_kopf())
     sys.exit(0 if all(ergebnisse) else 1)

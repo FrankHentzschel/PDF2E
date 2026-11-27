@@ -1,4 +1,4 @@
-# PDF2E 1.15.2 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.15.3 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -263,6 +263,7 @@ Die Auswertungslogik ist an allen vier Mustern gegengeprüft. Warenwert, Pfand, 
 | 2604304 | SAGASSER Fachmarkt, Lieferort Ebermannstadt | 4 + Skonto 3 % (−8,99) | 34,20 | 386,70, SEPA-Lastschrift |
 | 2603531 | Barverkauf ab Rampe (Telefonnummer im Anschriftenblock) | 4 | 43,40 (brutto) | 244,40, enthaltene MwSt |
 | 2603475 | J & J Festbedarf, Minus-Rechnung | 9 × Rückware | −440,50 (brutto) | −772,50, enthaltene MwSt |
+| 2604142 | Getränke Hoffmann, Lieferfiliale Mainleus, Datum mit einstelligem Tag (8.11.2026) | 5 + Skonto 2 % (−5,95) | 27,70 | 379,91 |
 | 2604269 | REWE Markt GmbH Zweig NL. Süd (GLN 4388096000002), Lieferort Ebermannstadt, **Tabellen-Layout** | 3 | 15,50 (Saldo) | 355,81 |
 
 Seit 1.5.0 steht Pfand getrennt nach Lieferung und Rücknahme in der Rechnung. Das Programm leitet beide Mengen aus dem Leergutkonto ab (Lieferung − Rücknahme = Differenz, alter Saldo + Differenz = neuer Saldo). Gelingt das nicht eindeutig, bleibt es bei der Differenz mit einer Warnung im Protokoll.
