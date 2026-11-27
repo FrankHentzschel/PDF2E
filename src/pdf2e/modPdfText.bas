@@ -4,17 +4,19 @@ Attribute VB_Name = "modPdfText"
 '==============================================================================
 Option Explicit
 
-' Liefert den Text der PDF im Layout-Modus (Spalten bleiben erhalten).
+' Liefert den Text der PDF. modus "layout" (Standard): Spalten bleiben erhalten.
+' modus "raw": Text in der Reihenfolge der PDF, für das Tabellen-Layout der
+' BSI-Rechnung (ParseBSITabelle), bei dem -layout den Summenblock verschiebt.
 ' Seiten sind durch Seitenvorschub (Chr(12)) getrennt, Zeilenenden sind vbLf.
-Public Function PdfZuText(ByVal pdfPfad As String) As String
+Public Function PdfZuText(ByVal pdfPfad As String, Optional ByVal modus As String = "layout") As String
     Dim exe As String, txtPfad As String, cmd As String, rc As Long, s As String
 
     exe = Einstellung("pdftotext-Pfad")
     If Len(Dir$(exe)) = 0 Then Err.Raise vbObjectError + 10, , "pdftotext nicht gefunden: " & exe
     If Len(Dir$(pdfPfad)) = 0 Then Err.Raise vbObjectError + 11, , "PDF nicht gefunden: " & pdfPfad
 
-    txtPfad = Environ$("TEMP") & "\zugferd_" & Format$(Now, "yyyymmdd_hhnnss") & ".txt"
-    cmd = """" & exe & """ -layout -enc UTF-8 """ & pdfPfad & """ """ & txtPfad & """"
+    txtPfad = Environ$("TEMP") & "\zugferd_" & Format$(Now, "yyyymmdd_hhnnss") & IIf(modus = "layout", "", "_" & modus) & ".txt"
+    cmd = """" & exe & """ -" & modus & " -enc UTF-8 """ & pdfPfad & """ """ & txtPfad & """"
     rc = CreateObject("WScript.Shell").Run(cmd, 0, True)
     If rc <> 0 Or Len(Dir$(txtPfad)) = 0 Then
         Err.Raise vbObjectError + 12, , "pdftotext meldet Fehler (Code " & rc & ") für " & pdfPfad

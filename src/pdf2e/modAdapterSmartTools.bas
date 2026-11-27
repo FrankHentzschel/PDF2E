@@ -70,6 +70,7 @@ Public Sub SmartToolsEinbetten(ByVal zielPdf As String)
 
     inv.Save zielPdf        ' bettet factur-x.xml in die PDF-Kopie ein (PDF/A-3)
     Protokoll "Info", "Smart Tools: Profil EN16931, Prüfung ohne Fehler"
+    Set inv = Nothing               ' Datei-Handle von Smart Tools freigeben, bevor die Datei nachbearbeitet wird
     PdfANachbearbeiten zielPdf      ' CMYK/Überdrucken aus dem Quell-PDF PDF/A-konform machen (modPdfA)
 End Sub
 

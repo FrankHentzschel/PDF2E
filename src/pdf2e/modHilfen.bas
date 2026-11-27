@@ -360,3 +360,52 @@ Public Function EmpfaengerSchluessel() As String
         End If
     Next x
 End Function
+
+'------------------------------------------------------------------------------
+' Dateien auf Netzlaufwerken (ab 1.15.1)
+'------------------------------------------------------------------------------
+' Wartet die angegebene Zeit, ohne Excel zu blockieren (kein Declare nötig)
+Public Sub Warten(ByVal sekunden As Double)
+    Dim start As Single
+    start = Timer
+    Do While Timer - start < sekunden And Timer >= start   ' Timer springt um Mitternacht auf 0
+        DoEvents
+    Loop
+End Sub
+
+' Löscht eine Datei und wartet, bis sie wirklich weg ist. Auf Netzlaufwerken
+' bleibt eine Datei, die ein anderes Programm (PDF-Anzeige, Explorer-Vorschau,
+' Virenscanner) noch offen hält, nach dem Löschen kurz "zum Löschen vorgemerkt"
+' sichtbar; jeder Zugriff darauf meldet "Zugriff verweigert". Bis etwa 10
+' Sekunden wird gewartet, danach kommt eine verständliche Fehlermeldung.
+' Ab 1.15.2 wird die Datei zuerst in einen eindeutigen Namen umbenannt
+' ("…pdf.alt-JJJJMMTThhmmss") und dann gelöscht. Damit ist der Name sofort frei,
+' auch wenn Excel/Smart Tools die alte Datei noch offen hält; die umbenannte
+' Datei verschwindet, sobald das andere Programm sie freigibt.
+Public Sub DateiLoeschen(ByVal pfad As String)
+    Dim versuch As Long, nr As Long, txt As String, alt As String
+    For versuch = 1 To 20
+        If Len(Dir$(pfad)) = 0 Then Exit Sub
+        On Error Resume Next
+        SetAttr pfad, vbNormal
+        alt = pfad & ".alt-" & Format$(Now, "yyyymmddhhnnss") & "-" & versuch
+        Err.Clear
+        Name pfad As alt
+        If Err.Number = 0 Then
+            Kill alt                ' darf scheitern: dann bleibt nur die umbenannte Datei
+            Err.Clear
+            On Error GoTo 0
+            Exit Sub
+        End If
+        Err.Clear
+        Kill pfad
+        If Err.Number <> 0 Then nr = Err.Number: txt = Err.Description
+        On Error GoTo 0
+        If Len(Dir$(pfad)) = 0 Then Exit Sub
+        Warten 0.5
+    Next versuch
+    Err.Raise vbObjectError + 40, , "Die Datei lässt sich nicht löschen oder wird noch gelöscht:" & vbLf & pfad & vbLf & _
+        IIf(nr <> 0, "(" & txt & ", Fehler " & nr & ")" & vbLf, "") & _
+        "Vermutlich ist sie noch geöffnet (PDF-Anzeige, Explorer-Vorschau, Virenscanner, anderer Arbeitsplatz). " & _
+        "Bitte schließen und in einigen Sekunden erneut versuchen."
+End Sub

@@ -3,6 +3,42 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.15.3 – 27.11.2026
+
+Anlass: Bei RE 2604142 (Getränke Hoffmann) fehlten Rechnungsnummer, Rechnungsdatum und Kundennummer, die Summen stimmten.
+
+- **Fehlerbehebung:** Die Kopfzeile „Kunden-Nr. RE-Nr. Datum“ wurde nur mit zweistelligem Tag und Monat erkannt. BSI druckt Tage unter 10 ohne führende Null („8.11.2026“). Jetzt sind ein- und zweistellige Tage und Monate erlaubt (beide Layouts). Keine Folge der Layout-Erkennung aus 1.15.0: Der Fehler bestand schon vorher und fiel nur bei Rechnungen vom 1. bis 9. eines Monats auf.
+- Test: Kopf wird in allen Mustern geprüft, neues Muster RE 2604142 (Linux und Windows).
+- XL2E bleibt 1.6.7 (keine gemeinsamen Module geändert).
+
+## PDF2E 1.15.2 und XL2E 1.6.7 – 27.11.2026
+
+Anlass: Test bei Krug mit 1.15.1. Dieselbe Rechnung (2604315) ließ sich erst nach einem Neustart von Excel neu erzeugen (Fehler 75). Die alte Datei war noch offen, nach Franks Test vermutlich durch Excel/Smart Tools selbst, und nach dem Löschen nur zum Löschen vorgemerkt.
+
+- `DateiLoeschen` (modHilfen) benennt die vorhandene Datei zuerst in `…pdf.alt-Zeitstempel` um und löscht sie dann. Der Name ist damit sofort frei. Die umbenannte Datei verschwindet, sobald das andere Programm sie freigibt, spätestens beim Schließen von Excel.
+- Die Fehlerbehandlung in modZugferd räumt ebenfalls über `DateiLoeschen` auf (bisher `Kill`, was einen gesperrten Rest hinterlassen konnte).
+- Die Meldung bei Fehler 70/75 nennt als letzte Abhilfe, Excel neu zu starten.
+
+## PDF2E 1.15.1 und XL2E 1.6.6 – 27.11.2026
+
+Anlass: Bei Krug (Ausgabeordner F:\PDF2E\E-Rechnungen auf dem Netzlaufwerk) wurde die E-Rechnung angelegt und verschwand sofort wieder. Protokoll: „PDF/A-Korrektur nicht möglich (Fehler beim Zugriff auf Pfad/Datei)“, danach trotzdem „ZUGFeRD erzeugt“. Ein zweiter Versuch brach mit einem Zugriffsfehler ab.
+
+- **Ursache:** Die PDF/A-Korrektur (seit 1.14.0) schrieb `…pdf.tmp`, löschte das Original (`Kill`) und benannte die Hilfsdatei um (`Name`). Hält ein anderes Programm die frisch gespeicherte Datei offen (Virenscanner, Explorer-Vorschau, Indexdienst; auf Netzlaufwerken häufig), ist sie nach `Kill` nur zum Löschen vorgemerkt. Das Umbenennen auf diesen Namen scheitert dann mit Fehler 75, und die Fehlerbehandlung löschte zusätzlich die `.tmp`. Sobald das andere Programm die Datei freigab, war sie weg. Beim zweiten Versuch stand die vorgemerkte Datei noch im Ordner, `Kill` ohne Fehlerbehandlung brachte den Laufzeitfehler.
+- **Korrektur:** modPdfA baut das inkrementelle Update vollständig im Speicher auf und schreibt dann direkt in die vorhandene Datei (kein Löschen, kein Umbenennen, keine Hilfsdatei). Ist die Datei gesperrt, wird bis ca. 5 Sekunden erneut versucht; danach bleibt die Datei, wie Smart Tools sie gespeichert hat (Warnung im Protokoll).
+- Smart-Tools-Objekt wird vor der Nachbearbeitung freigegeben.
+- modZugferd: Überschreiben einer vorhandenen Datei wartet bis ca. 10 Sekunden, bis sie wirklich gelöscht ist (neue Prozedur `DateiLoeschen` in modHilfen), sonst verständliche Meldung statt Laufzeitfehler. Nach dem Erzeugen Kontrolle, dass die Datei noch existiert, Protokollzeile „Gespeichert: … (n Byte)“. Fehlerbehandlung löst beim Aufräumen keinen zweiten Laufzeitfehler mehr aus.
+- XL2E 1.6.6: dieselben gemeinsamen Module.
+
+## PDF2E 1.15.0 – 27.11.2026
+
+Anlass: Testrechnung RE 2604269 an REWE Markt GmbH Zweig NL. Süd lieferte keine Positionen, keinen MwSt-Satz und keine Summen.
+
+- **Neu: Tabellen-Layout der BSI-Rechnung** (Spalten Pos., ArtNr., Bezeichnung, Ka/Fa, Hl./Fl., Preis, Betrag, zzgl. MwSt.; Summenblock mit Pfand, Rundungsdifferenz MwSt., Summe 19% MwSt.). Erkennung am Tabellenkopf, Einlesen mit `pdftotext -raw` (`-layout` verschiebt unter Windows den Summenblock). Neue Prozeduren `IstBSITabelle` und `ParseBSITabelle` in modParserBSI, `PdfZuText` mit optionalem Modus.
+- Empfängername ohne angehängtes „RE-“; die folgende Zeile „GLN: …“ wird GLN des Rechnungsempfängers.
+- Pfand in diesem Layout als Saldo laut Rechnung (eine Position), da kein Leergut-Konto gedruckt wird.
+- Versionshistorie im Programm um 1.14.2 bis 1.14.5 ergänzt.
+- XL2E bleibt 1.6.5 (keine gemeinsamen Module geändert).
+
 ## PDF2E 1.14.5 und XL2E 1.6.5 – 27.11.2026
 
 - **Backend-Abgleich je Tabelle und Feld:** Nach jeder Umstellung und bei jedem Start (nur lesend) prüft PDF2E, ob alle Tabellen und Felder vorhanden sind, die das Programm erwartet. Fehlt etwas, wird es ergänzt (mit Sicherung vorher, alle anderen Plätze müssen geschlossen sein). Vorhandene Felder werden nicht geändert, gelöscht oder umbenannt.

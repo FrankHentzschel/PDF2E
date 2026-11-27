@@ -9,6 +9,8 @@ Attribute VB_Name = "modParserBSI"
 ' "STANDARD" = Layout wie in den Mustern RE 2603976, 2603894, 2603816, 2603587.
 ' Minus-Rechnung mit Rückware und Bruttobeträgen ("ENTHALTENE MWSt.") wie RE 2603475:
 ' Mengen der Rückware negativ, Preise und Pfand werden in netto umgerechnet.
+' Tabellen-Layout (Spalte Pos., MwSt je Zeile, RE 2604269): ParseBSITabelle unten,
+' Text mit pdftotext -raw; Auswahl in modProdukt.QuelleEinlesen (IstBSITabelle).
 '==============================================================================
 Option Explicit
 
@@ -39,7 +41,7 @@ Public Sub ParseBSI(ByVal text As String, ByVal variante As String)
     Dim reWWLeer As Object, reIG As Object, reUStId As Object, igLieferung As Boolean, reFiliale As Object
     Dim reMinusRB As Object, reEnthalten As Object, reRueckware As Object, reTelefon As Object
     Dim bruttoBetraege As Boolean, lgRueckgabe As Boolean, menge As Double, betrag As Currency
-    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$")
+    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*$")
     Set reLS = NeuesRegex("^\s*\d+\s+Lieferschein:\s+(\d+)\s+vom\s+(\d{1,2}\.\d{1,2}\.\d{4})")
     ' Position: ArtNr, Bezeichnung, Ka/Fa, Hl./Fl. (fehlt z. B. bei Paletten), Preis, Betrag,
     ' am Ende optional ein "*" (z. B. "136 EURO-Palette  29  12,000  348,00 *")
@@ -310,6 +312,12 @@ weiter:
     LeergutAbschliessen lgOffen, reArtNr
     If anzahlLS > 1 Then Protokoll "Warnung", "Mehrere Lieferscheine: " & lsListe & ". In der E-Rechnung steht nur der erste."
     Feld("f_PDF_MwSt").Value = mwstSumme
+    SteuernAbschliessen igLieferung, steuerSaetze, mwstSumme, bruttoBetraege
+End Sub
+
+' MwSt-Sätze bzw. Steuerbefreiung auf die Positionen anwenden (beide Layouts)
+Private Sub SteuernAbschliessen(ByVal igLieferung As Boolean, steuerSaetze As Collection, _
+                                ByVal mwstSumme As Currency, ByVal bruttoBetraege As Boolean)
     If igLieferung And InStr(EU_LAENDER, "|" & UCase$(Trim$(CStr(Feld("f_KLand").Value))) & "|") = 0 Then
         Protokoll "Fehler", "Steuerfreie Lieferung, aber Land des Empfängers '" & Feld("f_KLand").Value & _
                          "' ist kein anderes EU-Land. Ausfuhrlieferungen in Drittländer werden noch nicht unterstützt; bitte 'USt-Satz' und 'USt-Kat.' im Blatt Positionen prüfen."
@@ -659,3 +667,318 @@ Private Function LandAusKennzeichen(ByVal k As String) As String
     End Select
     Protokoll "Info", "Land des Empfängers aus der Anschrift: " & LandAusKennzeichen
 End Function
+
+'==============================================================================
+' Tabellen-Layout der BSI-Rechnung (RE 2604269): Tabellenkopf
+' "Pos. ArtNr. Bezeichnung Ka/Fa Hl./Fl. Preis Betrag zzgl. MwSt.", Beträge mit €,
+' Bezeichnungen über mehrere Zeilen, Summenblock "Summe / Warenwert", "Pfand",
+' "Rundungsdifferenz MwSt.", "Summe 19% MwSt.", "RECHNUNGSBETRAG".
+' Mit pdftotext -layout verschiebt Xpdf den Summenblock (Beträge neben falschen
+' Bezeichnungen). Deshalb liest PDF2E dieses Layout mit pdftotext -raw: Jede
+' Angabe steht dort in einer eigenen Zeile in der Reihenfolge der PDF.
+' Mit tests/parser_test.py (parse_tabelle) abgleichen.
+'==============================================================================
+
+' Erkennung in der -layout-Ausgabe am Tabellenkopf (das alte Layout hat "ARTNR BEZEICHNUNG")
+Public Function IstBSITabelle(ByVal text As String) As Boolean
+    IstBSITabelle = Not Treffer(NeuesRegex("(^|\n)\s*Pos\.\s+ArtNr\.\s+Bezeichnung"), text) Is Nothing
+End Function
+
+Public Sub ParseBSITabelle(ByVal text As String)
+    Dim roh() As String, z() As String, n As Long, i As Long, kopf As Long
+    Dim l As String, m As Object, eur As String, betragT As String
+    Dim reKopf As Object, reKopfzeile As Object, rePosStart As Object, reWare As Object, reLeergut As Object
+    Dim reWW As Object, rePfand As Object, reSteuer As Object, reRundung As Object, reRB As Object
+    Dim reGLN As Object, reZiffer As Object, reNurZahl As Object, rePLZ As Object, reTelefon As Object
+    Dim reILN As Object, reMail As Object, reIG As Object, reUStId As Object
+    Dim links As New Collection, steuerSaetze As New Collection
+    Dim posErwartet As Long, imSummenteil As Boolean, sammler As Long, puf As String, posNr As String, artNr As String
+    Dim anzahlLS As Long, lsListe As String, rueckgaben As String
+    Dim mwstSumme As Currency, pfand As Currency, warenwert As Currency, hatWW As Boolean, hatPfand As Boolean
+    Dim igLieferung As Boolean, s As String
+
+    eur = ChrW(&H20AC)
+    betragT = "(-?[\d.]*\d,\d{2}-?)\s*" & eur
+    Set reKopf = NeuesRegex("(\d+)\s+(\d{5,})\s+(\d{1,2}\.\d{1,2}\.\d{4})\s*$")
+    Set reKopfzeile = NeuesRegex("^Pos\.\s+ArtNr\.\s+Bezeichnung")
+    ' Beginn einer Position: "1 1", "4 100 Palette(n) 1 0"
+    Set rePosStart = NeuesRegex("^(\d+)\s+(\d+)(?:\s+(.*))?$")
+    ' Ware: Bezeichnung, Ka/Fa, Hl./Fl. (bis zu zwei Werte), Preis €, Betrag €, MwSt €
+    Set reWare = NeuesRegex("^(.+?)\s+(-?\d+-?)\s+(?:([\d.,]+)\s+)?(?:([\d.,]+)\s+)?(-?[\d.,]+-?)\s*" & eur & _
+                            "\s+" & betragT & "\s+" & betragT & "$")
+    Set reLeergut = NeuesRegex("^Leergutr" & ChrW(252) & "ckgabe:\s*(.*?)\s+(-?\d+-?)(?:\s+(-?\d+-?))?$")
+    Set reWW = NeuesRegex("^Summen?\s*/\s*Warenwert\b.*?" & betragT & "\s+" & betragT & "$")
+    Set rePfand = NeuesRegex("^Pfand\s+" & betragT & "(?:\s+" & betragT & ")?$")
+    Set reSteuer = NeuesRegex("^Summe\s+(\d+(?:,\d+)?)\s*%\s*MwSt\.?\s+" & betragT & "$")
+    Set reRundung = NeuesRegex("^Rundungsdifferenz\s+MwSt\.?\s+" & betragT & "$")
+    Set reRB = NeuesRegex("^RECHNUNGSBETRAG\s+" & betragT & "$")
+    ' GLN des Rechnungsempfängers in eigener Zeile: "GLN: 43 88 096 00000 2"
+    Set reGLN = NeuesRegex("^(?:RE-)?GLN:?\s*(\d[\d ]{11,}\d)$")
+    Set reZiffer = NeuesRegex("^\d")
+    Set reNurZahl = NeuesRegex("^\d+$")
+    Set rePLZ = NeuesRegex("^(?:([A-Z]{1,3})\s*-\s*(\d{4,5})|(\d{5}))\s+(.+)$")
+    Set reTelefon = NeuesRegex("^(?:Tel\.?:?\s*)?\+?\d[\d \-/()]{5,}\d$")
+    Set reILN = NeuesRegex("(?:ILN|GLN):\s*(\d{13})")
+    Set reMail = NeuesRegex("([\w.+-]+@[\w-]+(?:\.[\w-]+)+)")
+    Set reIG = NeuesRegex("[Ss]teuerfreie\s+(?:innergemeinschaftliche\s+)?Lieferung")
+    Set reUStId = NeuesRegex("^\s*U[Ss][Tt]\s*-?\s*ID(?:\s*-?\s*Nr\.?)?\s*:?\s+([A-Za-z]{2}[\w .-]*\w)\s*$")
+
+    ' Zeilen ohne Leerzeilen und ohne Wasserzeichen (einzelne Zeichen wie "T", "*"; Ziffern bleiben)
+    text = Replace(Replace(text, vbCr, ""), Chr$(12), vbLf)
+    roh = Split(text, vbLf)
+    ReDim z(0 To UBound(roh) + 1)
+    n = 0
+    For i = 0 To UBound(roh)
+        l = Trim$(roh(i))
+        If Len(l) > 1 Or l Like "#" Then z(n) = l: n = n + 1
+    Next i
+    z(n) = ""                                         ' Ende-Markierung für den Blick auf die Folgezeile
+    kopf = -1
+    For i = 0 To n - 1
+        If Not Treffer(reKopfzeile, z(i)) Is Nothing Then kopf = i: Exit For
+    Next i
+    If kopf < 0 Then
+        Protokoll "Fehler", "Tabellenkopf 'Pos. ArtNr. Bezeichnung' nicht gefunden."
+        Exit Sub
+    End If
+
+    ' ---- Kopf und Rechnungsempfänger (vor dem Tabellenkopf) ----
+    For i = 0 To kopf - 1
+        l = z(i)
+        Set m = Treffer(reKopf, l)
+        If Not m Is Nothing Then
+            If Len(Feld("f_RechNr").Value) = 0 Then
+                Feld("f_KundenNr").Value = m.SubMatches(0)
+                Feld("f_RechNr").Value = m.SubMatches(1)
+                Feld("f_RechDatum").Value = DatumDE(m.SubMatches(2))
+            End If
+        ElseIf Replace(l, " ", "") = "RECHNUNG" Or InStr(l, "Kunden-Nr.") > 0 Then
+            ' Überschriften
+        Else
+            Set m = Treffer(reGLN, l)
+            If Not m Is Nothing Then
+                ' "REWE MARKT GmbH Zweig NL. Süd RE-" + "GLN: 43 88 096 00000 2": RE- gehört zur GLN
+                Feld("f_KGLN").Value = "'" & Replace(m.SubMatches(0), " ", "")
+                If links.Count > 0 Then
+                    s = links(links.Count)
+                    If Right$(s, 4) = " RE-" Then
+                        links.Remove links.Count
+                        links.Add RTrim$(Left$(s, Len(s) - 4))
+                    End If
+                End If
+                Protokoll "Info", "GLN des Rechnungsempfängers aus der Rechnung übernommen: " & Replace(m.SubMatches(0), " ", "")
+            ElseIf Not Treffer(reTelefon, l) Is Nothing Then
+                Protokoll "Info", "Telefonnummer im Anschriftenblock nicht als Name übernommen: " & l
+            ElseIf LCase$(Left$(l, 4)) <> "per " Then
+                links.Add l
+            End If
+        End If
+    Next i
+    EmpfaengerSetzen links, rePLZ
+
+    ' ---- Tabelle und Summenblock ----
+    ' Der Tabellenkopf endet mit "zzgl. MwSt."
+    i = kopf
+    Do While i < n
+        If InStr(z(i), "MwSt") > 0 Then Exit Do
+        i = i + 1
+    Loop
+    i = i + 1
+    posErwartet = 1
+    ' sammler: 0 nichts, 1 Lieferschein, 2 Lieferort ("Wir lieferten an:"), 3 Position
+    Do While i < n
+        l = z(i)
+        If Not imSummenteil Then
+            Set m = Treffer(rePosStart, l)
+            If Not m Is Nothing Then
+                If CLng(m.SubMatches(0)) <> posErwartet Then
+                    Set m = Nothing
+                ElseIf Len(m.SubMatches(2) & "") = 0 And Not Treffer(reZiffer, z(i + 1)) Is Nothing Then
+                    Set m = Nothing                   ' Mengenzeile ("25 500"), keine neue Position
+                End If
+            End If
+            If Not m Is Nothing Then
+                TabelleAbschliessen sammler, puf, posNr, artNr, reWare, reLeergut, rueckgaben, anzahlLS, lsListe
+                sammler = 3
+                posNr = m.SubMatches(0)
+                artNr = m.SubMatches(1)
+                puf = m.SubMatches(2) & ""
+                posErwartet = posErwartet + 1
+                GoTo weiter
+            End If
+            If Not Treffer(reNurZahl, l) Is Nothing And Left$(z(i + 1), 12) = "geliefert am" Then
+                TabelleAbschliessen sammler, puf, posNr, artNr, reWare, reLeergut, rueckgaben, anzahlLS, lsListe
+                sammler = 1
+                puf = l
+                GoTo weiter
+            End If
+            If Left$(l, 17) = "Wir lieferten an:" Then
+                TabelleAbschliessen sammler, puf, posNr, artNr, reWare, reLeergut, rueckgaben, anzahlLS, lsListe
+                sammler = 2
+                puf = Trim$(Mid$(l, 18))
+                GoTo weiter
+            End If
+            If Not Treffer(reWW, l) Is Nothing Then
+                TabelleAbschliessen sammler, puf, posNr, artNr, reWare, reLeergut, rueckgaben, anzahlLS, lsListe
+                imSummenteil = True
+            ElseIf sammler <> 0 Then
+                puf = Trim$(puf & " " & l)
+                GoTo weiter
+            End If
+        End If
+
+        ' Summenblock und Zusatzangaben
+        Set m = Treffer(reWW, l)
+        If Not m Is Nothing Then
+            ' steht in der Tabelle und im Summenblock
+            If hatWW And ZahlDE(m.SubMatches(0)) <> warenwert Then
+                Protokoll "Warnung", "Warenwert in Tabelle und Summenblock verschieden: " & l
+            End If
+            warenwert = ZahlDE(m.SubMatches(0))
+            hatWW = True
+            GoTo weiter
+        End If
+        Set m = Treffer(rePfand, l)
+        If Not m Is Nothing Then pfand = ZahlDE(m.SubMatches(0)): hatPfand = True: GoTo weiter
+        Set m = Treffer(reSteuer, l)
+        If Not m Is Nothing Then
+            steuerSaetze.Add CDbl(ZahlDE(m.SubMatches(0)))
+            mwstSumme = mwstSumme + ZahlDE(m.SubMatches(1))
+            GoTo weiter
+        End If
+        Set m = Treffer(reRundung, l)
+        If Not m Is Nothing Then
+            Protokoll "Info", "Rundungsdifferenz MwSt. laut Rechnung " & m.SubMatches(0) & " (in der MwSt-Summe enthalten)."
+            GoTo weiter
+        End If
+        Set m = Treffer(reRB, l)
+        If Not m Is Nothing Then Feld("f_PDF_Brutto").Value = ZahlDE(m.SubMatches(0)): GoTo weiter
+        If Left$(l, 11) = "Betrag zzgl" Then GoTo weiter
+        If Not Treffer(reIG, l) Is Nothing Then
+            igLieferung = True
+            Protokoll "Info", "Steuerfreie innergemeinschaftliche Lieferung: USt-Kategorie K, 0 %, Befreiungsgrund VATEX-EU-IC."
+            GoTo weiter
+        End If
+        Set m = Treffer(reUStId, l)
+        If Not m Is Nothing Then
+            Feld("f_KUstId").Value = "'" & UStIdBereinigt(m.SubMatches(0))
+            Protokoll "Info", "USt-IdNr. des Empfängers aus der Rechnung übernommen: " & UStIdBereinigt(m.SubMatches(0))
+            GoTo weiter
+        End If
+        Set m = Treffer(reILN, l)
+        If Not m Is Nothing Then
+            If Len(Feld("f_LGLN").Value) = 0 Then
+                Feld("f_LGLN").Value = "'" & m.SubMatches(0)
+            ElseIf Feld("f_LGLN").Value <> m.SubMatches(0) Then
+                Protokoll "Warnung", "Abweichende GLN im Text: " & l
+            End If
+            GoTo weiter
+        End If
+        Set m = Treffer(reMail, l)
+        If Not m Is Nothing Then Feld("f_KEmail").Value = m.SubMatches(0): GoTo weiter
+        Protokoll "Info", "Nicht übernommen: " & l
+weiter:
+        i = i + 1
+    Loop
+    TabelleAbschliessen sammler, puf, posNr, artNr, reWare, reLeergut, rueckgaben, anzahlLS, lsListe
+
+    If anzahlLS = 0 Then Protokoll "Warnung", "Lieferschein (geliefert am … Nr:) nicht erkannt."
+    If anzahlLS > 1 Then Protokoll "Warnung", "Mehrere Lieferscheine: " & lsListe & ". In der E-Rechnung steht nur der erste."
+
+    ' Pfand: Dieses Layout hat kein Leergut-Konto mit Pfandsätzen, nur den Saldo.
+    ' Er wird als eine Pfand-Position übernommen (Preis positiv, Menge -1 bei Gutschrift).
+    If hatPfand And pfand <> 0 Then
+        PositionAnhaengen "Pfand", "", "Pfand (Saldo laut Rechnung)", Sgn(pfand), Einstellung("Einheit Pfand"), Abs(pfand), pfand, ""
+    End If
+    If hatPfand Or Len(rueckgaben) > 0 Then
+        Protokoll "Info", "Pfand als Saldo laut Rechnung übernommen (" & Format$(pfand, "#,##0.00") & _
+                          " EUR), das Layout enthält kein Leergut-Konto mit Lieferung und Rücknahme je Pfandartikel." & _
+                          IIf(Len(rueckgaben) > 0, " Leergutrückgabe laut Rechnung: " & rueckgaben & ".", "")
+    End If
+
+    If hatWW Then Feld("f_PDF_Warenwert").Value = warenwert
+    Feld("f_PDF_Pfand").Value = pfand
+    If hatWW Then Feld("f_PDF_Netto").Value = warenwert + pfand
+    Feld("f_PDF_MwSt").Value = mwstSumme
+    SteuernAbschliessen igLieferung, steuerSaetze, mwstSumme, False
+End Sub
+
+' Gesammelten Block des Tabellen-Layouts auswerten (siehe ParseBSITabelle)
+Private Sub TabelleAbschliessen(ByRef sammler As Long, ByRef puf As String, ByVal posNr As String, ByVal artNr As String, _
+                                ByVal reWare As Object, ByVal reLeergut As Object, ByRef rueckgaben As String, _
+                                ByRef anzahlLS As Long, ByRef lsListe As String)
+    Dim m As Object, menge As Double, betrag As Currency
+    Select Case sammler
+        Case 1: TabelleLieferschein puf, anzahlLS, lsListe
+        Case 2: TabelleLieferort puf
+        Case 3
+            Set m = Treffer(reLeergut, puf)
+            If Not m Is Nothing Then
+                ' Rückgabe ohne Betrag; das Pfand steht nur als Saldo im Summenblock
+                rueckgaben = rueckgaben & IIf(Len(rueckgaben) > 0, ", ", "") & m.SubMatches(1) & " x " & Trim$(m.SubMatches(0)) & " (" & artNr & ")"
+            Else
+                Set m = Treffer(reWare, puf)
+                If m Is Nothing Then
+                    Protokoll "Info", "Nicht übernommen: Pos. " & posNr & " " & artNr & " " & puf
+                Else
+                    menge = CDbl(ZahlDE(m.SubMatches(1)))
+                    betrag = ZahlDE(m.SubMatches(5))
+                    If betrag < 0 And menge > 0 Then menge = -menge     ' Rückware
+                    PositionAnhaengen "Ware", artNr, Trim$(m.SubMatches(0)), menge, _
+                        Einstellung("Einheit Ware"), ZahlDE(m.SubMatches(4)), betrag, m.SubMatches(2) & ""
+                End If
+            End If
+    End Select
+    sammler = 0
+    puf = ""
+End Sub
+
+' "150425 geliefert am Nr: 25.11.2026 5392": Datum und Lieferscheinnummer (letzte Zahl)
+Private Sub TabelleLieferschein(ByVal block As String, ByRef anzahlLS As Long, ByRef lsListe As String)
+    Dim m As Object, t() As String, k As Long, nr As String, zahlen As Long
+    Set m = Treffer(NeuesRegex("\d{1,2}\.\d{1,2}\.\d{4}"), block)
+    t = Split(block, " ")
+    For k = 0 To UBound(t)
+        If Len(t(k)) > 0 And Not t(k) Like "*[!0-9]*" Then nr = t(k): zahlen = zahlen + 1
+    Next k
+    If m Is Nothing Or zahlen < 2 Then
+        Protokoll "Warnung", "Lieferschein nicht erkannt: " & block
+        Exit Sub
+    End If
+    anzahlLS = anzahlLS + 1
+    lsListe = lsListe & IIf(anzahlLS > 1, ", ", "") & nr & " vom " & m.Value
+    If anzahlLS = 1 Then
+        Feld("f_LSNr").Value = nr
+        Feld("f_LSDatum").Value = DatumDE(m.Value)
+    End If
+End Sub
+
+' "REWE Dominic Mayer oHG - Nr. 46653518 GLN. 4388096535184, Oberes Tor 7, 91320 Ebermannstadt"
+' Gruppen: 0 Name, 1 Marktnummer, 2 GLN, 3 Straße, 4 Länderkennzeichen, 5 PLZ, 6 Ort
+Private Sub TabelleLieferort(ByVal s As String)
+    Dim m As Object
+    Set m = Treffer(NeuesRegex("^(.+?)(?:\s+-\s+Nr\.?:?\s*(\d[\d ]*\d))?\s+GLN\.?:?\s*(\d{13})\s*,\s*(.+?)\s*,\s*" & _
+                               "(?:([A-Z]{1,3})\s*-\s*)?(\d{4,5})\s+(.+)$"), s)
+    If m Is Nothing Then
+        ' ohne GLN: "Name, Straße, PLZ Ort"
+        Set m = Treffer(NeuesRegex("^(.+?)\s*,\s*(.+?)\s*,\s*(?:([A-Z]{1,3})\s*-\s*)?(\d{4,5})\s+(.+)$"), s)
+        If m Is Nothing Then
+            Feld("f_LName").Value = s
+            Protokoll "Warnung", "Lieferort nicht in Name, Straße, PLZ und Ort zerlegt: " & s
+            Exit Sub
+        End If
+        Feld("f_LName").Value = m.SubMatches(0)
+        Feld("f_LZeile2").Value = m.SubMatches(1)
+        Feld("f_LPLZ").Value = "'" & m.SubMatches(3)
+        Feld("f_LOrt").Value = Trim$(m.SubMatches(4))
+        If Len(m.SubMatches(2) & "") > 0 Then Feld("f_LLand").Value = LandAusKennzeichen(m.SubMatches(2))
+        Exit Sub
+    End If
+    Feld("f_LName").Value = m.SubMatches(0)
+    If Len(m.SubMatches(1) & "") > 0 Then Feld("f_Marktnr").Value = "'" & Replace(m.SubMatches(1), " ", "")
+    Feld("f_LGLN").Value = "'" & m.SubMatches(2)
+    Feld("f_LZeile2").Value = m.SubMatches(3)
+    Feld("f_LPLZ").Value = "'" & m.SubMatches(5)
+    Feld("f_LOrt").Value = Trim$(m.SubMatches(6))
+    If Len(m.SubMatches(4) & "") > 0 Then Feld("f_LLand").Value = LandAusKennzeichen(m.SubMatches(4))
+End Sub
