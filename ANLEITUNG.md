@@ -1,4 +1,4 @@
-# PDF2E 1.15.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.15.2 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -309,6 +309,7 @@ Den Summenblock `MINUS-RECHNUNGSBETRAG incl. 440,50- Pfand) EUR 772,50-` liest P
 
 ## Noch nicht getestet
 
+- 1.15.2: Umbenennen vor dem Löschen nicht in Excel getestet.
 - 1.15.1: Schreiben ohne Löschen/Umbenennen nur am Code geprüft, noch nicht in Excel kompiliert und nicht auf dem Netzlaufwerk bei Krug getestet.
 - 1.15.0: Tabellen-Layout nur mit der echten Xpdf-Ausgabe (-raw, -layout) von RE 2604269 im Python-Nachbau geprüft, noch nicht in Excel kompiliert. Rückware, mehrere MwSt-Sätze, Skonto und mehrere Lieferscheine in diesem Layout sind ohne Muster nachgebaut.
 - 1.11.0: Rückware und Bruttobeträge sind nur mit der Linux-Ausgabe von pdftotext (RE 2603475) geprüft und noch nicht in Excel kompiliert. `Totals.RoundingAmount` ist aus der Typbibliothek `SmartTools.Invoicing.tlb` gelesen, aber noch nicht mit Smart Tools ausprobiert.

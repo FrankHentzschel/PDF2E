@@ -1,4 +1,4 @@
-# XL2E 1.6.6 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
+# XL2E 1.6.7 – Excel-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Stand 17.11.2026. XL2E ist das Gegenstück zu PDF2E für Brauereien, deren BSI-Software die Rechnung als Excel-Datei ausgibt (Blatt `PA400_00`). Erster Kunde ist die Privatbrauerei Fiedler. Der Ablauf ist derselbe wie bei PDF2E: Rechnung einlesen, prüfen, E-Rechnung erzeugen, E-Mail-Entwurf.
 

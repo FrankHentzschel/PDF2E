@@ -57,10 +57,11 @@ Fehler:
     Resume Aufraeumen               ' Fehlerbehandlung beenden, damit Aufräumen keinen zweiten Laufzeitfehler auslöst
 Aufraeumen:
     If nr = 70 Or nr = 75 Then txt = txt & " (Fehler " & nr & "). Die Datei ist vermutlich noch geöffnet oder wird gerade gelöscht " & _
-        "(PDF-Anzeige, Explorer-Vorschau, Virenscanner). Bitte einige Sekunden warten und erneut versuchen."
+        "(PDF-Anzeige, Explorer-Vorschau, Virenscanner, Excel selbst). Bitte einige Sekunden warten und erneut versuchen; " & _
+        "hilft das nicht, Excel ganz schließen und neu starten."
     Protokoll "Fehler", txt
     On Error Resume Next
-    If Len(Dir$(ziel)) > 0 Then Kill ziel
+    If Len(ziel) > 0 Then DateiLoeschen ziel ' umbenennen und löschen, damit kein gesperrter Rest den Namen blockiert
     On Error GoTo 0
     MsgBox "Erzeugen fehlgeschlagen:" & vbLf & txt, vbExclamation
 End Sub

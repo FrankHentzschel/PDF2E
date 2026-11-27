@@ -3,6 +3,14 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.15.2 und XL2E 1.6.7 – 27.11.2026
+
+Anlass: Test bei Krug mit 1.15.1. Dieselbe Rechnung (2604315) ließ sich erst nach einem Neustart von Excel neu erzeugen (Fehler 75). Die alte Datei war noch offen, nach Franks Test vermutlich durch Excel/Smart Tools selbst, und nach dem Löschen nur zum Löschen vorgemerkt.
+
+- `DateiLoeschen` (modHilfen) benennt die vorhandene Datei zuerst in `…pdf.alt-Zeitstempel` um und löscht sie dann. Der Name ist damit sofort frei. Die umbenannte Datei verschwindet, sobald das andere Programm sie freigibt, spätestens beim Schließen von Excel.
+- Die Fehlerbehandlung in modZugferd räumt ebenfalls über `DateiLoeschen` auf (bisher `Kill`, was einen gesperrten Rest hinterlassen konnte).
+- Die Meldung bei Fehler 70/75 nennt als letzte Abhilfe, Excel neu zu starten.
+
 ## PDF2E 1.15.1 und XL2E 1.6.6 – 27.11.2026
 
 Anlass: Bei Krug (Ausgabeordner F:\PDF2E\E-Rechnungen auf dem Netzlaufwerk) wurde die E-Rechnung angelegt und verschwand sofort wieder. Protokoll: „PDF/A-Korrektur nicht möglich (Fehler beim Zugriff auf Pfad/Datei)“, danach trotzdem „ZUGFeRD erzeugt“. Ein zweiter Versuch brach mit einem Zugriffsfehler ab.
