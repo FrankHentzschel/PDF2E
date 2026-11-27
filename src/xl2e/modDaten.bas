@@ -136,32 +136,39 @@ End Function
 ' Aufruf aus AnwendungStart. Fehler werden gemeldet, der Start geht weiter.
 '------------------------------------------------------------------------------
 Public Sub DatenStart()
-    Dim pfad As String, db As Object, ver As Long
+    Dim pfad As String, schritt As String, txt As String
     If Not DatenAktiv() Then Exit Sub
     pfad = BackendPfad()
     On Error GoTo Fehler
 
+    schritt = "Backend-Ordner prüfen"
     If Not OrdnerExistiert(OrdnerVon(pfad)) Then
         Err.Raise vbObjectError + 61, , "Der Ordner des Backends ist nicht erreichbar: " & OrdnerVon(pfad)
     End If
 
     If Len(Dir$(pfad)) = 0 Then
+        schritt = "Backend anlegen"
         BackendAnlegen
     Else
+        schritt = "Schema-Version prüfen und Backend umstellen"
         SchemaSicherstellen
     End If
 
+    schritt = "Neue Einstellungen der Programmversion übernehmen"
     NachUpdateErgaenzen
     VeralteteEinstellungenEntfernen
+    schritt = "Einstellungen und Brauerei laden"
     BlattLaden "Einstellungen"              ' gemeinsame Einstellungen aus dem Backend
     BlattLaden "Brauerei"                   ' Lizenznehmer im Splash
     TagessicherungPruefen
     Exit Sub
 
 Fehler:
-    If Not db Is Nothing Then db.Close
-    Protokoll "Fehler", "Backend: " & Err.Description
-    MsgBox "Problem mit dem Backend:" & vbLf & Err.Description & vbLf & vbLf & _
+    txt = Err.Description
+    If Err.Number = 76 Then txt = txt & " (Fehler 76: ein Ordner fehlt oder ist nicht erreichbar)"
+    Protokoll "Fehler", "Backend (" & schritt & "): " & txt
+    MsgBox "Problem mit dem Backend:" & vbLf & txt & vbLf & vbLf & _
+           "Schritt: " & schritt & vbLf & _
            "Backend: " & pfad, vbExclamation, TOOL_NAME
 End Sub
 
@@ -333,30 +340,77 @@ Private Sub TagessicherungPruefen()
     BackendSichern ""
     Exit Sub
 Fehler:
+    Dim txt As String
+    txt = Err.Description
+    On Error Resume Next
     If Not db Is Nothing Then db.Close
-    Protokoll "Warnung", "Tagessicherung des Backends fehlgeschlagen: " & Err.Description
+    Protokoll "Warnung", "Tagessicherung des Backends fehlgeschlagen: " & txt
+    MsgBox "Die Tagessicherung des Backends ist fehlgeschlagen:" & vbLf & txt & vbLf & vbLf & _
+           "Bitte die Einstellung 'Backup-Ordner' prüfen. Das Arbeiten mit PDF2E ist trotzdem möglich.", _
+           vbExclamation, TOOL_NAME
 End Sub
 
 ' Kopie des Backends in den Backup-Ordner (leer = neben dem Backend, Unterordner Sicherung)
+' Ist der Backup-Ordner nicht erreichbar, wird bei einer Sicherung vor der
+' Migration (zusatz nicht leer) in den Unterordner Sicherung neben dem Backend
+' ausgewichen, damit die Umstellung nicht an der Sicherung scheitert.
 Public Sub BackendSichern(ByVal zusatz As String)
-    Dim ordner As String, ziel As String, fso As Object, db As Object
+    Dim ordner As String, ziel As String, db As Object, fehlerText As String, rueckfall As String
     If Not DatenAktiv() Then Exit Sub
     If Len(Dir$(BackendPfad())) = 0 Then Exit Sub
+    rueckfall = OrdnerVon(BackendPfad()) & "\Sicherung"
     ordner = Trim$(EinstellungOderLeer("Backup-Ordner"))
-    If Len(ordner) = 0 Then ordner = OrdnerVon(BackendPfad()) & "\Sicherung"
+    If Len(ordner) = 0 Then ordner = rueckfall
     If Right$(ordner, 1) = "\" Then ordner = Left$(ordner, Len(ordner) - 1)
-    If Not OrdnerExistiert(ordner) Then MkDir ordner
-    ziel = ordner & "\" & DateiStamm(BackendPfad()) & "_" & Format$(Now, "yyyy-mm-dd_hhnnss") & _
-           IIf(Len(zusatz) > 0, "_" & zusatz, "") & ".accdb"
-    ' FileSystemObject statt FileCopy: kopiert auch, wenn andere Plätze die Datei geöffnet haben
-    Set fso = CreateObject("Scripting.FileSystemObject")
-    fso.CopyFile BackendPfad(), ziel, True
+
+    ziel = SicherungKopieren(ordner, zusatz, fehlerText)
+    If Len(ziel) = 0 And Len(zusatz) > 0 And StrComp(ordner, rueckfall, vbTextCompare) <> 0 Then
+        Protokoll "Warnung", "Backup-Ordner nicht nutzbar (" & fehlerText & "), Sicherung vor der Umstellung in " & rueckfall
+        ziel = SicherungKopieren(rueckfall, zusatz, fehlerText)
+        If Len(ziel) > 0 Then ordner = rueckfall
+    End If
+    If Len(ziel) = 0 Then Err.Raise vbObjectError + 64, , fehlerText
+
     Set db = DbOeffnen()
     SysSetzen db, "LetzteSicherung", Format$(Now, "yyyy-mm-dd hh:nn:ss") & " " & ziel
     db.Close
     Protokoll "Info", "Backend gesichert: " & ziel
     AlteSicherungenLoeschen ordner, DateiStamm(BackendPfad())
 End Sub
+
+' Kopie des Backends in "ordner" anlegen. Rückgabe: Zieldatei, leer bei Fehler (Text in fehlerText)
+Private Function SicherungKopieren(ByVal ordner As String, ByVal zusatz As String, ByRef fehlerText As String) As String
+    Dim ziel As String
+    If Not OrdnerAnlegen(ordner) Then
+        fehlerText = "Der Sicherungsordner ist nicht erreichbar oder kann nicht angelegt werden: " & ordner
+        Exit Function
+    End If
+    ziel = ordner & "\" & DateiStamm(BackendPfad()) & "_" & Format$(Now, "yyyy-mm-dd_hhnnss") & _
+           IIf(Len(zusatz) > 0, "_" & zusatz, "") & ".accdb"
+    ' FileSystemObject statt FileCopy: kopiert auch, wenn andere Plätze die Datei geöffnet haben
+    On Error Resume Next
+    CreateObject("Scripting.FileSystemObject").CopyFile BackendPfad(), ziel, True
+    If Err.Number <> 0 Then
+        fehlerText = "Die Sicherungskopie konnte nicht geschrieben werden (" & Err.Description & "): " & ziel
+        Exit Function
+    End If
+    SicherungKopieren = ziel
+End Function
+
+' Ordner samt fehlender übergeordneter Ordner anlegen (MkDir legt nur eine Ebene an).
+' False, wenn das Laufwerk bzw. die Freigabe nicht erreichbar ist oder Rechte fehlen.
+Private Function OrdnerAnlegen(ByVal ordner As String) As Boolean
+    Dim fso As Object, eltern As String
+    If Len(ordner) = 0 Then Exit Function
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FolderExists(ordner) Then OrdnerAnlegen = True: Exit Function
+    eltern = fso.GetParentFolderName(ordner)
+    If Len(eltern) = 0 Or StrComp(eltern, ordner, vbTextCompare) = 0 Then Exit Function
+    If Not OrdnerAnlegen(eltern) Then Exit Function
+    On Error Resume Next
+    fso.CreateFolder ordner
+    OrdnerAnlegen = fso.FolderExists(ordner)
+End Function
 
 Private Sub AlteSicherungenLoeschen(ByVal ordner As String, ByVal stamm As String)
     Dim behalten As Long, namen() As String, n As Long, f As String, i As Long, j As Long, t As String
@@ -408,6 +462,15 @@ Public Sub BlattLaden(ByVal blatt As String)
 
     Set db = DbOeffnen()
     Set rs = db.OpenRecordset("SELECT * FROM [" & blatt & "] ORDER BY [ID]", DB_OPEN_DYNASET)
+    For s = 1 To n                          ' fehlt ein Feld, ist die Schema-Umstellung nicht gelaufen
+        If Not FeldVorhanden(rs, FeldName(f(s - 1))) Then
+            rs.Close
+            db.Close
+            Err.Raise vbObjectError + 65, , "Im Backend fehlt das Feld '" & FeldName(f(s - 1)) & "' in der Tabelle " & blatt & _
+                      ". Die Umstellung des Backends auf Schema-Version " & SCHEMA_VERSION & " ist noch nicht gelaufen. " & _
+                      "Bitte alle PDF2E-Plätze schließen und PDF2E neu starten; die Meldung beim Start nennt die Ursache."
+        End If
+    Next s
     Dim zeilen As Collection, zeile As Variant
     Set zeilen = New Collection
     Do While Not rs.EOF
@@ -508,6 +571,7 @@ Public Sub DatenBlattAktiviert(ByVal sh As Object)
         Exit Sub
     End If
     On Error GoTo Fehler
+    SchemaSicherstellen                 ' Umstellung nachholen, falls sie beim Start gescheitert ist
     BlattLaden sh.Name
     KontextmenueAnlegen
     Exit Sub
@@ -924,6 +988,13 @@ Private Function DatenBlatt(ByVal name As String) As Worksheet
         LieferorteSicherstellen
         Set DatenBlatt = ThisWorkbook.Worksheets(name)
     End If
+End Function
+
+Private Function FeldVorhanden(ByVal rs As Object, ByVal name As String) As Boolean
+    Dim fld As Object
+    For Each fld In rs.Fields
+        If StrComp(fld.Name, name, vbTextCompare) = 0 Then FeldVorhanden = True: Exit Function
+    Next fld
 End Function
 
 Private Function OrdnerExistiert(ByVal ordner As String) As Boolean
