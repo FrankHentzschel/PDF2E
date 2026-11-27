@@ -1,4 +1,4 @@
-# PDF2E 1.15.0 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
+# PDF2E 1.15.1 – PDF-Rechnungen als E-Rechnung (ZUGFeRD)
 
 Kundenneutrales Werkzeug, Stand 04.11.2026. Erster Kunde ist die Krug-Bräu. Kundenspezifisch sind nur die Stammdaten-Blätter und das Rechnungslayout (Einstellung „Layout“, Einlese-Vorlage `modParserBSI` mit Kundenvariante als Parameter). Echte E-Rechnungen entstehen mit der Smart-Tools-Bibliothek (Adapter `SMARTTOOLS`). Im **Stub-Modus** (Adapter `STUB`) entsteht keine gültige E-Rechnung, er dient nur zum Testen ohne Bibliothek.
 
@@ -89,6 +89,8 @@ Einzelplatz und Mehrplatz unterscheiden sich nur in den Pfaden. Beim Einzelplatz
 Das Briefpapier der BSI-Rechnung (Logo, Kopf- und Fußbereich) ist in CMYK-Farben mit „Überdrucken“ gespeichert. Schon das BSI-Original ist deshalb kein gültiges PDF/A, und Smart Tools übernimmt den Seiteninhalt unverändert. Validatoren melden dann z. B. „Der Überdrucken-Modus (OPM) wird auf 1 statt auf 0 gesetzt …“ (Getränke Ziegler, 26.11.2026) oder „DeviceCMYK ohne CMYK-OutputIntent“ (veraPDF). Die XML-Daten sind davon nicht betroffen.
 
 Nach dem Speichern durch Smart Tools korrigiert PDF2E die Datei: Überdrucken-Modus auf 0 und ein CMYK-Farbprofil (frei verwendbar, CC0) als Standard für CMYK. Inhalt und Aussehen bleiben gleich, das eingebettete XML auch. Im Protokoll steht „PDF/A-Korrektur: …“. Klappt die Korrektur nicht, steht dort eine Warnung, und die E-Rechnung bleibt so, wie Smart Tools sie gespeichert hat.
+
+Ab 1.15.1 schreibt die Korrektur direkt in die Datei, ohne Hilfsdatei, Löschen und Umbenennen. Bis 1.15.0 konnte die E-Rechnung auf einem Netzlaufwerk verschwinden, wenn ein Virenscanner oder die Explorer-Vorschau die Datei gerade offen hielt (Protokoll: „PDF/A-Korrektur nicht möglich (Fehler beim Zugriff auf Pfad/Datei)“). Notlösung für ältere Versionen: Einstellung **PDF/A-Korrektur** = `Nein` oder ein lokaler Ausgabeordner.
 
 Dauerhaft besser wäre, das Briefpapier in BSI als RGB-PDF ohne Überdrucken zu hinterlegen. Dann ist schon das Original PDF/A-konform.
 
@@ -307,6 +309,7 @@ Den Summenblock `MINUS-RECHNUNGSBETRAG incl. 440,50- Pfand) EUR 772,50-` liest P
 
 ## Noch nicht getestet
 
+- 1.15.1: Schreiben ohne Löschen/Umbenennen nur am Code geprüft, noch nicht in Excel kompiliert und nicht auf dem Netzlaufwerk bei Krug getestet.
 - 1.15.0: Tabellen-Layout nur mit der echten Xpdf-Ausgabe (-raw, -layout) von RE 2604269 im Python-Nachbau geprüft, noch nicht in Excel kompiliert. Rückware, mehrere MwSt-Sätze, Skonto und mehrere Lieferscheine in diesem Layout sind ohne Muster nachgebaut.
 - 1.11.0: Rückware und Bruttobeträge sind nur mit der Linux-Ausgabe von pdftotext (RE 2603475) geprüft und noch nicht in Excel kompiliert. `Totals.RoundingAmount` ist aus der Typbibliothek `SmartTools.Invoicing.tlb` gelesen, aber noch nicht mit Smart Tools ausprobiert.
 - 1.8.0: Skonto und SEPA-Lastschrift sind nur mit der Linux-Ausgabe von pdftotext geprüft und noch nicht in Excel kompiliert. Die Namen in der Smart-Tools-Bibliothek (`PaymentMeansCode_SEPA_direct_debit`, `Payment.DirectDebit.MandateReferenceId`, `.CreditorId`) sind aus der installierten `SmartTools.Invoicing.dll` gelesen.

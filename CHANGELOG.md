@@ -3,6 +3,16 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.15.1 und XL2E 1.6.6 – 27.11.2026
+
+Anlass: Bei Krug (Ausgabeordner F:\PDF2E\E-Rechnungen auf dem Netzlaufwerk) wurde die E-Rechnung angelegt und verschwand sofort wieder. Protokoll: „PDF/A-Korrektur nicht möglich (Fehler beim Zugriff auf Pfad/Datei)“, danach trotzdem „ZUGFeRD erzeugt“. Ein zweiter Versuch brach mit einem Zugriffsfehler ab.
+
+- **Ursache:** Die PDF/A-Korrektur (seit 1.14.0) schrieb `…pdf.tmp`, löschte das Original (`Kill`) und benannte die Hilfsdatei um (`Name`). Hält ein anderes Programm die frisch gespeicherte Datei offen (Virenscanner, Explorer-Vorschau, Indexdienst; auf Netzlaufwerken häufig), ist sie nach `Kill` nur zum Löschen vorgemerkt. Das Umbenennen auf diesen Namen scheitert dann mit Fehler 75, und die Fehlerbehandlung löschte zusätzlich die `.tmp`. Sobald das andere Programm die Datei freigab, war sie weg. Beim zweiten Versuch stand die vorgemerkte Datei noch im Ordner, `Kill` ohne Fehlerbehandlung brachte den Laufzeitfehler.
+- **Korrektur:** modPdfA baut das inkrementelle Update vollständig im Speicher auf und schreibt dann direkt in die vorhandene Datei (kein Löschen, kein Umbenennen, keine Hilfsdatei). Ist die Datei gesperrt, wird bis ca. 5 Sekunden erneut versucht; danach bleibt die Datei, wie Smart Tools sie gespeichert hat (Warnung im Protokoll).
+- Smart-Tools-Objekt wird vor der Nachbearbeitung freigegeben.
+- modZugferd: Überschreiben einer vorhandenen Datei wartet bis ca. 10 Sekunden, bis sie wirklich gelöscht ist (neue Prozedur `DateiLoeschen` in modHilfen), sonst verständliche Meldung statt Laufzeitfehler. Nach dem Erzeugen Kontrolle, dass die Datei noch existiert, Protokollzeile „Gespeichert: … (n Byte)“. Fehlerbehandlung löst beim Aufräumen keinen zweiten Laufzeitfehler mehr aus.
+- XL2E 1.6.6: dieselben gemeinsamen Module.
+
 ## PDF2E 1.15.0 – 27.11.2026
 
 Anlass: Testrechnung RE 2604269 an REWE Markt GmbH Zweig NL. Süd lieferte keine Positionen, keinen MwSt-Satz und keine Summen.

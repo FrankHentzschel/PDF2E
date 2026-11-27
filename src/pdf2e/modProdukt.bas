@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.15.0"
+Public Const TOOL_VERSION As String = "1.15.1"
 Public Const TOOL_STAND As String = "27.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -67,6 +67,7 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.15.1", "27.11.2026", "Fehlerbehebung", "E-Rechnung verschwand auf dem Netzlaufwerk (Krug, F:): die PDF/A-Korrektur schrieb eine Hilfsdatei, löschte das Original und benannte um; hielt ein anderes Programm (Virenscanner, Explorer-Vorschau) die Datei offen, scheiterte das Umbenennen (Fehler 75) und beide Dateien waren weg. Jetzt wird direkt in die Datei geschrieben, ohne Löschen und Umbenennen, mit Wiederholung bei Sperre. Kontrolle, dass die Datei nach dem Speichern noch da ist; Überschreiben wartet, bis die alte Datei wirklich gelöscht ist; verständliche Meldung statt Laufzeitfehler bei gesperrter Datei")
     c.Add Array("1.15.0", "27.11.2026", "Neue Funktion", "Tabellen-Layout der BSI-Rechnung (Spalten Pos., ArtNr., Bezeichnung, Ka/Fa, Hl./Fl., Preis, Betrag, zzgl. MwSt.) wird erkannt und mit pdftotext -raw gelesen (RE 2604269: keine Positionen, kein MwSt-Satz). Pfand als Saldo laut Rechnung, da dieses Layout kein Leergut-Konto hat. Empfängername ohne angehängtes RE- GLN, die GLN des Rechnungsempfängers wird übernommen")
     c.Add Array("1.14.5", "27.11.2026", "Fehlerbehebung", "Backend-Abgleich je Tabelle und Feld bei jedem Start; Sperre des Backends bei Fehler in der Umstellung freigeben")
     c.Add Array("1.14.4", "27.11.2026", "Fehlerbehebung", "Schema-Umstellung wiederholbar: vorhandene Tabellen und Felder werden übersprungen")

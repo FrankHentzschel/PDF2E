@@ -20,6 +20,17 @@ Attribute VB_Name = "modPdfA"
 ' Lizenz CC0 1.0, frei verwendbar), 8464 Byte, unten als Hex-Text.
 ' Geprüft mit veraPDF 1.28 (PDF/A-3B) an Smart-Tools-Ausgaben von Krug-Rechnungen.
 '
+' Schreiben (ab 1.15.1): direkt in die vorhandene Datei, ohne Hilfsdatei,
+' Löschen und Umbenennen. Das alte Verfahren (.tmp schreiben, Original löschen,
+' .tmp umbenennen) ließ auf Netzlaufwerken die E-Rechnung verschwinden: Hält
+' ein anderes Programm (Virenscanner, Explorer-Vorschau, Indexdienst) die
+' frische Datei offen, ist sie nach Kill nur "zum Löschen vorgemerkt", das
+' Umbenennen scheitert mit "Zugriff verweigert", und die Fehlerbehandlung
+' löschte zusätzlich die .tmp. Jetzt wird das Update vollständig im Speicher
+' aufgebaut und erst dann in einem Zug geschrieben; die Datei wird nie gelöscht.
+' Gelingt das Öffnen zum Schreiben nicht (gesperrt), bleibt die Datei, wie
+' Smart Tools sie gespeichert hat.
+'
 ' Abschalten: Einstellung "PDF/A-Korrektur" = Nein.
 ' Unterstützt nur PDFs mit klassischer Querverweistabelle (so speichert Smart
 ' Tools); sonst bleibt es bei Schritt 1 und einer Warnung im Protokoll.
@@ -36,6 +47,8 @@ Private mEinfuegen As Object    ' Objektnummer -> Array(Einfügeposition ab 1, T
 Private mSize As Long           ' /Size des letzten Trailers = Nummer des neuen ICC-Objekts
 Private mRoot As String, mInfo As String, mTrailerId As String
 Private mDateiNr As Integer     ' offene Datei (für die Fehlerbehandlung)
+Private mAus() As Byte          ' inkrementelles Update, im Speicher aufgebaut
+Private mAusLen As Long         ' belegte Länge von mAus
 
 Public Sub PdfANachbearbeiten(ByVal pfad As String)
     Dim nOpm As Long, nCmyk As Long, xrefAlt As Long, hinweis As String, txt As String
@@ -73,11 +86,12 @@ Public Sub PdfANachbearbeiten(ByVal pfad As String)
     Exit Sub
 
 Fehler:
-    txt = Err.Description
+    txt = Err.Description & " (Fehler " & Err.Number & ")"
+    Resume Aufraeumen
+Aufraeumen:
     On Error Resume Next
     If mDateiNr <> 0 Then Close #mDateiNr
     mDateiNr = 0
-    If Len(Dir$(pfad & ".tmp")) > 0 Then Kill pfad & ".tmp"
     On Error GoTo 0
     Protokoll "Warnung", "PDF/A-Korrektur nicht möglich (" & txt & "). Die E-Rechnung bleibt, wie Smart Tools sie " & _
                          "gespeichert hat. Die XML-Daten sind davon nicht betroffen, ein Validator meldet aber evtl. PDF/A-Fehler."
@@ -299,61 +313,89 @@ Private Sub ResourcenVormerken(ByVal nr As Long, ByVal innen As Long, ByVal e As
 End Sub
 
 '------------------------------------------------------------------------------
-' Neue Datei schreiben: Original (mit OPM-Korrektur) + inkrementelles Update
+' Datei schreiben: Original (mit OPM-Korrektur) + inkrementelles Update.
+' Das Update entsteht komplett im Speicher; erst dann wird die vorhandene Datei
+' geöffnet und in einem Zug überschrieben (neue Länge >= alte Länge, die
+' ersten Bytes sind bis auf die OPM-Ziffern identisch). Kein Löschen/Umbenennen.
 '------------------------------------------------------------------------------
 Private Sub Speichern(ByVal pfad As String, ByVal xrefAlt As Long, ByVal mitCmyk As Boolean)
-    Dim tmp As String, f As Integer, pos As Long, nummern() As Long, neu() As Long
+    Dim f As Integer, pos As Long, nummern() As Long, neu() As Long, zusatz() As Byte
     Dim i As Long, k As Long, s As Long, e As Long, ein As Variant, icc() As Byte, xrefNeu As Long, gen As Long
 
-    tmp = pfad & ".tmp"
-    If Len(Dir$(tmp)) > 0 Then Kill tmp
-    f = FreeFile
-    Open tmp For Binary Access Write As #f
-    mDateiNr = f
-    Put #f, , mB
+    mAusLen = 0
+    ReDim mAus(0 To 65535)
     pos = UBound(mB) + 1
 
     If mitCmyk Then
-        If mB(UBound(mB)) <> 10 And mB(UBound(mB)) <> 13 Then Schreiben f, pos, vbCrLf
+        If mB(UBound(mB)) <> 10 And mB(UBound(mB)) <> 13 Then Schreiben pos, vbCrLf
         nummern = SortierteNummern()
         ReDim neu(LBound(nummern) To UBound(nummern))
         For i = LBound(nummern) To UBound(nummern)
             k = nummern(i)
             neu(i) = pos
             If k = mSize Then
-                Schreiben f, pos, k & " 0 obj" & vbCrLf & "<< /N 4 /Length " & ICC_LAENGE & " >>" & vbCrLf & "stream" & vbCrLf
+                Schreiben pos, k & " 0 obj" & vbCrLf & "<< /N 4 /Length " & ICC_LAENGE & " >>" & vbCrLf & "stream" & vbCrLf
                 icc = IccProfil()
-                Put #f, , icc
-                pos = pos + ICC_LAENGE
-                Schreiben f, pos, vbCrLf & "endstream" & vbCrLf & "endobj" & vbCrLf
+                Anhaengen icc, pos
+                Schreiben pos, vbCrLf & "endstream" & vbCrLf & "endobj" & vbCrLf
             Else
                 s = mOffset(k) + 1
                 e = ObjektEnde(s)
                 ein = mEinfuegen(k)
-                BytesSchreiben f, pos, s, ein(0) - 1
-                Schreiben f, pos, CStr(ein(1))
-                BytesSchreiben f, pos, ein(0), e - 1
-                Schreiben f, pos, vbCrLf
+                BytesSchreiben pos, s, ein(0) - 1
+                Schreiben pos, CStr(ein(1))
+                BytesSchreiben pos, ein(0), e - 1
+                Schreiben pos, vbCrLf
             End If
         Next i
         xrefNeu = pos
-        Schreiben f, pos, "xref" & vbCrLf
+        Schreiben pos, "xref" & vbCrLf
         For i = LBound(nummern) To UBound(nummern)
             k = nummern(i)
             If k = mSize Then gen = 0 Else gen = mGen(k)
-            Schreiben f, pos, k & " 1" & vbCrLf & Format$(neu(i), "0000000000") & " " & _
-                              Format$(gen, "00000") & " n" & vbCrLf
+            Schreiben pos, k & " 1" & vbCrLf & Format$(neu(i), "0000000000") & " " & _
+                           Format$(gen, "00000") & " n" & vbCrLf
         Next i
-        Schreiben f, pos, "trailer" & vbCrLf & "<< /Size " & (mSize + 1) & " /Root " & mRoot & _
-                          IIf(Len(mInfo) > 0, " /Info " & mInfo, "") & IIf(Len(mTrailerId) > 0, " /ID " & mTrailerId, "") & _
-                          " /Prev " & xrefAlt & " >>" & vbCrLf & "startxref" & vbCrLf & xrefNeu & vbCrLf & "%%EOF" & vbCrLf
+        Schreiben pos, "trailer" & vbCrLf & "<< /Size " & (mSize + 1) & " /Root " & mRoot & _
+                       IIf(Len(mInfo) > 0, " /Info " & mInfo, "") & IIf(Len(mTrailerId) > 0, " /ID " & mTrailerId, "") & _
+                       " /Prev " & xrefAlt & " >>" & vbCrLf & "startxref" & vbCrLf & xrefNeu & vbCrLf & "%%EOF" & vbCrLf
+    End If
+
+    f = ZumSchreibenOeffnen(pfad)
+    mDateiNr = f
+    Put #f, 1, mB
+    If mAusLen > 0 Then
+        ReDim zusatz(0 To mAusLen - 1)
+        For i = 0 To mAusLen - 1
+            zusatz(i) = mAus(i)
+        Next i
+        Put #f, , zusatz
     End If
     Close #f
     mDateiNr = 0
-
-    Kill pfad
-    Name tmp As pfad
+    Erase mAus
+    mAusLen = 0
 End Sub
+
+' Öffnet die vorhandene Datei zum Schreiben. Ist sie kurz gesperrt (Virenscanner
+' prüft die neue Datei, Netzlaufwerk), bis zu etwa 5 Sekunden erneut versuchen.
+Private Function ZumSchreibenOeffnen(ByVal pfad As String) As Integer
+    Dim f As Integer, versuch As Long, nr As Long, txt As String
+    For versuch = 1 To 10
+        f = FreeFile
+        On Error Resume Next
+        Open pfad For Binary Access Write Lock Write As #f
+        nr = Err.Number: txt = Err.Description
+        On Error GoTo 0
+        If nr = 0 Then
+            If versuch > 1 Then Protokoll "Info", "PDF/A-Korrektur: Datei war gesperrt, Schreiben im " & versuch & ". Versuch"
+            ZumSchreibenOeffnen = f
+            Exit Function
+        End If
+        Warten 0.5
+    Next versuch
+    Err.Raise vbObjectError + 302, , "Datei zum Schreiben gesperrt: " & txt & " (Fehler " & nr & ")"
+End Function
 
 ' Objektnummern der geänderten Objekte und des ICC-Objekts, aufsteigend
 Private Function SortierteNummern() As Long()
@@ -374,21 +416,38 @@ Private Function SortierteNummern() As Long()
     SortierteNummern = n
 End Function
 
-Private Sub Schreiben(ByVal f As Integer, ByRef pos As Long, ByVal text As String)
+Private Sub Schreiben(ByRef pos As Long, ByVal text As String)
     Dim b() As Byte
     If Len(text) = 0 Then Exit Sub
     b = StrConv(text, vbFromUnicode)
-    Put #f, , b
-    pos = pos + UBound(b) + 1
+    Anhaengen b, pos
 End Sub
 
 ' Bytes von Position "von" bis "bis" (ab 1, einschließlich) aus der Originaldatei
-Private Sub BytesSchreiben(ByVal f As Integer, ByRef pos As Long, ByVal von As Long, ByVal bis As Long)
+Private Sub BytesSchreiben(ByRef pos As Long, ByVal von As Long, ByVal bis As Long)
     Dim b() As Byte
     If bis < von Then Exit Sub
     b = MidB$(mS, von, bis - von + 1)
-    Put #f, , b
-    pos = pos + bis - von + 1
+    Anhaengen b, pos
+End Sub
+
+' Hängt Bytes an das Update im Speicher an (mAus), pos = Dateiposition danach
+Private Sub Anhaengen(ByRef b() As Byte, ByRef pos As Long)
+    Dim i As Long, n As Long, groesse As Long
+    n = UBound(b) - LBound(b) + 1
+    If n <= 0 Then Exit Sub
+    groesse = UBound(mAus) + 1
+    If mAusLen + n > groesse Then
+        Do While mAusLen + n > groesse
+            groesse = groesse * 2
+        Loop
+        ReDim Preserve mAus(0 To groesse - 1)
+    End If
+    For i = 0 To n - 1
+        mAus(mAusLen + i) = b(LBound(b) + i)
+    Next i
+    mAusLen = mAusLen + n
+    pos = pos + n
 End Sub
 
 '------------------------------------------------------------------------------
