@@ -212,7 +212,8 @@ if XL:
     EINST=[(a,{"Eingangsordner":r"C:\Rechnungen\BSI-Excel"}.get(a,b),{"Eingangsordner":"Ordner mit den BSI-Excel-Rechnungen"}.get(a,c)) for a,b,c in EINST]
     EINST+=[("Quellblatt","PA400_00","Blatt der Excel-Rechnung; fehlt es, gilt das erste Blatt"),
             ("Briefkopf","Ja","Ja = Absender, Logo, Register und Bank aus den Stammdaten in Kopf- und Fußzeile des PDF"),
-            ("Briefkopf-Logo","","Logo für die Kopfzeile, z. B. C:\\XL2E\\fiedler_logo_hoch.png (PNG oder JPG)")]
+            ("Briefkopf-Logo","","Logo für die Kopfzeile, z. B. C:\\XL2E\\fiedler_logo_hoch.png (PNG oder JPG)"),
+            ("Briefpapier-Vorlage","","Excel-Vorlage (.xltx) mit dem Briefpapier als Kopfzeilen-Grafik (Seite 1 / Folgeseiten), z. B. \\\\server\\XL2E\\Briefpapier_Fiedler.xltx. Gesetzt = PDF nach dieser Vorlage, Briefkopf und Briefkopf-Logo werden dann nicht genutzt")]
 for i,(a,b,c) in enumerate(EINST,2):
     ws.cell(i,1,a); x=ws.cell(i,2,b); x.fill=INP; ws.cell(i,3,c).font=Font(italic=True,color="777777")
 # Arbeitsplatz: platzbezogene Werte, setzt die Starter-Mappe bei jedem Start
