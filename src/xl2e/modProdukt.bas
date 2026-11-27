@@ -6,14 +6,20 @@ Attribute VB_Name = "modProdukt"
 ' ruft nur die hier definierten Konstanten und Prozeduren auf.
 '
 ' Die Excel-Rechnung hat keinen Briefkopf (gedacht für vorgedrucktes Papier).
-' Für die E-Rechnung erzeugt XL2E deshalb ein PDF aus einer Kopie des
-' Rechnungsblatts und setzt Absender, Logo, Registerangaben und Bank aus den
-' Stammdaten in Kopf- und Fußzeile. Die Originaldatei bleibt unverändert.
+' Für die E-Rechnung erzeugt XL2E deshalb ein PDF und legt das Briefpapier dazu:
+' - mit Einstellung "Briefpapier-Vorlage" (Excel-Vorlage .xltx, ab 1.7.0): neue
+'   Mappe aus der Vorlage, Inhalt der Rechnung hinein. Die Vorlage trägt das
+'   Briefpapier als Kopfzeilen-Grafik (Seite 1 und Folgeseiten, "Erste Seite
+'   anders"), von Hand eingerichtet: Excel übernimmt das Bild der ersten Seite
+'   per VBA nicht (Test 27.11.2026), von Hand eingefügt aber schon.
+' - sonst: Kopie des Rechnungsblatts, Absender, Logo, Registerangaben und Bank
+'   aus den Stammdaten als Text in Kopf- und Fußzeile.
+' Die Originaldatei bleibt unverändert.
 '==============================================================================
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.6.7"
+Public Const TOOL_VERSION As String = "1.7.0"
 Public Const TOOL_STAND As String = "27.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
@@ -57,18 +63,25 @@ Fehler:
     Err.Raise nr, , txt
 End Sub
 
-' PDF der Rechnung mit Briefkopf aus den Stammdaten erzeugen
+' PDF der Rechnung mit Briefpapier (Vorlage) oder Briefkopf aus den Stammdaten erzeugen
 Public Sub QuellPdfErstellen(ByVal quelle As String, ByVal ziel As String)
     Dim wbQ As Workbook, wbN As Workbook, ws As Worksheet
-    Dim nr As Long, txt As String
+    Dim nr As Long, txt As String, vorlage As String
 
     Application.ScreenUpdating = False
     Set wbQ = QuelleOeffnen(quelle)
     On Error GoTo Fehler
-    QuellBlatt(wbQ).Copy                     ' Kopie in eine neue, ungespeicherte Mappe
-    Set wbN = ActiveWorkbook
-    Set ws = wbN.Worksheets(1)
-    If UCase$(EinstellungOderLeer("Briefkopf")) <> "NEIN" Then BriefkopfSetzen ws
+    vorlage = BriefpapierVorlage()
+    If Len(vorlage) > 0 Then
+        Set wbN = Workbooks.Add(Template:=vorlage)   ' neue Mappe mit dem Briefpapier der Vorlage
+        Set ws = wbN.Worksheets(1)
+        InhaltUebertragen QuellBlatt(wbQ), ws
+    Else
+        QuellBlatt(wbQ).Copy                     ' Kopie in eine neue, ungespeicherte Mappe
+        Set wbN = ActiveWorkbook
+        Set ws = wbN.Worksheets(1)
+        If UCase$(EinstellungOderLeer("Briefkopf")) <> "NEIN" Then BriefkopfSetzen ws
+    End If
     ws.ExportAsFixedFormat Type:=xlTypePDF, Filename:=ziel, Quality:=xlQualityStandard, _
                            IncludeDocProperties:=False, IgnorePrintAreas:=False, OpenAfterPublish:=False
     wbN.Close SaveChanges:=False
@@ -81,8 +94,51 @@ Fehler:
     On Error Resume Next
     If Not wbN Is Nothing Then wbN.Close SaveChanges:=False
     wbQ.Close SaveChanges:=False
+    Application.CutCopyMode = False
     Application.ScreenUpdating = True
     Err.Raise nr, , "PDF aus der Excel-Rechnung: " & txt
+End Sub
+
+' Pfad der Briefpapier-Vorlage (.xltx) aus der Einstellung, leer = keine oder
+' nicht gefunden (dann Briefkopf als Text, mit Warnung im Protokoll)
+Private Function BriefpapierVorlage() As String
+    Dim pfad As String
+    pfad = Trim$(EinstellungOderLeer("Briefpapier-Vorlage"))
+    If Len(pfad) = 0 Then Exit Function
+    If Len(Dir$(pfad)) = 0 Then
+        Protokoll "Warnung", "Briefpapier-Vorlage nicht gefunden: " & pfad & " - Briefkopf wird als Text gesetzt."
+        Exit Function
+    End If
+    BriefpapierVorlage = pfad
+End Function
+
+' Inhalt des BSI-Rechnungsblatts in das Blatt aus der Briefpapier-Vorlage übertragen:
+' Werte, Formate, Spaltenbreiten, Zeilenhöhen, Druckbereich, manuelle Seitenumbrüche
+' und Skalierung. Ränder, Papier und Kopf-/Fußzeile (Briefpapier) kommen aus der
+' Vorlage. Keine Application.PrintCommunication = False: darunter übernimmt Excel
+' Kopfzeilen-Grafiken nicht zuverlässig.
+Private Sub InhaltUebertragen(ByVal q As Worksheet, ByVal z As Worksheet)
+    Dim i As Long
+    q.Cells.Copy Destination:=z.Cells(1, 1)       ' ganzes Blatt: auch Spaltenbreiten und Zeilenhöhen
+    Application.CutCopyMode = False
+    For i = 1 To q.UsedRange.Column + q.UsedRange.Columns.Count     ' Sicherheitsnetz Spaltenbreiten
+        z.Columns(i).ColumnWidth = q.Columns(i).ColumnWidth
+    Next i
+    z.DisplayPageBreaks = False
+    On Error Resume Next                          ' Seitenumbrüche/Skalierung: Fehler hier dürfen das PDF nicht verhindern
+    If Len(q.PageSetup.PrintArea) > 0 Then z.PageSetup.PrintArea = q.PageSetup.PrintArea
+    z.ResetAllPageBreaks
+    For i = 1 To q.HPageBreaks.Count
+        If q.HPageBreaks(i).Type = xlPageBreakManual Then z.HPageBreaks.Add Before:=z.Rows(q.HPageBreaks(i).Location.Row)
+    Next i
+    If q.PageSetup.Zoom = False Then
+        z.PageSetup.Zoom = False
+        z.PageSetup.FitToPagesWide = q.PageSetup.FitToPagesWide
+        z.PageSetup.FitToPagesTall = q.PageSetup.FitToPagesTall
+    Else
+        z.PageSetup.Zoom = q.PageSetup.Zoom
+    End If
+    On Error GoTo 0
 End Sub
 
 Private Function QuelleOeffnen(ByVal pfad As String) As Workbook
@@ -163,6 +219,7 @@ End Function
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.7.0", "27.11.2026", "Neue Funktion", "Briefpapier als Excel-Vorlage: neue Einstellung Briefpapier-Vorlage (Pfad zu einer .xltx mit dem Briefpapier als Kopfzeilen-Grafik, erste Seite und Folgeseiten verschieden). Ist sie gesetzt, entsteht das PDF aus einer neuen Mappe nach dieser Vorlage mit dem Inhalt der BSI-Rechnung; ohne Vorlage wie bisher Briefkopf als Text. Fehlt die Datei, Warnung im Protokoll und Briefkopf als Text")
     c.Add Array("1.6.7", "27.11.2026", "Fehlerbehebung", "Wie PDF2E 1.15.2: vorhandene E-Rechnung wird vor dem Überschreiben umbenannt und dann gelöscht, damit eine noch offene alte Datei den Namen nicht blockiert")
     c.Add Array("1.6.6", "27.11.2026", "Fehlerbehebung", "Wie PDF2E 1.15.1: E-Rechnung verschwand auf dem Netzlaufwerk (Krug, F:): die PDF/A-Korrektur schrieb eine Hilfsdatei, löschte das Original und benannte um; hielt ein anderes Programm (Virenscanner, Explorer-Vorschau) die Datei offen, scheiterte das Umbenennen (Fehler 75) und beide Dateien waren weg. Jetzt wird direkt in die Datei geschrieben, ohne Löschen und Umbenennen, mit Wiederholung bei Sperre. Kontrolle, dass die Datei nach dem Speichern noch da ist; Überschreiben wartet, bis die alte Datei wirklich gelöscht ist; verständliche Meldung statt Laufzeitfehler bei gesperrter Datei")
     c.Add Array("1.6.1", "26.11.2026", "Fehlerbehebung", "Wie PDF2E 1.14.1: Kompilierfehler in modPdfA (Variable mId verdeckte die VBA-Funktion Mid)")

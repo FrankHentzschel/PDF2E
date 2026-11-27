@@ -35,6 +35,7 @@ Die Excel-Rechnung hat keinen Briefkopf, weil sie für vorgedrucktes Papier geda
 8. **Einstellungen:**
    - Eingangsordner (Excel-Rechnungen) und Ausgabeordner
    - **Briefkopf-Logo**: Pfad zum Logo, z. B. `C:\XL2E\fiedler_logo_hoch.png`
+   - **Briefpapier-Vorlage** (ab 1.7.0, empfohlen): Pfad zur Excel-Vorlage mit dem Briefpapier, siehe „Briefpapier als Excel-Vorlage“
    - **Sammelkundennummern**: vorbelegt mit `12100`
    - E-Rechnung-Adapter: `SMARTTOOLS` (oder `STUB` für einen Testlauf ohne E-Rechnung)
    - Firma, Kontakt und Logos für das Info-Fenster wie bei PDF2E
@@ -81,6 +82,21 @@ Wie bei PDF2E (siehe dort): Outlook-Entwurf mit der E-Rechnung als Anhang, Texte
 | Fußzeile rechts | Bankverbindung der Rechnung (Bezeichnung, IBAN, BIC) |
 
 Einstellung „Briefkopf“ = Nein lässt Kopf- und Fußzeile so, wie sie in der Excel-Datei eingestellt sind. Die Ränder sind auf oben 3,6 cm und unten 2,4 cm gesetzt, die Breite wird auf eine Seite angepasst.
+
+## Briefpapier als Excel-Vorlage (ab 1.7.0)
+
+Ist die Einstellung **Briefpapier-Vorlage** gesetzt, erzeugt XL2E das PDF aus einer neuen Mappe nach dieser Vorlage. Die Mappe bekommt den Inhalt der BSI-Rechnung: Werte, Formate, Spaltenbreiten, Zeilenhöhen, Druckbereich, manuelle Seitenumbrüche und Skalierung. Ränder, Papier und das Briefpapier selbst kommen aus der Vorlage. Briefkopf und Briefkopf-Logo werden dann nicht genutzt. Fehlt die Datei, setzt XL2E den Briefkopf wie bisher als Text und schreibt eine Warnung ins Protokoll.
+
+**Vorlage einmalig von Hand anlegen.** Excel übernimmt das Bild der ersten Seite per VBA nicht (Test 27.11.2026), von Hand eingefügt aber schon.
+
+1. Neue leere Mappe, *Seitenlayout*: Ränder wie in der BSI-Datei (Fiedler: links 1,5, rechts 1,0, oben 1,0, unten 1,0 cm), Kopfzeilenrand 0.
+2. In die Kopfzeile klicken, im Register *Kopf- und Fußzeile* **Erste Seite anders** anhaken.
+3. Seite 1, mittlere Kopfzeile: *Grafik* → `Briefpapier_Fiedler_Seite1_v5.png`. *Grafik formatieren*: Seitenverhältnis sperren aus, Höhe 29,7 cm, Breite 21 cm.
+4. Seite 2, mittlere Kopfzeile: *Grafik* → `Briefpapier_Fiedler_Folgeseite_v5.png`, ebenso 29,7 × 21 cm. Als „Seite 2“ gilt jede weitere Seite der Seitenlayout-Ansicht, z. B. die leere Seite rechts daneben.
+5. *Speichern unter* → Dateityp **Excel-Vorlage (*.xltx)**, z. B. `Briefpapier_Fiedler.xltx`, bei mehreren Plätzen im Netzlaufwerk neben dem Backend.
+6. Im Blatt „Einstellungen“ die Zeile **Briefpapier-Vorlage** mit dem Pfad füllen. Fehlt die Zeile (Mappe aus einer Version vor 1.7.0), in Spalte A `Briefpapier-Vorlage` und in Spalte B den Pfad eintragen.
+
+Hinweise: Excel setzt das Bild im PDF rund 4 mm tiefer und etwas gestaucht (gemessen am Test-PDF), das ist im Briefpapier v5 berücksichtigt. Der untere Rand muss so groß sein, dass die Rechnung nicht in die Fußzeile des Briefpapiers läuft (offen, bis eine mehrseitige BSI-Rechnung vorliegt).
 
 ## Test mit den Mustern
 

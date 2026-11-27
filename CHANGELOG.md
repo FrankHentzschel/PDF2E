@@ -3,6 +3,15 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## XL2E 1.7.0 – 27.11.2026
+
+Anlass: Briefpapier Fiedler mit drei Bankverbindungen, Steuernummer, USt-IdNr. und ILN passt nicht mehr in die Excel-Kopf-/Fußzeile (Textlänge). Tests mit Kopfzeilen-Grafik (Hintergrundtest 1.0.3–1.0.5): ganzseitiges Bild in der Kopfzeile funktioniert, das Bild der Kopfzeile „Erste Seite“ übernimmt Excel per VBA aber nicht, von Hand eingefügt schon.
+
+- **Neue Funktion:** Einstellung **Briefpapier-Vorlage** (Pfad zu einer .xltx). Gesetzt: PDF aus einer neuen Mappe nach der Vorlage, Inhalt der BSI-Rechnung wird hineinkopiert (modProdukt.QuellPdfErstellen, InhaltUebertragen). Nicht gesetzt: wie bisher Briefkopf als Text. Datei fehlt: Warnung im Protokoll, Briefkopf als Text.
+- Mappe: neue Zeile „Briefpapier-Vorlage“ im Blatt „Einstellungen“ (build_xlsx.py). Bestehende Mappen: Zeile von Hand ergänzen (Anleitung).
+- Nur modProdukt (XL2E) geändert, keine gemeinsamen Module; PDF2E bleibt 1.15.3.
+- In Excel noch nicht getestet.
+
 ## PDF2E 1.15.3 – 27.11.2026
 
 Anlass: Bei RE 2604142 (Getränke Hoffmann) fehlten Rechnungsnummer, Rechnungsdatum und Kundennummer, die Summen stimmten.
