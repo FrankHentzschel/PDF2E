@@ -267,25 +267,62 @@ Private Sub SchemaSchritt(ByVal db As Object, ByVal v As Long)
     Select Case v
         Case 1
             For Each t In Tabellen()
-                db.Execute TabelleDDL(CStr(t)), DB_FAIL_ON_ERROR
-                db.Execute "CREATE UNIQUE INDEX ux_" & t & " ON [" & t & "] (" & IndexFelder(CStr(t)) & ")", DB_FAIL_ON_ERROR
+                TabelleSicherstellen db, CStr(t)
             Next t
+            If TabelleVorhanden(db, "Verarbeitung") Then Exit Sub
             db.Execute "CREATE TABLE Verarbeitung (ID COUNTER CONSTRAINT pk_Verarbeitung PRIMARY KEY, " & _
                        "RechNr TEXT(50) NOT NULL, Quelldatei TEXT(255), Ausgabedatei TEXT(255), Empfaenger TEXT(255), " & _
                        "Brutto CURRENCY, Status TEXT(30), ErzeugtAm DATETIME, ErzeugtVon TEXT(100), Rechner TEXT(100), " & _
                        "MailAm DATETIME, MailVon TEXT(100))", DB_FAIL_ON_ERROR
             db.Execute "CREATE UNIQUE INDEX ux_Verarbeitung ON Verarbeitung (RechNr)", DB_FAIL_ON_ERROR
         Case 2                                  ' ZR-Nummer des Händlers (G5-Zentralregulierung, BT-10)
-            db.Execute "ALTER TABLE [Empfaenger] ADD COLUMN [ZRNummer] TEXT(255)", DB_FAIL_ON_ERROR
+            FeldSicherstellen db, "Empfaenger", "ZRNummer:T"
         Case 3                                  ' GLN je Lieferort (Warenempfänger-GLN, BT-71)
-            db.Execute TabelleDDL(BLATT_LIEFERORTE), DB_FAIL_ON_ERROR
-            db.Execute "CREATE UNIQUE INDEX ux_" & BLATT_LIEFERORTE & " ON [" & BLATT_LIEFERORTE & "] (" & _
-                       IndexFelder(BLATT_LIEFERORTE) & ")", DB_FAIL_ON_ERROR
+            TabelleSicherstellen db, BLATT_LIEFERORTE
         Case 4                                  ' Standard-Warenempfänger-GLN je Empfänger (BT-71)
-            db.Execute "ALTER TABLE [Empfaenger] ADD COLUMN [WEGLN] TEXT(255)", DB_FAIL_ON_ERROR
-        ' Case 5: künftige Änderungen nur anhängen
+            FeldSicherstellen db, "Empfaenger", "WEGLN:T"
+        ' Case 5: künftige Änderungen nur anhängen (idempotent: vorhandene Tabellen/Felder überspringen)
     End Select
 End Sub
+
+' Schritte dürfen mehrfach laufen: Ist eine Umstellung früher teilweise gelaufen
+' (Tabelle oder Feld schon da, Schema-Version aber nicht hochgesetzt), wird das
+' Vorhandene übersprungen statt mit "ist bereits vorhanden" abzubrechen.
+Private Sub TabelleSicherstellen(ByVal db As Object, ByVal tabelle As String)
+    Dim f As Variant
+    If TabelleVorhanden(db, tabelle) Then
+        For Each f In Felder(tabelle)
+            FeldSicherstellen db, tabelle, CStr(f)
+        Next f
+        Exit Sub
+    End If
+    db.Execute TabelleDDL(tabelle), DB_FAIL_ON_ERROR
+    db.Execute "CREATE UNIQUE INDEX ux_" & tabelle & " ON [" & tabelle & "] (" & IndexFelder(tabelle) & ")", DB_FAIL_ON_ERROR
+    db.TableDefs.Refresh
+End Sub
+
+Private Sub FeldSicherstellen(ByVal db As Object, ByVal tabelle As String, ByVal feld As String)
+    Dim typ As String, fld As Object
+    db.TableDefs.Refresh
+    For Each fld In db.TableDefs(tabelle).Fields
+        If StrComp(fld.Name, FeldName(feld), vbTextCompare) = 0 Then Exit Sub
+    Next fld
+    Select Case FeldTyp(feld)
+        Case "A": typ = "TEXT(100)"
+        Case "M": typ = "LONGTEXT"
+        Case "N": typ = "DOUBLE"
+        Case Else: typ = "TEXT(255)"
+    End Select
+    db.Execute "ALTER TABLE [" & tabelle & "] ADD COLUMN [" & FeldName(feld) & "] " & typ, DB_FAIL_ON_ERROR
+End Sub
+
+Private Function TabelleVorhanden(ByVal db As Object, ByVal tabelle As String) As Boolean
+    Dim td As Object
+    db.TableDefs.Refresh
+    For Each td In db.TableDefs
+        If StrComp(td.Name, tabelle, vbTextCompare) = 0 Then TabelleVorhanden = True: Exit Function
+    Next td
+End Function
 
 Private Function TabelleDDL(ByVal tabelle As String) As String
     Dim s As String, f As Variant

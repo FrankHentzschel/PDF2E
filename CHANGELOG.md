@@ -3,6 +3,11 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.14.4 und XL2E 1.6.4 – 27.11.2026
+
+- **Fehlerbehebung:** Die Schema-Umstellung brach mit „Tabelle 'Lieferorte' ist bereits vorhanden“ ab, wenn eine frühere Umstellung teilweise gelaufen war (Tabelle schon da, Schema-Version nicht hochgesetzt). Die Schritte sind jetzt wiederholbar: vorhandene Tabellen und Felder werden übersprungen, fehlende Felder einer vorhandenen Tabelle ergänzt.
+- XL2E 1.6.4: dieselben gemeinsamen Module.
+
 ## PDF2E 1.14.3 und XL2E 1.6.3 – 27.11.2026
 
 - **Fehlerbehebung (eigentliche Ursache des Startfehlers nach Update):** Beim Start wird das Backend migriert und vorher gesichert, *bevor* das Blatt „Einstellungen“ aus dem Backend geladen ist. Der Backup-Ordner kam deshalb aus der ausgelieferten Programmmappe statt aus den Einstellungen des Kunden. Steht dort ein Pfad, den es beim Kunden nicht gibt, scheitert die Sicherung mit „Pfad nicht gefunden“, die Umstellung läuft nicht, und dem Backend fehlen neue Felder. Jetzt liest die Sicherung „Backup-Ordner“ und „Backup behalten“ direkt aus dem Backend (Zeile des Arbeitsplatzes vor gemeinsamer Zeile), das Blatt nur noch als Rückfall.
