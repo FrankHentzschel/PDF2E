@@ -177,12 +177,15 @@ End Sub
 ' Mappe neu zu öffnen, fehlt sonst z. B. die Spalte ZRNummer (DAO-Fehler 3265
 ' "Element in dieser Auflistung nicht gefunden").
 Private Sub SchemaSicherstellen()
-    Dim db As Object, ver As Long
+    Dim db As Object, ver As Long, vollstaendig As Boolean
     Set db = DbOeffnen()
     ver = CLng(Val(SysWert(db, "SchemaVersion")))
+    If ver = SCHEMA_VERSION Then vollstaendig = StrukturVollstaendig(db)
     db.Close
     Set db = Nothing
-    If ver > SCHEMA_VERSION Then
+    If ver = SCHEMA_VERSION And Not vollstaendig Then
+        BackendMigrieren ver                ' nur Abgleich: fehlende Tabellen/Felder ergänzen
+    ElseIf ver > SCHEMA_VERSION Then
         Err.Raise vbObjectError + 62, , "Das Backend hat die Schema-Version " & ver & ", dieses Programm kennt nur " & _
                   SCHEMA_VERSION & ". Bitte PDF2E über die Starter-Mappe neu starten, damit die aktuelle Version geladen wird."
     ElseIf ver < SCHEMA_VERSION Then
@@ -251,14 +254,29 @@ Private Sub BackendMigrieren(ByVal von As Long)
         Err.Raise vbObjectError + 63, , "Das Backend muss auf Schema-Version " & SCHEMA_VERSION & " aktualisiert werden. " & _
                   "Dazu dürfen keine anderen Plätze PDF2E geöffnet haben. Bitte dort schließen und erneut starten."
     End If
+    On Error GoTo Fehler
     For v = von + 1 To SCHEMA_VERSION
         SchemaSchritt db, v
         SysSetzen db, "SchemaVersion", CStr(v)
     Next v
+    StrukturAbgleichen db                   ' Sicherheitsnetz: jede Tabelle, jedes Feld
     SysSetzen db, "Stand", Format$(Now, "yyyy-mm-dd hh:nn:ss")
-    SysSetzen db, "Programmversion", TOOL_NAME & " " & TOOL_VERSION
+    ' "Programmversion" setzt erst NachUpdateErgaenzen, sonst würden neue Einstellungen nicht übernommen
     db.Close
-    Protokoll "Info", "Backend von Schema-Version " & von & " auf " & SCHEMA_VERSION & " aktualisiert."
+    On Error GoTo 0
+    If von = SCHEMA_VERSION Then
+        Protokoll "Info", "Backend: fehlende Tabellen/Felder ergänzt (Schema-Version " & SCHEMA_VERSION & ")."
+    Else
+        Protokoll "Info", "Backend von Schema-Version " & von & " auf " & SCHEMA_VERSION & " aktualisiert."
+    End If
+    Exit Sub
+Fehler:
+    Dim nr As Long, txt As String
+    nr = Err.Number: txt = Err.Description
+    On Error Resume Next
+    db.Close                                ' exklusive Sperre sofort freigeben
+    On Error GoTo 0
+    Err.Raise nr, , "Umstellung des Backends auf Schema-Version " & SCHEMA_VERSION & ": " & txt
 End Sub
 
 ' Ein Schritt des Datenmodells. Neue Schritte nur anhängen, nie ändern.
@@ -302,11 +320,9 @@ Private Sub TabelleSicherstellen(ByVal db As Object, ByVal tabelle As String)
 End Sub
 
 Private Sub FeldSicherstellen(ByVal db As Object, ByVal tabelle As String, ByVal feld As String)
-    Dim typ As String, fld As Object
+    Dim typ As String
     db.TableDefs.Refresh
-    For Each fld In db.TableDefs(tabelle).Fields
-        If StrComp(fld.Name, FeldName(feld), vbTextCompare) = 0 Then Exit Sub
-    Next fld
+    If FeldVorhandenDb(db, tabelle, FeldName(feld)) Then Exit Sub
     Select Case FeldTyp(feld)
         Case "A": typ = "TEXT(100)"
         Case "M": typ = "LONGTEXT"
@@ -315,6 +331,34 @@ Private Sub FeldSicherstellen(ByVal db As Object, ByVal tabelle As String, ByVal
     End Select
     db.Execute "ALTER TABLE [" & tabelle & "] ADD COLUMN [" & FeldName(feld) & "] " & typ, DB_FAIL_ON_ERROR
 End Sub
+
+' Alle Tabellen und Felder laut Tabellen()/Felder() vorhanden? (nur lesen)
+Private Function StrukturVollstaendig(ByVal db As Object) As Boolean
+    Dim t As Variant, f As Variant
+    For Each t In Tabellen()
+        If Not TabelleVorhanden(db, CStr(t)) Then Exit Function
+        For Each f In Felder(CStr(t))
+            If Not FeldVorhandenDb(db, CStr(t), FeldName(f)) Then Exit Function
+        Next f
+    Next t
+    StrukturVollstaendig = True
+End Function
+
+' Fehlende Tabellen und Felder ergänzen. Vorhandenes bleibt unverändert
+' (keine Typänderung, kein Löschen oder Umbenennen von Feldern).
+Private Sub StrukturAbgleichen(ByVal db As Object)
+    Dim t As Variant
+    For Each t In Tabellen()
+        TabelleSicherstellen db, CStr(t)
+    Next t
+End Sub
+
+Private Function FeldVorhandenDb(ByVal db As Object, ByVal tabelle As String, ByVal feld As String) As Boolean
+    Dim fld As Object
+    For Each fld In db.TableDefs(tabelle).Fields
+        If StrComp(fld.Name, feld, vbTextCompare) = 0 Then FeldVorhandenDb = True: Exit Function
+    Next fld
+End Function
 
 Private Function TabelleVorhanden(ByVal db As Object, ByVal tabelle As String) As Boolean
     Dim td As Object

@@ -3,6 +3,12 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.14.5 und XL2E 1.6.5 – 27.11.2026
+
+- **Backend-Abgleich je Tabelle und Feld:** Nach jeder Umstellung und bei jedem Start (nur lesend) prüft PDF2E, ob alle Tabellen und Felder vorhanden sind, die das Programm erwartet. Fehlt etwas, wird es ergänzt (mit Sicherung vorher, alle anderen Plätze müssen geschlossen sein). Vorhandene Felder werden nicht geändert, gelöscht oder umbenannt.
+- **Fehlerbehebung:** Nach einer Schema-Umstellung wurden neue Einstellungen der Programmversion nicht ins Backend übernommen. Bei einem Fehler während der Umstellung bleibt das Backend nicht mehr exklusiv gesperrt.
+- XL2E 1.6.5: dieselben gemeinsamen Module.
+
 ## PDF2E 1.14.4 und XL2E 1.6.4 – 27.11.2026
 
 - **Fehlerbehebung:** Die Schema-Umstellung brach mit „Tabelle 'Lieferorte' ist bereits vorhanden“ ab, wenn eine frühere Umstellung teilweise gelaufen war (Tabelle schon da, Schema-Version nicht hochgesetzt). Die Schritte sind jetzt wiederholbar: vorhandene Tabellen und Felder werden übersprungen, fehlende Felder einer vorhandenen Tabelle ergänzt.
