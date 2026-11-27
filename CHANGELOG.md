@@ -3,11 +3,16 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.14.3 und XL2E 1.6.3 – 27.11.2026
+
+- **Fehlerbehebung (eigentliche Ursache des Startfehlers nach Update):** Beim Start wird das Backend migriert und vorher gesichert, *bevor* das Blatt „Einstellungen“ aus dem Backend geladen ist. Der Backup-Ordner kam deshalb aus der ausgelieferten Programmmappe statt aus den Einstellungen des Kunden. Steht dort ein Pfad, den es beim Kunden nicht gibt, scheitert die Sicherung mit „Pfad nicht gefunden“, die Umstellung läuft nicht, und dem Backend fehlen neue Felder. Jetzt liest die Sicherung „Backup-Ordner“ und „Backup behalten“ direkt aus dem Backend (Zeile des Arbeitsplatzes vor gemeinsamer Zeile), das Blatt nur noch als Rückfall.
+- XL2E 1.6.3: dieselben gemeinsamen Module.
+
 ## PDF2E 1.14.2 und XL2E 1.6.2 – 27.11.2026
 
 Anlass: Bei Krug meldete PDF2E nach dem Update auf 1.14.1 beim Start „Problem mit dem Backend: Pfad nicht gefunden“, obwohl das Backend vorhanden war; danach im Blatt „Empfaenger“ „Element in dieser Auflistung nicht gefunden“.
 
-- **Fehlerbehebung:** Vor der Umstellung des Backends auf ein neues Schema wird eine Sicherung angelegt. War die Einstellung „Backup-Ordner“ nicht erreichbar oder fehlte mehr als eine Ordnerebene, brach `MkDir` mit Fehler 76 („Pfad nicht gefunden“) ab, die Umstellung lief nicht und dem Backend fehlten die neuen Felder (z. B. `WEGLN`). Jetzt werden fehlende Ordner mehrstufig angelegt; ist der Backup-Ordner trotzdem nicht nutzbar, sichert PDF2E vor der Umstellung in den Unterordner `Sicherung` neben dem Backend und protokolliert eine Warnung.
+- **Fehlerbehebung:** Vor der Umstellung des Backends auf ein neues Schema wird eine Sicherung angelegt. Ist der Backup-Ordner nicht erreichbar oder fehlt mehr als eine Ordnerebene, brach `MkDir` mit Fehler 76 („Pfad nicht gefunden“) ab. Jetzt werden fehlende Ordner mehrstufig angelegt; ist der Backup-Ordner trotzdem nicht nutzbar, sichert PDF2E vor der Umstellung in den Unterordner `Sicherung` neben dem Backend und protokolliert eine Warnung.
 - **Fehlermeldungen:** Die Startmeldung nennt den Schritt, in dem der Fehler auftrat, und bei Fehler 76 den Hinweis auf einen fehlenden Ordner; die Sicherung nennt den betroffenen Ordner. Fehlt im Backend ein Feld, nennt die Meldung Feld und Tabelle statt „Element in dieser Auflistung nicht gefunden“. Eine fehlgeschlagene Tagessicherung wird jetzt angezeigt, nicht nur protokolliert.
 - Beim Aktivieren eines Stammdatenblatts wird eine ausstehende Schema-Umstellung nachgeholt.
 - XL2E 1.6.2: dieselben gemeinsamen Module.

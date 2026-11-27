@@ -330,7 +330,7 @@ End Sub
 ' über "Backup behalten" (Standard 30) werden gelöscht.
 Private Sub TagessicherungPruefen()
     Dim db As Object, letzte As String
-    If Len(Trim$(EinstellungOderLeer("Backup-Ordner"))) = 0 Then Exit Sub
+    If Len(SicherungsEinstellung("Backup-Ordner")) = 0 Then Exit Sub
     On Error GoTo Fehler
     Set db = DbOeffnen()
     letzte = SysWert(db, "LetzteSicherung")
@@ -359,7 +359,7 @@ Public Sub BackendSichern(ByVal zusatz As String)
     If Not DatenAktiv() Then Exit Sub
     If Len(Dir$(BackendPfad())) = 0 Then Exit Sub
     rueckfall = OrdnerVon(BackendPfad()) & "\Sicherung"
-    ordner = Trim$(EinstellungOderLeer("Backup-Ordner"))
+    ordner = SicherungsEinstellung("Backup-Ordner")
     If Len(ordner) = 0 Then ordner = rueckfall
     If Right$(ordner, 1) = "\" Then ordner = Left$(ordner, Len(ordner) - 1)
 
@@ -377,6 +377,40 @@ Public Sub BackendSichern(ByVal zusatz As String)
     Protokoll "Info", "Backend gesichert: " & ziel
     AlteSicherungenLoeschen ordner, DateiStamm(BackendPfad())
 End Sub
+
+' Einstellung für die Sicherung direkt aus dem Backend lesen (Zeile dieses
+' Arbeitsplatzes vor gemeinsamer Zeile), sonst aus dem Blatt. Grund: Beim Start
+' wird vor dem Laden des Blatts "Einstellungen" migriert und gesichert. Das Blatt
+' enthält dann noch die Werte der ausgelieferten Programmmappe (z. B. einen
+' Backup-Ordner aus der Entwicklungsumgebung), nicht die des Kunden.
+Private Function SicherungsEinstellung(ByVal schluessel As String) As String
+    Dim db As Object, rs As Object, v As String, gefunden As Boolean
+    On Error GoTo Fehler
+    Set db = DbOeffnen()
+    Set rs = db.OpenRecordset("SELECT [Wert], [Arbeitsplatz] FROM Einstellungen WHERE [Einstellung] = '" & _
+                              Replace(schluessel, "'", "''") & "' AND ([Arbeitsplatz] = '*' OR [Arbeitsplatz] = '" & _
+                              Replace(Rechner(), "'", "''") & "')")
+    Do While Not rs.EOF
+        If Not gefunden Or StrComp(CStr(rs.Fields("Arbeitsplatz").Value), "*") <> 0 Then
+            v = Trim$(CStr(Nz0(rs.Fields("Wert").Value)))
+            gefunden = True
+        End If
+        rs.MoveNext
+    Loop
+    rs.Close
+    db.Close
+    Set db = Nothing
+    If gefunden Then SicherungsEinstellung = v: Exit Function
+Blatt:
+    SicherungsEinstellung = Trim$(EinstellungOderLeer(schluessel))
+    Exit Function
+Fehler:
+    Resume Weiter
+Weiter:
+    On Error Resume Next
+    If Not db Is Nothing Then db.Close
+    GoTo Blatt
+End Function
 
 ' Kopie des Backends in "ordner" anlegen. Rückgabe: Zieldatei, leer bei Fehler (Text in fehlerText)
 Private Function SicherungKopieren(ByVal ordner As String, ByVal zusatz As String, ByRef fehlerText As String) As String
@@ -414,7 +448,7 @@ End Function
 
 Private Sub AlteSicherungenLoeschen(ByVal ordner As String, ByVal stamm As String)
     Dim behalten As Long, namen() As String, n As Long, f As String, i As Long, j As Long, t As String
-    behalten = CLng(Val(EinstellungOderLeer("Backup behalten")))
+    behalten = CLng(Val(SicherungsEinstellung("Backup behalten")))
     If behalten <= 0 Then behalten = 30
     ReDim namen(0 To 0)
     f = Dir$(ordner & "\" & stamm & "_????-??-??_??????.accdb")      ' nur Tagessicherungen
