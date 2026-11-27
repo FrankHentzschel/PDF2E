@@ -13,8 +13,8 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "XL2E"
-Public Const TOOL_VERSION As String = "1.6.1"
-Public Const TOOL_STAND As String = "26.11.2026"
+Public Const TOOL_VERSION As String = "1.6.5"
+Public Const TOOL_STAND As String = "27.11.2026"
 Public Const TOOL_UNTERTITEL As String = "Excel-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "Excel einlesen"
 
