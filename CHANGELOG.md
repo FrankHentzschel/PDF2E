@@ -3,6 +3,16 @@
 Schema: HAUPT.NEBEN.KORREKTUR ([Semantic Versioning](https://semver.org/lang/de/)).
 Fehlerbehebung → dritte Stelle, neue Funktion → zweite Stelle, inkompatible Änderung → erste Stelle.
 
+## PDF2E 1.15.0 – 27.11.2026
+
+Anlass: Testrechnung RE 2604269 an REWE Markt GmbH Zweig NL. Süd lieferte keine Positionen, keinen MwSt-Satz und keine Summen.
+
+- **Neu: Tabellen-Layout der BSI-Rechnung** (Spalten Pos., ArtNr., Bezeichnung, Ka/Fa, Hl./Fl., Preis, Betrag, zzgl. MwSt.; Summenblock mit Pfand, Rundungsdifferenz MwSt., Summe 19% MwSt.). Erkennung am Tabellenkopf, Einlesen mit `pdftotext -raw` (`-layout` verschiebt unter Windows den Summenblock). Neue Prozeduren `IstBSITabelle` und `ParseBSITabelle` in modParserBSI, `PdfZuText` mit optionalem Modus.
+- Empfängername ohne angehängtes „RE-“; die folgende Zeile „GLN: …“ wird GLN des Rechnungsempfängers.
+- Pfand in diesem Layout als Saldo laut Rechnung (eine Position), da kein Leergut-Konto gedruckt wird.
+- Versionshistorie im Programm um 1.14.2 bis 1.14.5 ergänzt.
+- XL2E bleibt 1.6.5 (keine gemeinsamen Module geändert).
+
 ## PDF2E 1.14.5 und XL2E 1.6.5 – 27.11.2026
 
 - **Backend-Abgleich je Tabelle und Feld:** Nach jeder Umstellung und bei jedem Start (nur lesend) prüft PDF2E, ob alle Tabellen und Felder vorhanden sind, die das Programm erwartet. Fehlt etwas, wird es ergänzt (mit Sicherung vorher, alle anderen Plätze müssen geschlossen sein). Vorhandene Felder werden nicht geändert, gelöscht oder umbenannt.

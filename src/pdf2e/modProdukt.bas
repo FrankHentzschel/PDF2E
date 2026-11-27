@@ -8,7 +8,7 @@ Attribute VB_Name = "modProdukt"
 Option Explicit
 
 Public Const TOOL_NAME As String = "PDF2E"
-Public Const TOOL_VERSION As String = "1.14.5"
+Public Const TOOL_VERSION As String = "1.15.0"
 Public Const TOOL_STAND As String = "27.11.2026"
 Public Const TOOL_UNTERTITEL As String = "PDF-Rechnungen als E-Rechnung (ZUGFeRD)"
 Public Const QUELLE_SCHALTFLAECHE As String = "PDF einlesen"
@@ -39,9 +39,20 @@ Public Function QuelleAuswaehlen() As String
 End Function
 
 ' Rechnung auslesen und in die Blätter "Rechnung" und "Positionen" schreiben
+' BSI-Rechnungen gibt es in zwei Layouts: Lieferschein/Rechnung mit LEERGUT-KONTO
+' (ParseBSI, Text mit -layout) und das Tabellen-Layout mit Spalte Pos. und MwSt je
+' Zeile (ParseBSITabelle, Text mit -raw). Erkannt wird am Tabellenkopf.
 Public Sub QuelleEinlesen(ByVal pfad As String)
+    Dim text As String
     Select Case UCase$(Einstellung("Layout"))
-        Case "BSI": ParseBSI PdfZuText(pfad), Einstellung("Layout-Variante")
+        Case "BSI"
+            text = PdfZuText(pfad)
+            If IstBSITabelle(text) Then
+                Protokoll "Info", "Tabellen-Layout der BSI-Rechnung erkannt (Spalten Pos. bis zzgl. MwSt.), Text wird mit pdftotext -raw gelesen."
+                ParseBSITabelle PdfZuText(pfad, "raw")
+            Else
+                ParseBSI text, Einstellung("Layout-Variante")
+            End If
         Case Else: Err.Raise vbObjectError + 20, , "Unbekanntes Layout '" & Einstellung("Layout") & "' (Blatt Einstellungen)."
     End Select
 End Sub
@@ -56,6 +67,11 @@ End Sub
 ' oben eine Zeile ergänzen und TOOL_VERSION anpassen.
 Public Function Versionen() As Collection
     Dim c As New Collection
+    c.Add Array("1.15.0", "27.11.2026", "Neue Funktion", "Tabellen-Layout der BSI-Rechnung (Spalten Pos., ArtNr., Bezeichnung, Ka/Fa, Hl./Fl., Preis, Betrag, zzgl. MwSt.) wird erkannt und mit pdftotext -raw gelesen (RE 2604269: keine Positionen, kein MwSt-Satz). Pfand als Saldo laut Rechnung, da dieses Layout kein Leergut-Konto hat. Empfängername ohne angehängtes RE- GLN, die GLN des Rechnungsempfängers wird übernommen")
+    c.Add Array("1.14.5", "27.11.2026", "Fehlerbehebung", "Backend-Abgleich je Tabelle und Feld bei jedem Start; Sperre des Backends bei Fehler in der Umstellung freigeben")
+    c.Add Array("1.14.4", "27.11.2026", "Fehlerbehebung", "Schema-Umstellung wiederholbar: vorhandene Tabellen und Felder werden übersprungen")
+    c.Add Array("1.14.3", "27.11.2026", "Fehlerbehebung", "Sicherung vor der Schema-Umstellung liest Backup-Ordner aus dem Backend statt aus der Programmmappe")
+    c.Add Array("1.14.2", "27.11.2026", "Fehlerbehebung", "Backup-Ordner mehrstufig anlegen, Rückfall auf Ordner Sicherung neben dem Backend; genauere Fehlermeldungen beim Start")
     c.Add Array("1.14.1", "26.11.2026", "Fehlerbehebung", "Kompilierfehler „Erwartet: Datenfeld“ in modPdfA: Variable mId verdeckte die VBA-Funktion Mid (umbenannt in mTrailerId); Strukturtest prüft jetzt solche Namenskonflikte")
     c.Add Array("1.14.0", "26.11.2026", "Neue Funktion", "PDF/A-Korrektur nach dem Speichern (neues Modul modPdfA): Briefpapier der BSI-Rechnung in CMYK mit Überdrucken machte die E-Rechnung zu einem ungültigen PDF/A-3 (Meldung Getränke Ziegler: Überdrucken-Modus OPM 1 bei ICC-basiertem CMYK); Überdrucken-Modus wird auf 0 gesetzt und ein CMYK-Farbprofil als DefaultCMYK eingetragen, abschaltbar mit Einstellung PDF/A-Korrektur = Nein. Registerangaben der Brauerei (Sitz, Handelsregister, Geschäftsführer) als Freitext mit Code REG (BT-22), Hinweis VD-Valitool-71; Text aus dem Blatt Brauerei (optional Zeilen Sitz und Registerangaben)")
     c.Add Array("1.13.0", "26.11.2026", "Neue Funktion", "Warenempfänger-GLN zusätzlich als Standard je Kunde (neue Spalte Warenempfänger-GLN im Blatt Empfaenger), Vorrang hat die GLN im Blatt Lieferorte; GLN nur bei Kunden, die sie verlangen (Vorgaben GLN, REWE, EDEKA oder Warenempfänger-GLN gepflegt): nur für sie werden Lieferorte angelegt und GLN-Hinweise gemeldet; Backend Schema-Version 4")

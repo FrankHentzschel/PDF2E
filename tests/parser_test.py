@@ -302,8 +302,214 @@ def brutto_in_netto(r):
     return [tuple(z) for z in netto], summe, mwst, rundung
 
 
+# ---- Tabellen-Layout (BSI WWS, Spalten Pos./ArtNr./.../zzgl. MwSt., RE 2604269) ----
+# Mit pdftotext -layout ist der Summenblock verschoben (Xpdf, Windows), deshalb liest
+# PDF2E dieses Layout mit pdftotext -raw. Die -raw-Ausgabe liegt in tests/pdftotext_raw/.
+EUR = "€"
+BETRAG_T = r"(-?[\d.]*\d,\d{2}-?)\s*" + EUR
+RE_T_ERKENNUNG = re.compile(r"^\s*Pos\.\s+ArtNr\.\s+Bezeichnung")
+RE_T_POSSTART = re.compile(r"^(\d+)\s+(\d+)(?:\s+(.*))?$")
+RE_T_WARE = re.compile(r"^(.+?)\s+(-?\d+-?)\s+(?:([\d.,]+)\s+)?(?:([\d.,]+)\s+)?(-?[\d.,]+-?)\s*" + EUR +
+                       r"\s+" + BETRAG_T + r"\s+" + BETRAG_T + r"$")
+RE_T_LEERGUT = re.compile(r"^Leergutrückgabe:\s*(.*?)\s+(-?\d+-?)(?:\s+(-?\d+-?))?$")
+RE_T_WW = re.compile(r"^Summen?\s*/\s*Warenwert\b.*?" + BETRAG_T + r"\s+" + BETRAG_T + r"$")
+RE_T_PFAND = re.compile(r"^Pfand\s+" + BETRAG_T + r"(?:\s+" + BETRAG_T + r")?$")
+RE_T_STEUER = re.compile(r"^Summe\s+(\d+(?:,\d+)?)\s*%\s*MwSt\.?\s+" + BETRAG_T + r"$")
+RE_T_RUNDUNG = re.compile(r"^Rundungsdifferenz\s+MwSt\.?\s+" + BETRAG_T + r"$")
+RE_T_RB = re.compile(r"^RECHNUNGSBETRAG\s+" + BETRAG_T + r"$")
+RE_T_GLN = re.compile(r"^(?:RE-)?GLN:?\s*(\d[\d ]{11,}\d)$")
+RE_T_LIEFERORT = re.compile(r"^(.+?)(?:\s+-\s+Nr\.?:?\s*(\d[\d ]*\d))?\s+GLN\.?:?\s*(\d{13})\s*,\s*(.+?)\s*,\s*"
+                            r"(?:([A-Z]{1,3})\s*-\s*)?(\d{4,5})\s+(.+)$")
+RE_T_DATUM = re.compile(r"\d{1,2}\.\d{1,2}\.\d{4}")
+
+
+def ist_tabelle(text_layout):
+    return any(RE_T_ERKENNUNG.match(z) for z in text_layout.split("\n"))
+
+
+def parse_tabelle(text):
+    """Nachbau von ParseBSITabelle (modParserBSI) für die -raw-Ausgabe."""
+    r = {"ware": 0.0, "pfand": 0.0, "mwst": 0.0, "satz": None, "zeilenfehler": [], "warnungen": [], "pfandzeilen": [],
+         "nachlaesse": [], "zeilen": [], "brutto": False, "rueckgaben": []}
+    z = [l.strip() for l in text.replace("\r", "").replace("\f", "\n").split("\n")]
+    z = [l for l in z if len(l) > 1 or l.isdigit()]   # leer und Wasserzeichen ("T", "*"), Ziffern bleiben
+    kopf = next(i for i, l in enumerate(z) if RE_T_ERKENNUNG.match(l))
+    # Kopf und Empfänger
+    links = []
+    for l in z[:kopf]:
+        m = re.search(r"(\d+)\s+(\d{5,})\s+(\d{2}\.\d{2}\.\d{4})\s*$", l)
+        if m:
+            r["kunde"], r["renr"], r["datum"] = m.groups()
+            continue
+        if l.replace(" ", "") == "RECHNUNG" or "Kunden-Nr." in l:
+            continue
+        m = RE_T_GLN.match(l)
+        if m:
+            r["kgln"] = m[1].replace(" ", "")
+            if links and links[-1].endswith(" RE-"):
+                links[-1] = links[-1][:-4].rstrip()
+            continue
+        links.append(l)
+    r["empfaenger"] = links
+    # Kopfzeile der Tabelle endet mit "zzgl. MwSt."
+    i = kopf
+    while i < len(z) and "MwSt" not in z[i]:
+        i += 1
+    i += 1
+    # Sammler wie in VBA: 0 nichts, 1 Lieferschein, 2 Lieferort, 3 Position
+    pos_erwartet, modus, sammler, puf = 1, "pos", 0, []
+    ls, lieferort = [], None
+
+    def ist_posstart(k):
+        m = RE_T_POSSTART.match(z[k])
+        if not m or int(m[1]) != pos_erwartet:
+            return None
+        if m[3] is None and k + 1 < len(z) and re.match(r"^\d", z[k + 1]):
+            return None                        # Mengenzeile ("25 500"), keine neue Position
+        return m
+
+    def abschliessen():
+        nonlocal sammler, puf, lieferort
+        if sammler == 1:
+            ls.append(puf)
+        elif sammler == 2:
+            lieferort = puf
+        elif sammler == 3:
+            position(puf[0], puf[1], " ".join(puf[2:]).strip())
+        sammler, puf = 0, []
+
+    def position(pos, art, rest):
+        m = RE_T_LEERGUT.match(rest)
+        if m:
+            r["rueckgaben"].append((art, m[1], zahl(m[2])))
+            return
+        m = RE_T_WARE.match(rest)
+        if not m:
+            r.setdefault("nicht", []).append(f"{pos} {art} {rest}")
+            return
+        menge, preis, betrag = zahl(m[2]), zahl(m[5]), zahl(m[6])
+        if betrag < 0 < menge:
+            menge = -menge
+        if abs(round(menge * preis, 2) - betrag) > 0.005:
+            r["zeilenfehler"].append(f"{pos} {art} {rest}")
+        r["ware"] += betrag
+        r["zeilen"].append(("Ware", menge, preis, betrag))
+
+    while i < len(z):
+        l = z[i]
+        if modus == "pos":
+            m = ist_posstart(i)
+            if m:
+                abschliessen()
+                sammler, puf = 3, [m[1], m[2]] + ([m[3]] if m[3] else [])
+                pos_erwartet += 1
+                i += 1
+                continue
+            if re.match(r"^\d+$", l) and i + 1 < len(z) and z[i + 1].startswith("geliefert am"):
+                abschliessen()
+                sammler, puf = 1, [l]
+                i += 1
+                continue
+            if l.startswith("Wir lieferten an:"):
+                abschliessen()
+                sammler, puf = 2, [l[len("Wir lieferten an:"):].strip()]
+                i += 1
+                continue
+            if RE_T_WW.match(l):
+                abschliessen()
+                modus = "summen"
+            elif sammler:
+                puf.append(l)
+                i += 1
+                continue
+        m = RE_T_WW.match(l)
+        if m:
+            r["pdf_warenwert"] = zahl(m[1])
+        elif (m := RE_T_PFAND.match(l)):
+            r["pdf_pfand"] = zahl(m[1])
+        elif (m := RE_T_STEUER.match(l)):
+            r["satz"] = zahl(m[1])
+            r["mwst"] += zahl(m[2])
+        elif (m := RE_T_RB.match(l)):
+            r["pdf_brutto"] = zahl(m[1])
+        elif RE_T_RUNDUNG.match(l) or l.startswith("Betrag zzgl"):
+            pass
+        else:
+            r.setdefault("nicht", []).append(l)
+        i += 1
+    abschliessen()
+    # Lieferschein: "150425 geliefert am Nr: 25.11.2026 5392"
+    r["lieferscheine"] = []
+    for block in ls:
+        t = " ".join(block)
+        d = RE_T_DATUM.search(t)
+        nummern = [x for x in t.split() if x.isdigit()]
+        if d and len(nummern) >= 2:
+            r["lieferscheine"].append((nummern[-1], d[0]))
+    if lieferort:
+        m = RE_T_LIEFERORT.match(" ".join(lieferort))
+        r["lieferort"] = m.groups() if m else " ".join(lieferort)
+    # Pfand als Saldo (das Layout hat kein Leergut-Konto)
+    pf = r.get("pdf_pfand", 0.0)
+    if pf:
+        menge = 1.0 if pf > 0 else -1.0
+        r["pfand"] = pf
+        r["pfandzeilen"].append(("Saldo", menge, abs(pf)))
+        r["zeilen"].append(("Pfand", menge, abs(pf), pf))
+    if "pdf_warenwert" in r:
+        r["pdf_netto"] = round(r["pdf_warenwert"] + r.get("pdf_pfand", 0.0), 2)
+    return r
+
+
+def pruefe_tabelle(pfad_layout):
+    """Layout-Ausgabe erkennen, dann die -raw-Ausgabe gleichen Namens lesen."""
+    name = os.path.basename(pfad_layout).replace("_windows", "")
+    pfad_raw = os.path.join(os.path.dirname(__file__), "pdftotext_raw", name)
+    r = parse_tabelle(open(pfad_raw, encoding="utf-8").read())
+    netto = round(r["ware"] + r["pfand"], 2)
+    mwst = round(netto * r["satz"] / 100 + 1e-9, 2) if r["satz"] is not None else None
+    checks = [
+        ("Warenwert", r["ware"], r.get("pdf_warenwert")),
+        ("Pfand", r["pfand"], r.get("pdf_pfand")),
+        ("Netto", netto, r.get("pdf_netto")),
+        ("MwSt", mwst or 0.0, r["mwst"]),
+        ("Brutto", netto + (mwst or 0), r.get("pdf_brutto")),
+    ]
+    fehler = [f"{n}: berechnet {a:.2f}, PDF {b}" for n, a, b in checks if b is None or abs(a - b) > 0.005]
+    fehler += [f"Zeile Menge x Preis: {x}" for x in r["zeilenfehler"]]
+    if name == "Rechnung_2604269.txt":
+        erwartet = {
+            "kopf": ("11737", "2604269", "25.11.2026"),
+            "empfaenger": ["REWE MARKT GmbH Zweig NL. Süd", "Raiffeisenstraße 5 - 9", "61191 Rosbach v.d.H."],
+            "kgln": "4388096000002",
+            "lieferscheine": [("5392", "25.11.2026")],
+            "lieferort": ("REWE Dominic Mayer oHG", "46653518", "4388096535184", "Oberes Tor 7", None, "91320",
+                          "Ebermannstadt"),
+            "positionen": 3,
+            "rueckgaben": [("99001", "Euro 0,5", 25.0), ("99030", "Palette", 1.0)],
+        }
+        ist = {
+            "kopf": (r.get("kunde"), r.get("renr"), r.get("datum")),
+            "empfaenger": r["empfaenger"], "kgln": r.get("kgln"), "lieferscheine": r["lieferscheine"],
+            "lieferort": r.get("lieferort"), "positionen": len([x for x in r["zeilen"] if x[0] == "Ware"]),
+            "rueckgaben": r["rueckgaben"],
+        }
+        fehler += [f"{k}: erwartet {erwartet[k]!r}, gelesen {ist[k]!r}" for k in erwartet if erwartet[k] != ist[k]]
+    print(("OK    " if not fehler else "FEHLER") + "  " + os.path.basename(pfad_layout) + "  (Tabellen-Layout, -raw)")
+    for typ, menge, preis, betrag in r["zeilen"]:
+        print(f"        {typ:5} {menge:+g} x {preis:.3f} = {betrag:.2f}")
+    for x in r.get("nicht", []):
+        print("        nicht übernommen: " + x)
+    for f in fehler:
+        print("        " + f)
+    return not fehler
+
+
 def pruefe(pfad):
-    r = parse(open(pfad, encoding="utf-8").read())
+    text = open(pfad, encoding="utf-8").read()
+    if ist_tabelle(text):
+        return pruefe_tabelle(pfad)
+    r = parse(text)
     if r["brutto"]:
         return pruefe_brutto(pfad, r)
     netto = round(r["ware"] + r["pfand"], 2)
@@ -396,9 +602,22 @@ def test_differenz_null():
     return ok
 
 
+def test_tabelle_grenzfaelle():
+    """Bezeichnung endet auf eine Zahl ("P 5"), Leergutmenge sieht aus wie ein Positionsbeginn ("6 120")."""
+    pfad = os.path.join(os.path.dirname(__file__), "pdftotext_raw", "Rechnung_2604269.txt")
+    text = open(pfad, encoding="utf-8").read()
+    text = text.replace("Pilsner 0,5 /\nP11", "Bernstein Radler 0,5 /\nP 5").replace("\n25 500\n", "\n6 120\n")
+    r = parse_tabelle(text)
+    ok = (len(r["zeilen"]) == 4 and abs(r["ware"] - 283.5) < 0.005 and not r["zeilenfehler"]
+          and r["rueckgaben"] == [("99001", "Euro 0,5", 6.0), ("99030", "Palette", 1.0)])
+    print(("OK    " if ok else "FEHLER") + "  Tabellen-Layout Grenzfälle (synthetisch aus 2604269): " + repr(r["rueckgaben"]))
+    return ok
+
+
 if __name__ == "__main__":
     dateien = sys.argv[1:] or sorted(glob.glob(os.path.join(os.path.dirname(__file__), "pdftotext", "*.txt")))
     ergebnisse = [pruefe(d) for d in dateien]
     if not sys.argv[1:]:
         ergebnisse.append(test_differenz_null())
+        ergebnisse.append(test_tabelle_grenzfaelle())
     sys.exit(0 if all(ergebnisse) else 1)
